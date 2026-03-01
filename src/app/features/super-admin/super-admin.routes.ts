@@ -26,6 +26,11 @@ export const SUPER_ADMIN_ROUTES: Routes = [
         loadComponent: () =>
           import('./pages/sa-audit.component').then((m) => m.SaAuditComponent),
       },
+      {
+        path: 'template',
+        loadComponent: () =>
+          import('./pages/sa-template.component').then((m) => m.SaTemplateComponent),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

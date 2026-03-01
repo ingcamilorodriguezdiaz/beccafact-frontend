@@ -27,10 +27,15 @@ interface ImportJob {
           <h2 class="page-title">Importación Masiva</h2>
           <p class="page-subtitle">Carga productos desde CSV o Excel — hasta 10MB</p>
         </div>
-        <a href="#" class="btn btn-secondary" (click)="$event.preventDefault()">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/></svg>
-          Descargar plantilla
-        </a>
+        <button class="btn btn-secondary" (click)="downloadTemplate()" [disabled]="downloadingTemplate()">
+          @if (downloadingTemplate()) {
+            <span class="btn-spinner"></span>
+            Generando...
+          } @else {
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/></svg>
+            Descargar plantilla
+          }
+        </button>
       </div>
 
       <!-- Steps indicator -->
@@ -460,6 +465,7 @@ export class ImportComponent implements OnDestroy {
   isDragOver    = signal(false);
   isPreviewing  = signal(false);
   isUploading   = signal(false);
+  downloadingTemplate = signal(false);
   preview       = signal<PreviewResult | null>(null);
   activeJob     = signal<ImportJob | null>(null);
   history       = signal<ImportJob[]>([]);
@@ -556,6 +562,26 @@ export class ImportComponent implements OnDestroy {
     });
   }
   asString(val: unknown): string { return val === null || val === undefined ? '' : String(val); }
+
+  downloadTemplate() {
+    this.downloadingTemplate.set(true);
+    this.http.post(`${this.API}/template`, {}, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const url  = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href  = url;
+        link.download = `plantilla-importacion-${new Date().toISOString().slice(0,10)}.xlsx`;
+        link.click();
+        URL.revokeObjectURL(url);
+        this.downloadingTemplate.set(false);
+        this.notification.success('Plantilla descargada correctamente');
+      },
+      error: () => {
+        this.downloadingTemplate.set(false);
+        this.notification.error('Error al generar la plantilla');
+      },
+    });
+  }
   formatSize(bytes: number): string {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
