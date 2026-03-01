@@ -12,7 +12,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
 
 interface UsageData {
-  documentsUsedThisMonth?: number;
+  documentsUsedThisMonth: number;
+  totalProducts: number;
+  totalCustomers: number;
+  month: number;
+  year: number;
 }
 
 @Component({
@@ -56,7 +60,7 @@ interface UsageData {
   `],
 })
 export class LayoutComponent {
-  private http = inject(HttpClient);
+ private http = inject(HttpClient);
   protected auth = inject(AuthService);
   /**
    * Calcula el porcentaje de uso mensual de documentos comparando
@@ -82,5 +86,4 @@ export class LayoutComponent {
     ),
   );
 
- 
 }
