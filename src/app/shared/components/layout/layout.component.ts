@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -6,6 +6,14 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
 import { NavbarComponent } from '../navbar/navbar.component';
 import { ToastComponent } from '../toast/toast.component';
 import { GlobalLoaderComponent } from '../global-loader/global-loader.component';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
+
+interface UsageData {
+  documentsUsedThisMonth?: number;
+}
 
 @Component({
   selector: 'app-layout',
@@ -19,6 +27,7 @@ import { GlobalLoaderComponent } from '../global-loader/global-loader.component'
           [isSuperAdmin]="auth.isSuperAdmin()"
           [user]="auth.user()!"
           [plan]="auth.currentPlan()"
+          [usagePercent]="usagePercent()"
         />
         <div class="main-area">
           <app-navbar [user]="auth.user()!" />
@@ -39,7 +48,7 @@ import { GlobalLoaderComponent } from '../global-loader/global-loader.component'
       flex: 1; display: flex; flex-direction: column; overflow: hidden;
     }
     .content {
-      flex: 1; overflow-y: auto; padding: 28px 28px;
+      flex: 1; overflow-y: auto; padding: 28px;
     }
     @media (max-width: 768px) {
       .content { padding: 16px; }
@@ -47,5 +56,31 @@ import { GlobalLoaderComponent } from '../global-loader/global-loader.component'
   `],
 })
 export class LayoutComponent {
-  constructor(protected auth: AuthService) {}
+  private http = inject(HttpClient);
+  protected auth = inject(AuthService);
+  /**
+   * Calcula el porcentaje de uso mensual de documentos comparando
+   * los documentos emitidos este mes contra el límite del plan.
+   * Si no hay datos de uso o el plan es ilimitado, retorna 0.
+   */
+  readonly usagePercent = computed(() => {
+    const features = this.auth.planFeatures();
+    const maxDocs = features['max_documents_per_month'];
+    if (!maxDocs || maxDocs === '-1' || maxDocs === 'unlimited') return 0;
+
+    const limit = parseInt(maxDocs, 10);
+    if (isNaN(limit) || limit <= 0) return 0;
+
+    // usageData es opcionalmente cargado; si no está disponible usamos 0
+    const used = this.usageData()?.documentsUsedThisMonth ?? 0;
+    return Math.min(100, Math.round((used / limit) * 100));
+  });
+
+  private readonly usageData = toSignal(
+    this.http.get<UsageData>(`${environment.apiUrl}/reports/usage-summary`).pipe(
+      catchError(() => of(null)),
+    ),
+  );
+
+ 
 }

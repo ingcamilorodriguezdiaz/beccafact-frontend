@@ -1,9 +1,9 @@
 import {
-  Component, Input, OnChanges, signal, computed, Output, EventEmitter,
+  Component, Input, signal, computed, inject,
 } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { User } from '../../../core/auth/auth.service';
+import { User, AuthService } from '../../../core/auth/auth.service';
 
 export type PlanInfo = {
   id: string;
@@ -426,28 +426,27 @@ const FEATURE_LABELS: Record<string, string> = {
     .upgrade-btn:hover { background: rgba(245,158,11,0.35); }
   `],
 })
-export class SidebarComponent implements OnChanges {
+export class SidebarComponent {
   @Input() user!: User;
   @Input() plan: PlanInfo = null;
   @Input() isSuperAdmin = false;
   @Input() usagePercent = 0;
 
-  collapsed    = signal(false);
+  collapsed        = signal(false);
   showUpgradeToast = signal(false);
   lockedItemLabel  = signal('');
 
-  /** Mapa key→value de features del plan activo */
-  private featureMap: Record<string, string> = {};
-  private toastTimer: any;
-
-  ngOnChanges(): void {
-    this.featureMap = {};
-    if (this.plan?.features) {
-      for (const f of this.plan.features) {
-        this.featureMap[f.key] = f.value;
-      }
-    }
+  /**
+   * Consume planFeatures() directamente desde AuthService (signal reactivo).
+   * Esto garantiza que el mapa se actualice cada vez que el plan cambie,
+   * sin depender de ngOnChanges ni de la referencia del @Input.
+   */
+  private auth = inject(AuthService);
+  private get featureMap(): Record<string, string> {
+    return this.auth.planFeatures();
   }
+
+  private toastTimer: any;
 
   toggleCollapse(): void { this.collapsed.update(v => !v); }
 
@@ -468,7 +467,6 @@ export class SidebarComponent implements OnChanges {
 
   /** Determina si el ítem está habilitado (no bloqueado por plan) */
   isItemEnabled(item: NavItem): boolean {
-    console.log("hablar camilo:",item,this.featureMap);
     if (!item.feature) return true;
     if (this.isSuperAdmin) return true;
     const val = this.featureMap[item.feature];
