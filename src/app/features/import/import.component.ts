@@ -275,8 +275,14 @@ interface ImportJob {
             <table class="table">
               <thead>
                 <tr>
-                  <th>Archivo</th><th>Estado</th><th>Total</th>
-                  <th>Exitosas</th><th>Errores</th><th>Fecha</th>
+                  <th>Archivo</th>
+                  <th>Estado</th>
+                  <th>Total</th>
+                  <th>Exitosas</th>
+                  <th>Errores</th>                    
+                  <th>Acciones</th>
+                  <th>Fecha</th>
+                   
                 </tr>
               </thead>
               <tbody>
@@ -292,6 +298,19 @@ interface ImportJob {
                     <td>{{ job.totalRows }}</td>
                     <td><span class="num-success">{{ job.successRows }}</span></td>
                     <td><span class="num-error" [class.hide-zero]="job.errorRows === 0">{{ job.errorRows }}</span></td>
+                    <td>
+                                  @if (job.errorRows > 0) {
+                    <button class="btn btn-sm btn-danger"
+                            (click)="downloadErrorReport(job)"
+                            type="button">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="14" class="me-1">
+                        <path fill-rule="evenodd"
+                              d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
+                      </svg>
+                      Descargar errores
+                    </button>
+                  }
+                    </td>
                     <td class="hist-date">{{ job.createdAt | date:'dd/MM/yy HH:mm' }}</td>
                   </tr>
                 }
@@ -460,21 +479,21 @@ interface ImportJob {
 export class ImportComponent implements OnDestroy {
   private readonly API = `${environment.apiUrl}/import`;
   private pollInterval?: ReturnType<typeof setInterval>;
-downloadingReport = signal<string | null>(null);
+  downloadingReport = signal<string | null>(null);
   steps = [
     { num: 1, label: 'Seleccionar archivo' },
     { num: 2, label: 'Vista previa' },
     { num: 3, label: 'Procesando' },
   ];
 
-  selectedFile  = signal<File | null>(null);
-  isDragOver    = signal(false);
-  isPreviewing  = signal(false);
-  isUploading   = signal(false);
+  selectedFile = signal<File | null>(null);
+  isDragOver = signal(false);
+  isPreviewing = signal(false);
+  isUploading = signal(false);
   downloadingTemplate = signal(false);
-  preview       = signal<PreviewResult | null>(null);
-  activeJob     = signal<ImportJob | null>(null);
-  history       = signal<ImportJob[]>([]);
+  preview = signal<PreviewResult | null>(null);
+  activeJob = signal<ImportJob | null>(null);
+  history = signal<ImportJob[]>([]);
 
   previewKeys = computed(() => {
     const rows = this.preview()?.previewRows ?? [];
@@ -573,10 +592,10 @@ downloadingReport = signal<string | null>(null);
     this.downloadingTemplate.set(true);
     this.http.post(`${this.API}/template`, {}, { responseType: 'blob' }).subscribe({
       next: (blob) => {
-        const url  = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href  = url;
-        link.download = `plantilla-importacion-${new Date().toISOString().slice(0,10)}.xlsx`;
+        link.href = url;
+        link.download = `plantilla-importacion-${new Date().toISOString().slice(0, 10)}.xlsx`;
         link.click();
         URL.revokeObjectURL(url);
         this.downloadingTemplate.set(false);
@@ -594,26 +613,26 @@ downloadingReport = signal<string | null>(null);
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
   statusLabel(status: string): string {
-    return { PENDING:'Pendiente', PROCESSING:'Procesando', COMPLETED:'Completado', ERROR:'Error', CANCELLED:'Cancelado' }[status] ?? status;
+    return { PENDING: 'Pendiente', PROCESSING: 'Procesando', COMPLETED: 'Completado', ERROR: 'Error', CANCELLED: 'Cancelado' }[status] ?? status;
   }
 
   downloadErrorReport(job: ImportJob) {
-  this.downloadingReport.set(job.id);
-  this.http.get(`${this.API}/${job.id}/error-report`, { responseType: 'blob' }).subscribe({
-    next: (blob) => {
-      const url  = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href  = url;
-      link.download = `errores-${job.fileName.replace(/\.[^.]+$/, '')}-${new Date().toISOString().slice(0,10)}.xlsx`;
-      link.click();
-      URL.revokeObjectURL(url);
-      this.downloadingReport.set(null);
-      this.notification.success('Reporte de errores descargado');
-    },
-    error: () => {
-      this.downloadingReport.set(null);
-      this.notification.error('Error al generar el reporte');
-    },
-  });
-}
+    this.downloadingReport.set(job.id);
+    this.http.get(`${this.API}/${job.id}/error-report`, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `errores-${job.fileName.replace(/\.[^.]+$/, '')}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+        link.click();
+        URL.revokeObjectURL(url);
+        this.downloadingReport.set(null);
+        this.notification.success('Reporte de errores descargado');
+      },
+      error: () => {
+        this.downloadingReport.set(null);
+        this.notification.error('Error al generar el reporte');
+      },
+    });
+  }
 }
