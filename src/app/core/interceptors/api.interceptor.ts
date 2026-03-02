@@ -10,7 +10,6 @@ export const apiResponseInterceptor: HttpInterceptorFn = (req, next) => {
       if (event instanceof HttpResponse) {
 
         const {data} = event.body as ApiResponse<any>;
-        console.log("camil ",data);
        
         if (data && data !== undefined) {
           return event.clone({

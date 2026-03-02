@@ -125,6 +125,11 @@ export class AuthService {
     );
   }
 
+  hasAnyRole = (roles: string[]) => () => {
+    const userRoles = this.user()?.roles ?? [];
+    return userRoles.some(r => roles.includes(r));
+  };
+
   getAccessToken(): string | null {
     return localStorage.getItem('access_token');
   }

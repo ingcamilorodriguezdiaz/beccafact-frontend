@@ -10,9 +10,15 @@ interface PreviewResult {
   errors: Array<{ row: number; field: string; message: string }>;
 }
 interface ImportJob {
-  id: string; status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'ERROR' | 'CANCELLED';
-  fileName: string; totalRows: number; processedRows: number;
-  successRows: number; errorRows: number; createdAt: string;
+  id: string;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'ERROR' | 'CANCELLED';
+  fileName: string;
+  totalRows: number;
+  processedRows: number;
+  successRows: number;
+  errorRows: number;
+  createdAt: string;
+  errors?: Array<{ row: number; field: string; message: string }>;
 }
 
 @Component({
@@ -454,7 +460,7 @@ interface ImportJob {
 export class ImportComponent implements OnDestroy {
   private readonly API = `${environment.apiUrl}/import`;
   private pollInterval?: ReturnType<typeof setInterval>;
-
+downloadingReport = signal<string | null>(null);
   steps = [
     { num: 1, label: 'Seleccionar archivo' },
     { num: 2, label: 'Vista previa' },
@@ -590,4 +596,24 @@ export class ImportComponent implements OnDestroy {
   statusLabel(status: string): string {
     return { PENDING:'Pendiente', PROCESSING:'Procesando', COMPLETED:'Completado', ERROR:'Error', CANCELLED:'Cancelado' }[status] ?? status;
   }
+
+  downloadErrorReport(job: ImportJob) {
+  this.downloadingReport.set(job.id);
+  this.http.get(`${this.API}/${job.id}/error-report`, { responseType: 'blob' }).subscribe({
+    next: (blob) => {
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href  = url;
+      link.download = `errores-${job.fileName.replace(/\.[^.]+$/, '')}-${new Date().toISOString().slice(0,10)}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+      this.downloadingReport.set(null);
+      this.notification.success('Reporte de errores descargado');
+    },
+    error: () => {
+      this.downloadingReport.set(null);
+      this.notification.error('Error al generar el reporte');
+    },
+  });
+}
 }

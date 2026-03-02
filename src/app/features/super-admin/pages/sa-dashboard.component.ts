@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../core/auth/auth.service';
 
 interface GlobalMetrics {
   companies: { total: number; active: number; suspended: number; trial: number };
@@ -210,9 +211,10 @@ export class SaDashboardComponent implements OnInit {
   metrics = signal<GlobalMetrics | null>(null);
   today = new Date().toLocaleDateString('es-CO', { weekday:'long', day:'numeric', month:'long' });
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient,protected auth: AuthService) {}
 
   ngOnInit() {
+    console.log("auth:",this.auth.user()?.roles);
     this.http.get<any>(`${environment.apiUrl}/super-admin/metrics`).subscribe({
       next: (res) => this.metrics.set(res.data ?? res),
       error: () => this.metrics.set({

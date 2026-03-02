@@ -154,7 +154,8 @@ import { environment } from '../../../environments/environment';
             </a>
           }
 
-          @if (auth.hasFeature('bulk_import')()) {
+          @if (auth.hasFeature('bulk_import')() && 
+          auth.hasAnyRole(['SUPER_ADMIN','ADMIN'])()) {
             <a routerLink="/import" class="qa-card">
               <div class="qa-icon">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
@@ -176,15 +177,17 @@ import { environment } from '../../../environments/environment';
             </div>
           </a>
 
-          <a routerLink="/reports" class="qa-card">
-            <div class="qa-icon">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
-            </div>
-            <div class="qa-text">
-              <div class="qa-label">Ver reportes</div>
-              <div class="qa-desc">Análisis y resúmenes</div>
-            </div>
-          </a>
+          @if (auth.hasFeature('has_reports')()) {
+            <a routerLink="/reports" class="qa-card">
+              <div class="qa-icon">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+              </div>
+              <div class="qa-text">
+                <div class="qa-label">Ver reportes</div>
+                <div class="qa-desc">Análisis y resúmenes</div>
+              </div>
+            </a>
+          }
         </div>
       </div>
     </div>
@@ -402,7 +405,7 @@ export class DashboardComponent implements OnInit {
 
   constructor(protected auth: AuthService, private http: HttpClient) {}
 
-  ngOnInit() { this.loadStats(); }
+  ngOnInit() { this.loadStats();}
 
   private loadStats() {
     this.http.get<any>(`${environment.apiUrl}/companies/me/usage`).subscribe({
