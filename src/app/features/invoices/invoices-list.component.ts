@@ -4,21 +4,20 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { NotificationService } from '../../core/services/notification.service';
 import { environment } from '../../../environments/environment';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
+interface InvoiceItem {
+  id: string; description: string; quantity: number; unitPrice: number;
+  taxRate: number; taxAmount: number; discount: number; total: number;
+  position: number; product?: { id: string; name: string; sku: string };
+}
 interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  prefix: string;
-  type: string;
-  status: string;
-  issueDate: string;
-  dueDate?: string;
-  subtotal: number;
-  taxAmount: number;
-  total: number;
-  dianCufe?: string;
-  dianStatus?: string;
-  customer: { id: string; name: string; documentNumber: string };
+  id: string; invoiceNumber: string; prefix: string; type: string; status: string;
+  issueDate: string; dueDate?: string; subtotal: number; taxAmount: number;
+  discountAmount?: number; total: number; notes?: string; currency?: string;
+  dianCufe?: string; dianStatus?: string; dianQrCode?: string;
+  customer: { id: string; name: string; documentNumber: string; email?: string; phone?: string; address?: string };
+  items?: InvoiceItem[];
   _count?: { items: number };
 }
 
@@ -154,7 +153,7 @@ interface InvoiceLine {
                     <span class="status-pill status-{{ inv.status.toLowerCase() }}">{{ statusLabel(inv.status) }}</span>
                   </td>
                   <td class="actions-cell">
-                    <button class="btn-icon" title="Ver" (click)="viewDetail(inv)">
+                    <button class="btn-icon" title="Ver detalle" (click)="viewDetail(inv)">
                       <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                     </button>
                     @if (inv.status === 'ACCEPTED_DIAN' || inv.status === 'SENT_DIAN') {
@@ -163,7 +162,7 @@ interface InvoiceLine {
                       </button>
                     }
                     @if (inv.status === 'DRAFT') {
-                      <button class="btn-icon" title="Enviar a DIAN" (click)="sendToDian(inv)">
+                      <button class="btn-icon btn-icon-blue" title="Enviar a DIAN" (click)="sendToDian(inv)">
                         <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
                       </button>
                     }
@@ -189,49 +188,360 @@ interface InvoiceLine {
       </div>
     </div>
 
-    <!-- ── Invoice Detail Drawer ─────────────────────────── -->
+    <!-- ═══════════════════════════════════════════════════════
+         DRAWER — Detalle de factura
+    ═══════════════════════════════════════════════════════ -->
     @if (detailInvoice()) {
       <div class="drawer-overlay" (click)="detailInvoice.set(null)">
         <div class="drawer" (click)="$event.stopPropagation()">
+
+          <!-- ── Drawer header ─────────────────────────────── -->
           <div class="drawer-header">
-            <div>
-              <div class="drawer-title">{{ detailInvoice()!.invoiceNumber }}</div>
-              <div class="drawer-sub">{{ typeLabel(detailInvoice()!.type) }} · {{ detailInvoice()!.issueDate | date:'dd/MM/yyyy' }}</div>
+            <div class="drawer-header-left">
+              <div class="drawer-inv-number">{{ detailInvoice()!.invoiceNumber }}</div>
+              <div class="drawer-inv-meta">
+                <span class="type-badge type-{{ detailInvoice()!.type.toLowerCase() }}">{{ typeLabel(detailInvoice()!.type) }}</span>
+                <span class="drawer-dot">·</span>
+                <span class="drawer-date">{{ detailInvoice()!.issueDate | date:'dd MMM yyyy' }}</span>
+              </div>
             </div>
-            <span class="status-pill status-{{ detailInvoice()!.status.toLowerCase() }}" style="margin-left:auto;margin-right:12px">
-              {{ statusLabel(detailInvoice()!.status) }}
-            </span>
-            <button class="drawer-close" (click)="detailInvoice.set(null)">
+            <div class="drawer-header-right">
+              <span class="status-pill status-{{ detailInvoice()!.status.toLowerCase() }}">
+                {{ statusLabel(detailInvoice()!.status) }}
+              </span>
+              <button class="drawer-close" (click)="detailInvoice.set(null)" title="Cerrar">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="17"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- ── Drawer body (scrollable) ──────────────────── -->
+          <div class="drawer-body">
+
+            <!-- Cliente -->
+            <div class="dw-section">
+              <div class="dw-section-title">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
+                Cliente
+              </div>
+              <div class="dw-card">
+                <div class="dw-client-name">{{ detailInvoice()!.customer.name }}</div>
+                <div class="dw-client-doc">{{ detailInvoice()!.customer.documentNumber }}</div>
+                @if (detailInvoice()!.customer.email) {
+                  <div class="dw-client-extra">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+                    {{ detailInvoice()!.customer.email }}
+                  </div>
+                }
+                @if (detailInvoice()!.customer.phone) {
+                  <div class="dw-client-extra">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+                    {{ detailInvoice()!.customer.phone }}
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Fechas + moneda (fila horizontal) -->
+            <div class="dw-section">
+              <div class="dw-section-title">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"/></svg>
+                Fechas
+              </div>
+              <div class="dw-dates-row">
+                <div class="dw-date-chip">
+                  <span class="dw-date-lbl">Emisión</span>
+                  <span class="dw-date-val">{{ detailInvoice()!.issueDate | date:'dd/MM/yyyy' }}</span>
+                </div>
+                <div class="dw-date-chip" [class.dw-date-chip-overdue]="isOverdue(detailInvoice()!)">
+                  <span class="dw-date-lbl">Vencimiento</span>
+                  <span class="dw-date-val">{{ detailInvoice()!.dueDate ? (detailInvoice()!.dueDate! | date:'dd/MM/yyyy') : 'Contado' }}</span>
+                </div>
+                <div class="dw-date-chip">
+                  <span class="dw-date-lbl">Moneda</span>
+                  <span class="dw-date-val">{{ detailInvoice()!.currency ?? 'COP' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ítems de la factura -->
+            <div class="dw-section">
+              <div class="dw-section-title">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg>
+                Ítems
+                @if (detailInvoice()!.items) {
+                  <span class="dw-badge-count">{{ detailInvoice()!.items!.length }}</span>
+                } @else {
+                  <span class="dw-badge-count">{{ detailInvoice()!._count?.items ?? 0 }}</span>
+                }
+              </div>
+
+              @if (detailInvoice()!.items && detailInvoice()!.items!.length > 0) {
+                <div class="dw-items-table">
+                  <!-- Table head -->
+                  <div class="dw-items-head">
+                    <span class="dwi-col-desc">Descripción</span>
+                    <span class="dwi-col-qty">Cant.</span>
+                    <span class="dwi-col-price">Precio</span>
+                    <span class="dwi-col-tax">IVA</span>
+                    <span class="dwi-col-total">Total</span>
+                  </div>
+                  <!-- Table rows -->
+                  @for (it of detailInvoice()!.items!; track it.id; let odd = $odd) {
+                    <div class="dw-items-row" [class.dw-items-row-odd]="odd">
+                      <div class="dwi-col-desc">
+                        <span class="dwi-desc-text">{{ it.description }}</span>
+                        @if (it.product) {
+                          <span class="dwi-sku">{{ it.product.sku }}</span>
+                        }
+                        @if (it.discount > 0) {
+                          <span class="dwi-disc">-{{ it.discount }}% dto.</span>
+                        }
+                      </div>
+                      <div class="dwi-col-qty">{{ it.quantity }}</div>
+                      <div class="dwi-col-price">{{ fmtCOP(it.unitPrice) }}</div>
+                      <div class="dwi-col-tax">{{ it.taxRate }}%</div>
+                      <div class="dwi-col-total">{{ fmtCOP(it.total) }}</div>
+                    </div>
+                  }
+                </div>
+              } @else if (!detailInvoice()!.items) {
+                <div class="dw-items-empty">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"/></svg>
+                  Cargando ítems...
+                </div>
+              }
+            </div>
+
+            <!-- Resumen de totales -->
+            <div class="dw-section">
+              <div class="dw-section-title">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z"/></svg>
+                Totales
+              </div>
+              <div class="dw-totals">
+                <div class="dw-total-row">
+                  <span>Subtotal</span>
+                  <span>{{ fmtCOP(detailInvoice()!.subtotal) }}</span>
+                </div>
+                <div class="dw-total-row">
+                  <span>IVA</span>
+                  <span>{{ fmtCOP(detailInvoice()!.taxAmount) }}</span>
+                </div>
+                @if ((detailInvoice()!.discountAmount ?? 0) > 0) {
+                  <div class="dw-total-row dw-total-disc">
+                    <span>Descuento</span>
+                    <span>-{{ fmtCOP(detailInvoice()!.discountAmount!) }}</span>
+                  </div>
+                }
+                <div class="dw-total-row dw-total-grand">
+                  <span>Total</span>
+                  <span>{{ fmtCOP(detailInvoice()!.total) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- DIAN (solo si hay info) -->
+            @if (detailInvoice()!.dianCufe || detailInvoice()!.dianStatus) {
+              <div class="dw-section">
+                <div class="dw-section-title">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+                  DIAN
+                </div>
+                <div class="dw-card dw-dian-card">
+                  <div class="dw-dian-row">
+                    <span class="dw-dian-lbl">Estado</span>
+                    <span class="dian-badge dian-{{ (detailInvoice()!.dianStatus ?? 'pendiente').toLowerCase() }}">
+                      {{ dianLabel(detailInvoice()!.dianStatus) }}
+                    </span>
+                  </div>
+                  @if (detailInvoice()!.dianCufe) {
+                    <div class="dw-dian-cufe">
+                      <span class="dw-dian-lbl">CUFE</span>
+                      <code class="dw-cufe-code">{{ detailInvoice()!.dianCufe }}</code>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Notas -->
+            @if (detailInvoice()!.notes) {
+              <div class="dw-section">
+                <div class="dw-section-title">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z"/></svg>
+                  Notas
+                </div>
+                <div class="dw-notes">{{ detailInvoice()!.notes }}</div>
+              </div>
+            }
+
+          </div><!-- /drawer-body -->
+
+          <!-- ── Drawer footer ──────────────────────────────── -->
+          <div class="drawer-footer">
+            <button class="btn btn-outline btn-sm" (click)="openPdfPreview(detailInvoice()!)" [disabled]="loadingPdf()">
+              @if (loadingPdf()) {
+                <span class="btn-spinner"></span> Generando...
+              } @else {
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"/></svg>
+                Vista previa
+              }
+            </button>
+            @if (detailInvoice()!.status === 'DRAFT') {
+              <button class="btn btn-secondary btn-sm" (click)="openEditModal(detailInvoice()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                Editar
+              </button>
+              <button class="btn btn-primary btn-sm" (click)="sendToDian(detailInvoice()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
+                Enviar a DIAN
+              </button>
+            }
+            @if (detailInvoice()!.status === 'ACCEPTED_DIAN' || detailInvoice()!.status === 'SENT_DIAN') {
+              <button class="btn btn-success btn-sm" (click)="markPaid(detailInvoice()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                Marcar pagada
+              </button>
+            }
+          </div>
+
+        </div><!-- /drawer -->
+      </div><!-- /drawer-overlay -->
+    }
+
+    <!-- ── PDF Preview Modal ──────────────────────────────── -->
+    @if (showPdfModal()) {
+      <div class="modal-overlay" (click)="closePdfModal()">
+        <div class="modal modal-pdf" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" style="color:#dc2626"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"/></svg>
+              Vista previa de factura
+            </h3>
+            <button class="modal-close" (click)="closePdfModal()">
               <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
             </button>
           </div>
-          <div class="drawer-body">
-            <div class="detail-section">
-              <div class="ds-title">Cliente</div>
-              <div class="ds-row"><span>Nombre</span><strong>{{ detailInvoice()!.customer.name }}</strong></div>
-              <div class="ds-row"><span>Documento</span><strong>{{ detailInvoice()!.customer.documentNumber }}</strong></div>
+          <div class="pdf-iframe-wrap">
+            @if (loadingPdf()) {
+              <div class="pdf-loading">
+                <div class="pdf-spinner"></div>
+                <p>Generando previsualización...</p>
+              </div>
+            } @else if (pdfUrl()) {
+              <iframe [src]="pdfUrl()!" class="pdf-iframe" frameborder="0"></iframe>
+            }
+          </div>
+          <div class="modal-footer">
+            <span class="pdf-note">⚠ Las facturas en borrador incluyen marca de agua</span>
+            <button class="btn btn-secondary" (click)="closePdfModal()">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ── Edit Draft Modal ───────────────────────────────── -->
+    @if (showEditModal()) {
+      <div class="modal-overlay" (click)="closeEditModal()">
+        <div class="modal modal-xl" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" style="color:#1a407e"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+              Editar borrador — {{ detailInvoice()?.invoiceNumber }}
+            </h3>
+            <button class="modal-close" (click)="closeEditModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Prefijo *</label>
+                <input type="text" [(ngModel)]="editInvoice.prefix" class="form-control" placeholder="FV"/>
+              </div>
+              <div class="form-group">
+                <label>Fecha emisión *</label>
+                <input type="date" [(ngModel)]="editInvoice.issueDate" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>Fecha vencimiento</label>
+                <input type="date" [(ngModel)]="editInvoice.dueDate" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>Moneda</label>
+                <select [(ngModel)]="editInvoice.currency" class="form-control">
+                  <option value="COP">COP</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
             </div>
-            <div class="detail-section">
-              <div class="ds-title">DIAN</div>
-              <div class="ds-row"><span>Estado DIAN</span><strong>{{ dianLabel(detailInvoice()!.dianStatus) }}</strong></div>
-              @if (detailInvoice()!.dianCufe) {
-                <div class="ds-row"><span>CUFE</span><code style="font-size:11px;word-break:break-all">{{ detailInvoice()!.dianCufe }}</code></div>
+            <div class="form-group">
+              <label>Cliente *</label>
+              <select [(ngModel)]="editInvoice.customerId" class="form-control">
+                <option value="">Seleccionar cliente...</option>
+                @for (c of customers(); track c.id) {
+                  <option [value]="c.id">{{ c.name }} — {{ c.documentNumber }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-section-title">
+              Líneas de factura
+              <button class="btn-add-line" (click)="addEditLine()">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+                Agregar línea
+              </button>
+            </div>
+            <div class="lines-table">
+              <div class="lines-header">
+                <span style="flex:3">Descripción</span>
+                <span style="flex:1">Cant.</span>
+                <span style="flex:1.5">Precio unit.</span>
+                <span style="flex:1">IVA %</span>
+                <span style="flex:1">Desc. %</span>
+                <span style="flex:1.5;text-align:right">Total</span>
+                <span style="width:32px"></span>
+              </div>
+              @for (line of editLines; track $index; let i = $index) {
+                <div class="lines-row">
+                  <div style="flex:3">
+                    <select [(ngModel)]="line.productId" (ngModelChange)="onEditProductSelect(i, $event)" class="form-control form-sm">
+                      <option value="">Descripción libre</option>
+                      @for (p of lineProducts(); track p.id) {
+                        <option [value]="p.id">{{ p.name }} ({{ p.sku }})</option>
+                      }
+                    </select>
+                    @if (!line.productId) {
+                      <input type="text" [(ngModel)]="line.description" class="form-control form-sm" style="margin-top:4px" placeholder="Descripción..."/>
+                    }
+                  </div>
+                  <input type="number" [(ngModel)]="line.quantity"  min="0.01" class="form-control form-sm" style="flex:1"/>
+                  <input type="number" [(ngModel)]="line.unitPrice" min="0"    class="form-control form-sm" style="flex:1.5"/>
+                  <input type="number" [(ngModel)]="line.taxRate"   min="0" max="100" class="form-control form-sm" style="flex:1"/>
+                  <input type="number" [(ngModel)]="line.discount"  min="0" max="100" class="form-control form-sm" style="flex:1"/>
+                  <span class="line-total" style="flex:1.5">{{ fmtCOP(lineTotal(line)) }}</span>
+                  <button class="btn-remove" (click)="removeEditLine(i)" [disabled]="editLines.length===1">×</button>
+                </div>
               }
             </div>
-            <div class="detail-section">
-              <div class="ds-title">Totales</div>
-              <div class="ds-row"><span>Subtotal</span><strong>{{ fmtCOP(detailInvoice()!.subtotal) }}</strong></div>
-              <div class="ds-row"><span>IVA</span><strong>{{ fmtCOP(detailInvoice()!.taxAmount) }}</strong></div>
-              <div class="ds-row total-row"><span>Total</span><strong>{{ fmtCOP(detailInvoice()!.total) }}</strong></div>
+
+            <div class="totals-box" style="margin-top:14px">
+              <div class="totals-row"><span>Subtotal</span><strong>{{ fmtCOP(editSubtotal()) }}</strong></div>
+              <div class="totals-row"><span>IVA</span><strong>{{ fmtCOP(editTax()) }}</strong></div>
+              <div class="totals-row totals-total"><span>Total</span><strong>{{ fmtCOP(editSubtotal() + editTax()) }}</strong></div>
+            </div>
+
+            <div class="form-group" style="margin-top:14px">
+              <label>Notas / observaciones</label>
+              <textarea [(ngModel)]="editInvoice.notes" class="form-control" rows="2" placeholder="Información adicional..."></textarea>
             </div>
           </div>
-          <div class="drawer-footer">
-            @if (detailInvoice()!.status === 'DRAFT') {
-              <button class="btn btn-primary" (click)="sendToDian(detailInvoice()!)">Enviar a DIAN</button>
-            }
-            @if (detailInvoice()!.status === 'ACCEPTED_DIAN') {
-              <button class="btn btn-primary" (click)="markPaid(detailInvoice()!)">Marcar pagada</button>
-            }
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeEditModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="savingEdit()" (click)="saveEdit()">
+              {{ savingEdit() ? 'Guardando...' : 'Guardar cambios' }}
+            </button>
           </div>
         </div>
       </div>
@@ -248,7 +558,6 @@ interface InvoiceLine {
             </button>
           </div>
           <div class="modal-body">
-            <!-- Header fields -->
             <div class="form-row-3">
               <div class="form-group">
                 <label>Tipo *</label>
@@ -280,8 +589,6 @@ interface InvoiceLine {
                 }
               </select>
             </div>
-
-            <!-- Line items -->
             <div class="form-section-title">
               Líneas de factura
               <button class="btn-add-line" (click)="addLine()">
@@ -321,14 +628,11 @@ interface InvoiceLine {
                 </div>
               }
             </div>
-
-            <!-- Totals summary -->
             <div class="totals-box">
               <div class="totals-row"><span>Subtotal</span><strong>{{ fmtCOP(subtotal()) }}</strong></div>
               <div class="totals-row"><span>IVA</span><strong>{{ fmtCOP(totalTax()) }}</strong></div>
               <div class="totals-row totals-total"><span>Total</span><strong>{{ fmtCOP(subtotal() + totalTax()) }}</strong></div>
             </div>
-
             <div class="form-group" style="margin-top:14px">
               <label>Notas / observaciones</label>
               <textarea [(ngModel)]="newInvoice.notes" class="form-control" rows="2" placeholder="Información adicional para el receptor..."></textarea>
@@ -386,10 +690,10 @@ interface InvoiceLine {
     .type-nota_credito { background:#fce7f3; color:#9d174d; }
     .type-nota_debito { background:#fef3c7; color:#92400e; }
     .dian-badge { padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:700; }
-    .dian-pendiente, .dian-undefined { background:#f3f4f6; color:#6b7280; }
+    .dian-pendiente,.dian-undefined,.dian-pending { background:#f3f4f6; color:#6b7280; }
     .dian-aceptado { background:#d1fae5; color:#065f46; }
     .dian-rechazado { background:#fee2e2; color:#991b1b; }
-    .status-pill { padding:3px 9px; border-radius:9999px; font-size:11px; font-weight:700; }
+    .status-pill { padding:3px 9px; border-radius:9999px; font-size:11px; font-weight:700; white-space:nowrap; }
     .status-draft { background:#f3f4f6; color:#6b7280; }
     .status-sent_dian { background:#dbeafe; color:#1e40af; }
     .status-accepted_dian { background:#d1fae5; color:#065f46; }
@@ -397,10 +701,11 @@ interface InvoiceLine {
     .status-paid { background:#d1fae5; color:#065f46; }
     .status-overdue { background:#fee2e2; color:#991b1b; }
     .status-cancelled { background:#f3f4f6; color:#6b7280; }
-    .actions-cell { text-align:right; }
+    .actions-cell { text-align:right; white-space:nowrap; }
     .btn-icon { background:none; border:none; padding:5px; border-radius:6px; cursor:pointer; color:#9ca3af; transition:all .15s; }
     .btn-icon:hover { background:#f0f4f9; color:#1a407e; }
     .btn-icon-success:hover { background:#d1fae5; color:#065f46; }
+    .btn-icon-blue:hover { background:#dbeafe; color:#1e40af; }
     .pagination { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid #f0f4f8; }
     .pagination-info { font-size:13px; color:#9ca3af; }
     .pagination-btns { display:flex; gap:4px; }
@@ -415,32 +720,102 @@ interface InvoiceLine {
     .sk { background:linear-gradient(90deg,#f0f4f8 25%,#e8eef8 50%,#f0f4f8 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:6px; height:14px; }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-    /* Drawer */
-    .drawer-overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:100; display:flex; justify-content:flex-end; }
-    .drawer { width:420px; max-width:100%; background:#fff; height:100%; display:flex; flex-direction:column; }
-    .drawer-header { display:flex; align-items:center; gap:10px; padding:18px 20px; border-bottom:1px solid #f0f4f8; flex-shrink:0; }
-    .drawer-title { font-weight:700; font-size:16px; color:#0c1c35; font-family:'Sora',sans-serif; }
-    .drawer-sub { font-size:12px; color:#9ca3af; margin-top:2px; }
-    .drawer-close { background:none; border:none; cursor:pointer; color:#9ca3af; padding:4px; border-radius:6px; flex-shrink:0; }
-    .drawer-body { flex:1; overflow-y:auto; padding:20px; }
-    .drawer-footer { padding:16px 20px; border-top:1px solid #f0f4f8; display:flex; gap:10px; flex-shrink:0; }
-    .detail-section { margin-bottom:20px; }
-    .ds-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:10px; }
-    .ds-row { display:flex; justify-content:space-between; align-items:flex-start; padding:7px 0; border-bottom:1px solid #f8fafc; font-size:13.5px; }
-    .ds-row span { color:#9ca3af; }
-    .ds-row strong { color:#0c1c35; text-align:right; max-width:240px; }
-    .total-row { background:#f8fafc; padding:10px 8px; border-radius:8px; font-size:15px; border:none !important; }
-    .total-row span, .total-row strong { color:#0c1c35; font-size:15px; }
+    /* ══════════════════════════════════════════
+       DRAWER — completamente rediseñado
+    ══════════════════════════════════════════ */
+    .drawer-overlay { position:fixed; inset:0; background:rgba(12,28,53,.4); z-index:100; display:flex; justify-content:flex-end; backdrop-filter:blur(2px); }
+    .drawer { width:460px; max-width:100vw; background:#fff; height:100%; display:flex; flex-direction:column; box-shadow:-8px 0 32px rgba(12,28,53,.12); }
 
-    /* Modal */
+    /* Header */
+    .drawer-header { display:flex; align-items:flex-start; justify-content:space-between; padding:20px 22px 16px; border-bottom:1px solid #f0f4f8; flex-shrink:0; gap:12px; }
+    .drawer-header-left { flex:1; min-width:0; }
+    .drawer-inv-number { font-family:'Sora',monospace; font-size:20px; font-weight:800; color:#0c1c35; letter-spacing:.5px; }
+    .drawer-inv-meta { display:flex; align-items:center; gap:6px; margin-top:5px; flex-wrap:wrap; }
+    .drawer-dot { color:#cbd5e1; font-size:12px; }
+    .drawer-date { font-size:12px; color:#94a3b8; }
+    .drawer-header-right { display:flex; align-items:center; gap:8px; flex-shrink:0; padding-top:2px; }
+    .drawer-close { background:none; border:none; cursor:pointer; color:#94a3b8; padding:5px; border-radius:7px; transition:all .15s; }
+    .drawer-close:hover { background:#f1f5f9; color:#374151; }
+
+    /* Body */
+    .drawer-body { flex:1; overflow-y:auto; padding:0; scrollbar-width:thin; scrollbar-color:#e2e8f0 transparent; }
+    .drawer-body::-webkit-scrollbar { width:4px; }
+    .drawer-body::-webkit-scrollbar-track { background:transparent; }
+    .drawer-body::-webkit-scrollbar-thumb { background:#e2e8f0; border-radius:2px; }
+
+    /* Sections */
+    .dw-section { padding:16px 22px; border-bottom:1px solid #f8fafc; }
+    .dw-section:last-child { border-bottom:none; }
+    .dw-section-title { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; margin-bottom:10px; }
+    .dw-section-title svg { flex-shrink:0; }
+    .dw-badge-count { background:#e8eef8; color:#1a407e; font-size:10px; font-weight:700; padding:1px 6px; border-radius:9999px; margin-left:4px; }
+
+    /* Cliente card */
+    .dw-card { background:#f8fafc; border:1px solid #f0f4f8; border-radius:10px; padding:12px 14px; }
+    .dw-client-name { font-size:14px; font-weight:700; color:#0c1c35; margin-bottom:2px; }
+    .dw-client-doc { font-size:12px; color:#64748b; font-family:monospace; margin-bottom:4px; }
+    .dw-client-extra { display:flex; align-items:center; gap:5px; font-size:12px; color:#64748b; margin-top:4px; }
+    .dw-client-extra svg { color:#94a3b8; flex-shrink:0; }
+
+    /* Fechas chips */
+    .dw-dates-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .dw-date-chip { background:#f8fafc; border:1px solid #f0f4f8; border-radius:8px; padding:8px 10px; text-align:center; }
+    .dw-date-chip-overdue { background:#fff5f5; border-color:#fecaca; }
+    .dw-date-chip-overdue .dw-date-val { color:#dc2626 !important; }
+    .dw-date-lbl { display:block; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; margin-bottom:3px; }
+    .dw-date-val { display:block; font-size:12.5px; font-weight:700; color:#1e293b; }
+
+    /* Items table */
+    .dw-items-table { border:1px solid #f0f4f8; border-radius:10px; overflow:hidden; }
+    .dw-items-head { display:grid; grid-template-columns:1fr 52px 90px 48px 80px; align-items:center; padding:7px 12px; background:#f8fafc; border-bottom:1px solid #f0f4f8; }
+    .dw-items-head span { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; }
+    .dw-items-row { display:grid; grid-template-columns:1fr 52px 90px 48px 80px; align-items:center; padding:9px 12px; border-bottom:1px solid #f8fafc; transition:background .1s; }
+    .dw-items-row:last-child { border-bottom:none; }
+    .dw-items-row:hover { background:#fafcff; }
+    .dw-items-row-odd { background:#fafcff; }
+    .dw-items-row-odd:hover { background:#f0f6ff; }
+    .dwi-col-desc { min-width:0; padding-right:8px; }
+    .dwi-col-qty,.dwi-col-tax { text-align:center; font-size:12.5px; color:#475569; }
+    .dwi-col-price { text-align:right; font-size:12px; color:#475569; padding-right:4px; }
+    .dwi-col-total { text-align:right; font-size:12.5px; font-weight:700; color:#0c1c35; }
+    .dwi-desc-text { display:block; font-size:13px; font-weight:600; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .dwi-sku { display:inline-block; font-size:10.5px; color:#94a3b8; font-family:monospace; margin-top:1px; }
+    .dwi-disc { display:inline-block; font-size:10px; font-weight:700; color:#f59e0b; background:#fef3c7; padding:1px 5px; border-radius:4px; margin-left:4px; }
+    .dw-items-empty { display:flex; align-items:center; gap:6px; font-size:12px; color:#94a3b8; padding:12px 0; }
+
+    /* Totales */
+    .dw-totals { background:#f8fafc; border:1px solid #f0f4f8; border-radius:10px; overflow:hidden; }
+    .dw-total-row { display:flex; justify-content:space-between; align-items:center; padding:8px 14px; border-bottom:1px solid #f0f4f8; font-size:13px; color:#64748b; }
+    .dw-total-row:last-child { border-bottom:none; }
+    .dw-total-disc { color:#f59e0b; }
+    .dw-total-grand { background:#fff; border-top:2px solid #e8eef8 !important; border-bottom:none !important; }
+    .dw-total-grand span:first-child { font-weight:700; font-size:14px; color:#0c1c35; }
+    .dw-total-grand span:last-child { font-family:'Sora',sans-serif; font-size:17px; font-weight:800; color:#1a407e; }
+
+    /* DIAN card */
+    .dw-dian-card { padding:10px 14px; }
+    .dw-dian-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+    .dw-dian-lbl { font-size:11px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; }
+    .dw-dian-cufe { margin-top:8px; }
+    .dw-cufe-code { display:block; font-size:10.5px; color:#475569; font-family:monospace; word-break:break-all; margin-top:4px; background:#f1f5f9; padding:6px 8px; border-radius:6px; line-height:1.5; }
+
+    /* Notas */
+    .dw-notes { font-size:13px; color:#475569; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; line-height:1.5; }
+
+    /* Footer */
+    .drawer-footer { padding:14px 22px; border-top:1px solid #f0f4f8; display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; }
+
+    /* ══════════════════════════════════════════
+       MODALS
+    ══════════════════════════════════════════ */
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; display:flex; align-items:center; justify-content:center; padding:16px; }
     .modal { background:#fff; border-radius:16px; width:100%; max-width:560px; max-height:90vh; display:flex; flex-direction:column; }
     .modal-xl { max-width:900px; }
-    .modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid #f0f4f8; flex-shrink:0; }
-    .modal-header h3 { font-family:'Sora',sans-serif; font-size:17px; font-weight:700; color:#0c1c35; margin:0; }
-    .modal-close { background:none; border:none; cursor:pointer; color:#9ca3af; padding:4px; border-radius:6px; }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid #f0f4f8; flex-shrink:0; gap:10px; }
+    .modal-header h3 { font-family:'Sora',sans-serif; font-size:17px; font-weight:700; color:#0c1c35; margin:0; display:flex; align-items:center; gap:8px; }
+    .modal-close { background:none; border:none; cursor:pointer; color:#9ca3af; padding:4px; border-radius:6px; flex-shrink:0; }
     .modal-body { flex:1; overflow-y:auto; padding:20px 24px; }
-    .modal-footer { display:flex; justify-content:flex-end; gap:10px; padding:16px 24px; border-top:1px solid #f0f4f8; flex-shrink:0; }
+    .modal-footer { display:flex; justify-content:flex-end; align-items:center; gap:10px; padding:16px 24px; border-top:1px solid #f0f4f8; flex-shrink:0; }
     .form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:12px; }
     .form-group { margin-bottom:12px; }
     .form-group label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:5px; }
@@ -463,12 +838,30 @@ interface InvoiceLine {
     .totals-total { border-top:1px solid #e5e7eb; margin-top:6px; padding-top:10px; font-size:15px; }
     .totals-total span, .totals-total strong { color:#0c1c35; font-weight:700; font-size:15px; }
     textarea.form-control { resize:vertical; }
-    .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; }
+
+    /* PDF modal */
+    .modal-pdf { max-width:900px; height:90vh; }
+    .pdf-iframe-wrap { flex:1; overflow:hidden; background:#e5e7eb; }
+    .pdf-iframe { width:100%; height:100%; border:none; }
+    .pdf-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:16px; color:#94a3b8; }
+    .pdf-spinner { width:40px; height:40px; border:4px solid #e2e8f0; border-top-color:#1a407e; border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .pdf-note { font-size:12px; color:#94a3b8; margin-right:auto; }
+
+    /* Buttons */
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; white-space:nowrap; }
+    .btn-sm { padding:7px 13px; font-size:13px; }
     .btn-primary { background:#1a407e; color:#fff; }
     .btn-primary:hover:not(:disabled) { background:#15336a; }
     .btn-primary:disabled { opacity:.6; cursor:default; }
     .btn-secondary { background:#f0f4f9; color:#374151; border:1px solid #dce6f0; }
-    .btn-secondary:hover { background:#e8eef8; }
+    .btn-secondary:hover:not(:disabled) { background:#e8eef8; }
+    .btn-success { background:#065f46; color:#fff; }
+    .btn-success:hover:not(:disabled) { background:#047857; }
+    .btn-outline { background:#fff; border:1px solid #dce6f0; color:#374151; }
+    .btn-outline:hover:not(:disabled) { background:#f8fafc; border-color:#1a407e; color:#1a407e; }
+    .btn-outline:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-spinner { width:13px; height:13px; border:2px solid rgba(0,0,0,.15); border-top-color:#1a407e; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
     .btn-sm { padding:7px 14px; font-size:13px; }
   `]
 })
@@ -486,8 +879,17 @@ export class InvoicesListComponent implements OnInit {
   page = signal(1);
   totalPages = signal(1);
 
-  detailInvoice = signal<Invoice | null>(null);
-  showModal = signal(false);
+  detailInvoice   = signal<Invoice | null>(null);
+  showModal       = signal(false);
+  showPdfModal    = signal(false);
+  showEditModal   = signal(false);
+  pdfUrl          = signal<SafeResourceUrl | null>(null);
+  objectUrl: string | null = null;
+  loadingPdf      = signal(false);
+  savingEdit      = signal(false);
+
+  editInvoice  = { customerId:'', prefix:'FV', issueDate:'', dueDate:'', notes:'', currency:'COP' };
+  editLines:   InvoiceLine[] = [];
 
   search = '';
   filterStatus = '';
@@ -506,13 +908,9 @@ export class InvoicesListComponent implements OnInit {
   lines: InvoiceLine[] = [this.newLine()];
   newInvoice = { type: 'VENTA', prefix: 'FV', issueDate: new Date().toISOString().slice(0, 10), dueDate: '', customerId: '', notes: '' };
 
-  constructor(private http: HttpClient, private notify: NotificationService) {}
+  constructor(private http: HttpClient, private notify: NotificationService, private sanitizer: DomSanitizer) {}
 
-  ngOnInit() {
-    this.load();
-    this.loadCustomers();
-    this.loadProducts();
-  }
+  ngOnInit() { this.load(); this.loadCustomers(); this.loadProducts(); }
 
   load() {
     this.loading.set(true);
@@ -522,7 +920,6 @@ export class InvoicesListComponent implements OnInit {
     if (this.filterType) params.type = this.filterType;
     if (this.filterFrom) params.from = this.filterFrom;
     if (this.filterTo) params.to = this.filterTo;
-
     this.http.get<any>(this.API, { params }).subscribe({
       next: r => {
         this.invoices.set(r.data ?? r);
@@ -536,128 +933,108 @@ export class InvoicesListComponent implements OnInit {
   }
 
   computeKpis(data: Invoice[]) {
-    const now = new Date();
-    const month = now.getMonth();
-    const year = now.getFullYear();
-    const thisMonth = data.filter(i => {
-      const d = new Date(i.issueDate);
-      return d.getMonth() === month && d.getFullYear() === year && i.status !== 'CANCELLED';
-    });
-    const total = thisMonth.reduce((s, i) => s + Number(i.total), 0);
-    const pending = data.filter(i => i.status === 'SENT_DIAN' || i.status === 'DRAFT').length;
-    const overdue = data.filter(i => i.status === 'OVERDUE').length;
-    const paid = data.filter(i => i.status === 'PAID').length;
+    const now = new Date(), m = now.getMonth(), y = now.getFullYear();
+    const thisMonth = data.filter(i => { const d = new Date(i.issueDate); return d.getMonth()===m && d.getFullYear()===y && i.status!=='CANCELLED'; });
     this.kpis = [
-      { label: 'Este mes', value: this.fmtCOP(total) },
-      { label: 'Pendientes DIAN', value: String(pending) },
-      { label: 'Vencidas', value: String(overdue) },
-      { label: 'Pagadas', value: String(paid) },
+      { label: 'Este mes', value: this.fmtCOP(thisMonth.reduce((s,i)=>s+Number(i.total),0)) },
+      { label: 'Pendientes DIAN', value: String(data.filter(i=>i.status==='SENT_DIAN'||i.status==='DRAFT').length) },
+      { label: 'Vencidas', value: String(data.filter(i=>i.status==='OVERDUE').length) },
+      { label: 'Pagadas', value: String(data.filter(i=>i.status==='PAID').length) },
     ];
   }
 
-  loadCustomers() {
-    this.http.get<any>(`${this.CUST_API}?limit=100`).subscribe({
-      next: r => this.customers.set(r.data ?? r),
-      error: () => {}
-    });
-  }
+  loadCustomers() { this.http.get<any>(`${this.CUST_API}?limit=100`).subscribe({ next: r => this.customers.set(r.data ?? r), error: ()=>{} }); }
+  loadProducts()  { this.http.get<any>(`${this.PROD_API}?limit=100&status=ACTIVE`).subscribe({ next: r => this.lineProducts.set(r.data ?? r), error: ()=>{} }); }
 
-  loadProducts() {
-    this.http.get<any>(`${this.PROD_API}?limit=100&status=ACTIVE`).subscribe({
-      next: r => this.lineProducts.set(r.data ?? r),
-      error: () => {}
-    });
-  }
-
-  onSearch() {
-    clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => { this.page.set(1); this.load(); }, 350);
-  }
-
+  onSearch() { clearTimeout(this.searchTimer); this.searchTimer = setTimeout(()=>{ this.page.set(1); this.load(); }, 350); }
   setPage(p: number) { this.page.set(p); this.load(); }
-
-  pageRange(): number[] {
-    const tp = this.totalPages(), cp = this.page();
-    const r: number[] = [];
-    for (let i = Math.max(1, cp - 2); i <= Math.min(tp, cp + 2); i++) r.push(i);
-    return r;
-  }
+  pageRange(): number[] { const tp=this.totalPages(),cp=this.page(),r:number[]=[]; for(let i=Math.max(1,cp-2);i<=Math.min(tp,cp+2);i++) r.push(i); return r; }
 
   openNewInvoice() {
     this.lines = [this.newLine()];
-    this.newInvoice = { type: 'VENTA', prefix: 'FV', issueDate: new Date().toISOString().slice(0, 10), dueDate: '', customerId: '', notes: '' };
+    this.newInvoice = { type:'VENTA', prefix:'FV', issueDate:new Date().toISOString().slice(0,10), dueDate:'', customerId:'', notes:'' };
     this.showModal.set(true);
   }
-
   closeModal() { this.showModal.set(false); }
-
   addLine() { this.lines.push(this.newLine()); }
-
   removeLine(i: number) { this.lines.splice(i, 1); }
 
   onProductSelect(i: number, productId: string) {
     if (!productId) return;
     const p = this.lineProducts().find(p => p.id === productId);
-    if (p) {
-      this.lines[i].description = p.name;
-      this.lines[i].unitPrice = Number(p.price);
-      this.lines[i].taxRate = Number(p.taxRate);
-    }
+    if (p) { this.lines[i].description = p.name; this.lines[i].unitPrice = Number(p.price); this.lines[i].taxRate = Number(p.taxRate); }
   }
+  calcLine(i: number) {}
 
-  calcLine(i: number) { /* reactive via template */ }
-
-  lineTotal(line: InvoiceLine): number {
-    const base = line.quantity * line.unitPrice * (1 - line.discount / 100);
-    return base + base * (line.taxRate / 100);
-  }
-
-  subtotal(): number {
-    return this.lines.reduce((s, l) => s + l.quantity * l.unitPrice * (1 - l.discount / 100), 0);
-  }
-
-  totalTax(): number {
-    return this.lines.reduce((s, l) => {
-      const base = l.quantity * l.unitPrice * (1 - l.discount / 100);
-      return s + base * (l.taxRate / 100);
-    }, 0);
-  }
+  lineTotal(line: InvoiceLine): number { const base = line.quantity * line.unitPrice * (1 - line.discount / 100); return base + base * (line.taxRate / 100); }
+  subtotal(): number { return this.lines.reduce((s,l)=>s+l.quantity*l.unitPrice*(1-l.discount/100),0); }
+  totalTax(): number { return this.lines.reduce((s,l)=>{ const b=l.quantity*l.unitPrice*(1-l.discount/100); return s+b*(l.taxRate/100); },0); }
 
   saveInvoice(sendDian: boolean) {
     if (!this.newInvoice.customerId) { this.notify.warning('Selecciona un cliente'); return; }
-    if (this.lines.some(l => !l.description && !l.productId)) { this.notify.warning('Todas las líneas necesitan descripción'); return; }
-
+    if (this.lines.some(l=>!l.description&&!l.productId)) { this.notify.warning('Todas las líneas necesitan descripción'); return; }
     this.saving.set(true);
-    const body = {
-      ...this.newInvoice,
-      dueDate: this.newInvoice.dueDate || undefined,
-      sendToDian: sendDian,
-      items: this.lines.map((l, i) => ({
-        productId: l.productId || undefined,
-        description: l.description,
-        quantity: l.quantity,
-        unitPrice: l.unitPrice,
-        taxRate: l.taxRate,
-        discount: l.discount,
-        position: i + 1,
-      }))
-    };
-
+    const body = { ...this.newInvoice, dueDate: this.newInvoice.dueDate || undefined, sendToDian: sendDian, items: this.lines.map((l,i)=>({ productId:l.productId||undefined, description:l.description, quantity:l.quantity, unitPrice:l.unitPrice, taxRate:l.taxRate, discount:l.discount, position:i+1 })) };
     this.http.post(this.API, body).subscribe({
-      next: () => {
-        this.notify.success(sendDian ? 'Factura creada y enviada a DIAN' : 'Factura guardada como borrador');
-        this.saving.set(false);
-        this.closeModal();
-        this.load();
-      },
+      next: () => { this.notify.success(sendDian ? 'Factura creada y enviada a DIAN' : 'Factura guardada como borrador'); this.saving.set(false); this.closeModal(); this.load(); },
       error: e => { this.saving.set(false); this.notify.error(e?.error?.message ?? 'Error al crear factura'); }
     });
   }
 
   viewDetail(inv: Invoice) {
-    this.http.get<Invoice>(`${this.API}/${inv.id}`).subscribe({
-      next: r => this.detailInvoice.set(r),
-      error: () => this.detailInvoice.set(inv)
+    this.http.get<any>(`${this.API}/${inv.id}`).subscribe({
+      next: r => this.detailInvoice.set(r.data ?? r),
+      error: () => this.detailInvoice.set(inv),
+    });
+  }
+
+  openPdfPreview(inv: Invoice) {
+    this.loadingPdf.set(true);
+    this.showPdfModal.set(true);
+    const token = localStorage.getItem('access_token') ?? '';
+    this.http.get(`${this.API}/${inv.id}/pdf`, { responseType:'blob', headers:{ Authorization:`Bearer ${token}` } }).subscribe({
+      next: blob => {
+        this.objectUrl = URL.createObjectURL(new Blob([blob], { type:'text/html' }));
+        this.pdfUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(this.objectUrl));
+        this.loadingPdf.set(false);
+      },
+      error: () => { this.loadingPdf.set(false); this.notify.error('Error al generar la vista previa'); },
+    });
+  }
+
+  closePdfModal() {
+    if (this.objectUrl) { URL.revokeObjectURL(this.objectUrl); this.objectUrl = null; }
+    this.pdfUrl.set(null);
+    this.showPdfModal.set(false);
+  }
+
+  openEditModal(inv: Invoice) {
+    this.editInvoice = { customerId:inv.customer.id, prefix:inv.prefix, issueDate:inv.issueDate?.slice(0,10)??'', dueDate:inv.dueDate?.slice(0,10)??'', notes:inv.notes??'', currency:inv.currency??'COP' };
+    this.editLines = (inv.items ?? []).map(it => ({ productId:it.product?.id??'', description:it.description, quantity:Number(it.quantity), unitPrice:Number(it.unitPrice), taxRate:Number(it.taxRate), discount:Number(it.discount) }));
+    if (this.editLines.length === 0) this.editLines = [this.newLine()];
+    this.showEditModal.set(true);
+  }
+  closeEditModal() { this.showEditModal.set(false); }
+  addEditLine() { this.editLines.push(this.newLine()); }
+  removeEditLine(i: number) { if (this.editLines.length > 1) this.editLines.splice(i, 1); }
+  onEditProductSelect(i: number, productId: string) {
+    if (!productId) return;
+    const p = this.lineProducts().find(p => p.id === productId);
+    if (p) { this.editLines[i].description = p.name; this.editLines[i].unitPrice = Number(p.price); this.editLines[i].taxRate = Number(p.taxRate); }
+  }
+  editSubtotal() { return this.editLines.reduce((s,l)=>s+l.quantity*l.unitPrice*(1-l.discount/100),0); }
+  editTax()      { return this.editLines.reduce((s,l)=>{ const b=l.quantity*l.unitPrice*(1-l.discount/100); return s+b*(l.taxRate/100); },0); }
+
+  saveEdit() {
+    const inv = this.detailInvoice();
+    if (!inv) return;
+    if (!this.editInvoice.customerId) { this.notify.warning('Selecciona un cliente'); return; }
+    if (this.editLines.some(l=>!l.description&&!l.productId)) { this.notify.warning('Todas las líneas necesitan descripción'); return; }
+    this.savingEdit.set(true);
+    const body = { customerId:this.editInvoice.customerId, prefix:this.editInvoice.prefix, issueDate:this.editInvoice.issueDate, dueDate:this.editInvoice.dueDate||undefined, notes:this.editInvoice.notes, currency:this.editInvoice.currency, items:this.editLines.map((l,i)=>({ productId:l.productId||undefined, description:l.description, quantity:l.quantity, unitPrice:l.unitPrice, taxRate:l.taxRate, discount:l.discount, position:i+1 })) };
+    this.http.patch<any>(`${this.API}/${inv.id}`, body).subscribe({
+      next: r => { this.notify.success('Factura actualizada'); this.savingEdit.set(false); this.showEditModal.set(false); this.detailInvoice.set(r.data ?? r); this.load(); },
+      error: e => { this.savingEdit.set(false); this.notify.error(e?.error?.message ?? 'Error al guardar'); },
     });
   }
 
@@ -675,30 +1052,11 @@ export class InvoicesListComponent implements OnInit {
     });
   }
 
-  isOverdue(inv: Invoice): boolean {
-    return inv.dueDate ? new Date(inv.dueDate) < new Date() && inv.status !== 'PAID' && inv.status !== 'CANCELLED' : false;
-  }
-
-  typeLabel(t: string): string {
-    return { VENTA: 'Venta', NOTA_CREDITO: 'N. Crédito', NOTA_DEBITO: 'N. Débito', SOPORTE_ADQUISICION: 'Soporte' }[t] ?? t;
-  }
-
-  statusLabel(s: string): string {
-    return { DRAFT: 'Borrador', SENT_DIAN: 'Enviada', ACCEPTED_DIAN: 'Aceptada', REJECTED_DIAN: 'Rechazada', PAID: 'Pagada', CANCELLED: 'Anulada', OVERDUE: 'Vencida' }[s] ?? s;
-  }
-
-  dianLabel(s?: string): string {
-    if (!s) return 'Pendiente';
-    return { ACEPTADO: 'Aceptado', RECHAZADO: 'Rechazado', PENDIENTE: 'Pendiente' }[s] ?? s;
-  }
-
-  fmtCOP(v: number): string {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
-  }
-
+  isOverdue(inv: Invoice): boolean { return inv.dueDate ? new Date(inv.dueDate) < new Date() && inv.status !== 'PAID' && inv.status !== 'CANCELLED' : false; }
+  typeLabel(t: string)   { return ({ VENTA:'Venta', NOTA_CREDITO:'N. Crédito', NOTA_DEBITO:'N. Débito', SOPORTE_ADQUISICION:'Soporte' } as any)[t] ?? t; }
+  statusLabel(s: string) { return ({ DRAFT:'Borrador', SENT_DIAN:'Enviada', ACCEPTED_DIAN:'Aceptada', REJECTED_DIAN:'Rechazada', PAID:'Pagada', CANCELLED:'Anulada', OVERDUE:'Vencida' } as any)[s] ?? s; }
+  dianLabel(s?: string)  { if (!s) return 'Pendiente'; return ({ ACEPTADO:'Aceptado', RECHAZADO:'Rechazado', PENDIENTE:'Pendiente' } as any)[s] ?? s; }
+  fmtCOP(v: number)      { return new Intl.NumberFormat('es-CO',{ style:'currency', currency:'COP', minimumFractionDigits:0 }).format(v); }
   min(a: number, b: number) { return Math.min(a, b); }
-
-  private newLine(): InvoiceLine {
-    return { productId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 19, discount: 0 };
-  }
+  private newLine(): InvoiceLine { return { productId:'', description:'', quantity:1, unitPrice:0, taxRate:19, discount:0 }; }
 }
