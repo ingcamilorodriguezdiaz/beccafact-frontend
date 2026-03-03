@@ -3,7 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap, catchError, EMPTY } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse } from '../../model/api-response.model';
 
 export interface User {
   id: string;
@@ -39,14 +38,15 @@ export interface AuthTokens {
 export class AuthService {
   private readonly API = `${environment.apiUrl}/auth`;
 
-  // Signals
-  private _user = signal<User | null>(null);
-  private _isLoading = signal(false);
+  private _user        = signal<User | null>(null);
+  private _isLoading   = signal(false);
+  private _authChecked = signal(false);
 
-  readonly user = this._user.asReadonly();
-  readonly isLoading = this._isLoading.asReadonly();
+  readonly user            = this._user.asReadonly();
+  readonly isLoading       = this._isLoading.asReadonly();
+  readonly authChecked     = this._authChecked.asReadonly();
   readonly isAuthenticated = computed(() => !!this._user());
-  readonly isSuperAdmin = computed(() => this._user()?.isSuperAdmin ?? false);
+  readonly isSuperAdmin    = computed(() => this._user()?.isSuperAdmin ?? false);
 
   readonly currentPlan = computed(() => {
     const subs = this._user()?.company?.subscriptions;
@@ -68,18 +68,45 @@ export class AuthService {
       return val !== undefined && val !== 'false' && val !== '0';
     });
 
-  constructor(private http: HttpClient, private router: Router) {
-    this.loadUserFromStorage();
+  // ── CONSTRUCTOR LIMPIO: sin HttpClient ──────────────────────
+  // La inicialización de sesión ocurre en APP_INITIALIZER (app.config.ts)
+  // para evitar la dependencia circular con authInterceptor.
+  constructor(private http: HttpClient, private router: Router) {}
+
+  /**
+   * Llamado desde APP_INITIALIZER — después de que HttpClient
+   * e interceptores ya están completamente construidos.
+   */
+  initSession(): Promise<void> {
+    const token = this.getAccessToken();
+    if (!token) {
+      this._authChecked.set(true);
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      this.loadProfile().subscribe({
+        next: () => {
+          this._authChecked.set(true);
+          resolve();
+        },
+        error: (err) => {
+          console.warn('Session init failed:', err?.status);
+          this.clearSession();
+          resolve(); // siempre resolver para no bloquear el arranque
+        },
+      });
+    });
   }
 
   login(email: string, password: string) {
     this._isLoading.set(true);
     return this.http.post<AuthTokens>(`${this.API}/login`, { email, password }).pipe(
-      tap(({accessToken,refreshToken,user}) => {
-        this.saveTokens(accessToken,refreshToken);
+      tap(({ accessToken, refreshToken, user }) => {
+        this.saveTokens(accessToken, refreshToken);
         this._user.set(user);
+        this._authChecked.set(true);
         this._isLoading.set(false);
-
         if (user.isSuperAdmin) {
           this.router.navigate(['/super-admin']);
         } else {
@@ -104,7 +131,7 @@ export class AuthService {
 
   refreshToken() {
     const refreshToken = this.getRefreshToken();
-    const userId = this._user()?.id;
+    const userId = this._user()?.id ?? this.getUserIdFromToken();
     if (!refreshToken || !userId) return EMPTY;
 
     return this.http
@@ -112,11 +139,7 @@ export class AuthService {
         userId,
         refreshToken,
       })
-      .pipe(
-        tap((res) => {
-          this.saveTokens(res.accessToken, res.refreshToken);
-        }),
-      );
+      .pipe(tap((res) => this.saveTokens(res.accessToken, res.refreshToken)));
   }
 
   loadProfile() {
@@ -147,14 +170,17 @@ export class AuthService {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     this._user.set(null);
+    this._authChecked.set(true);
   }
 
-  private loadUserFromStorage() {
-    const token = this.getAccessToken();
-    if (token) {
-      this.loadProfile().subscribe({
-        error: () => this.clearSession(),
-      });
+  private getUserIdFromToken(): string | null {
+    try {
+      const token = this.getAccessToken();
+      if (!token) return null;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload?.sub ?? payload?.id ?? null;
+    } catch {
+      return null;
     }
   }
 }

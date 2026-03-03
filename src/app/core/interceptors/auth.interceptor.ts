@@ -23,9 +23,8 @@ export const authInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,
   next: HttpHandlerFn,
 ) => {
-  const auth = inject(AuthService);
+  const auth  = inject(AuthService);
   const token = auth.getAccessToken();
-
   const authReq = token ? addToken(req, token) : req;
 
   return next(authReq).pipe(
@@ -47,7 +46,6 @@ function handle401Error(
   next: HttpHandlerFn,
   auth: AuthService,
 ) {
-  // If no refresh token available, logout immediately
   const refreshStream = auth.refreshToken();
   if (refreshStream === EMPTY) {
     auth.logout();
