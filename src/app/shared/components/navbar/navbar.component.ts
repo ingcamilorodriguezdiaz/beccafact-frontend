@@ -1,4 +1,4 @@
-import { Component, Input, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService, User } from '../../../core/auth/auth.service';
@@ -10,9 +10,15 @@ import { AuthService, User } from '../../../core/auth/auth.service';
   template: `
     <header class="navbar">
       <div class="navbar-left">
+        <!-- Hamburger (solo móvil) -->
+        <button class="hamburger-btn" (click)="toggleMobileSidebar.emit()" type="button" aria-label="Abrir menú">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
+            <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/>
+          </svg>
+        </button>
         <div class="breadcrumb">
-          <span class="breadcrumb-app">BeccaFact</span>
-          <svg viewBox="0 0 6 10" fill="none" width="6"><path d="M1 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="breadcrumb-app hide-mobile-sm">BeccaFact</span>
+          <svg class="hide-mobile-sm" viewBox="0 0 6 10" fill="none" width="6"><path d="M1 1l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="breadcrumb-page">{{ getPageTitle() }}</span>
         </div>
       </div>
@@ -24,7 +30,7 @@ import { AuthService, User } from '../../../core/auth/auth.service';
             <svg viewBox="0 0 16 16" fill="currentColor" width="13">
               <path d="M8 1.5a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5a.5.5 0 01.5-.5z"/>
             </svg>
-            Actualizar plan
+            <span class="upgrade-text">Actualizar plan</span>
           </a>
         }
 
@@ -78,23 +84,34 @@ import { AuthService, User } from '../../../core/auth/auth.service';
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 24px; background: #fff; border-bottom: 1px solid #dce6f0;
       height: 58px; position: sticky; top: 0; z-index: 100;
-      box-shadow: 0 1px 4px rgba(12,28,53,0.05);
+      box-shadow: 0 1px 4px rgba(12,28,53,0.05); gap: 12px;
     }
 
+    /* Hamburger (oculto en desktop) */
+    .hamburger-btn {
+      display: none; align-items: center; justify-content: center;
+      width: 36px; height: 36px; background: none; border: 1px solid #dce6f0;
+      border-radius: 8px; cursor: pointer; color: #3d5a80; flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .hamburger-btn:hover { background: #f0f4f9; color: #1a407e; }
+
     /* Breadcrumb */
+    .navbar-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
     .breadcrumb {
       display: flex; align-items: center; gap: 8px;
-      color: #9ab5cc; font-size: 14px;
+      color: #9ab5cc; font-size: 14px; min-width: 0;
     }
-    .breadcrumb svg { opacity: 0.5; }
-    .breadcrumb-app { color: #3d5a80; font-weight: 600; }
+    .breadcrumb svg { opacity: 0.5; flex-shrink: 0; }
+    .breadcrumb-app { color: #3d5a80; font-weight: 600; white-space: nowrap; }
     .breadcrumb-page {
       font-family: var(--font-d, 'Sora', sans-serif);
       font-weight: 600; color: #0c1c35; font-size: 15px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
     /* Right */
-    .navbar-right { display: flex; align-items: center; gap: 10px; }
+    .navbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
     /* Upgrade pill */
     .upgrade-pill {
@@ -112,7 +129,7 @@ import { AuthService, User } from '../../../core/auth/auth.service';
       width: 36px; height: 36px; border-radius: 9px;
       background: none; border: 1px solid #dce6f0;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      color: #7ea3cc; position: relative; transition: all 0.15s;
+      color: #7ea3cc; position: relative; transition: all 0.15s; flex-shrink: 0;
     }
     .icon-btn:hover { background: #f0f4f9; color: #1a407e; border-color: #c0d4e8; }
     .notif-dot {
@@ -166,11 +183,30 @@ import { AuthService, User } from '../../../core/auth/auth.service';
     .dropdown-item.danger:hover { background: #fee2e2; }
 
     .hide-mobile { display: flex; flex-direction: column; }
-    @media (max-width: 640px) { .hide-mobile { display: none; } }
+
+    /* ── Responsive ──────────────────────────────────── */
+    @media (max-width: 768px) {
+      .navbar { padding: 0 14px; }
+      .hamburger-btn { display: flex; }
+    }
+    @media (max-width: 640px) {
+      .hide-mobile { display: none !important; }
+      .upgrade-text { display: none; }
+      .upgrade-pill { padding: 7px 10px; }
+    }
+    @media (max-width: 480px) {
+      .navbar { padding: 0 10px; height: 52px; gap: 8px; }
+      .breadcrumb-page { font-size: 14px; }
+    }
+    .hide-mobile-sm { display: initial; }
+    @media (max-width: 480px) {
+      .hide-mobile-sm { display: none; }
+    }
   `],
 })
 export class NavbarComponent {
   @Input() user!: User;
+  @Output() toggleMobileSidebar = new EventEmitter<void>();
   menuOpen = signal(false);
 
   constructor(private auth: AuthService) {}

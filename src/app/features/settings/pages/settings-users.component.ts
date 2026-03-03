@@ -177,6 +177,14 @@ interface UserEntry {
     .btn-primary:disabled { opacity:.6; cursor:default; }
     .btn-secondary { background:#f0f4f9; color:#374151; border:1px solid #dce6f0; }
     .btn-secondary:hover { background:#e8eef8; }
+    @media (max-width: 640px) {
+      .page-header { flex-direction: column; align-items: stretch; gap: 10px; }
+      .btn-primary { width: 100%; justify-content: center; }
+      .table-card { overflow-x: auto; }
+      .data-table { min-width: 480px; }
+      .modal-overlay { align-items: flex-end; }
+      .modal { width: 100%; border-radius: 18px 18px 0 0; max-height: 92dvh; overflow-y: auto; }
+    }
   `]
 })
 export class SettingsUsersComponent implements OnInit {

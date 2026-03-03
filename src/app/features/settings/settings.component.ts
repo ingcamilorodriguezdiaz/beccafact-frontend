@@ -32,7 +32,19 @@ import { AuthService } from '../../core/auth/auth.service';
     .settings-link { padding: 9px 12px; border-radius: 8px; text-decoration: none; color: #374151; font-size: 14px; font-weight: 500; }
     .settings-link:hover { background: #f1f5f9; }
     .settings-link.active { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
-    .settings-content { flex: 1; }
+    .settings-content { flex: 1; min-width: 0; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .settings-layout { flex-direction: column; gap: 16px; }
+      .settings-sidebar { width: 100%; }
+      nav { flex-direction: row; flex-wrap: wrap; gap: 4px; }
+      .settings-link { padding: 7px 14px; font-size: 13px; }
+    }
+    @media (max-width: 480px) {
+      nav { gap: 4px; }
+      .settings-link { flex: 1; text-align: center; min-width: fit-content; }
+    }
   `],
 })
 export class SettingsComponent {

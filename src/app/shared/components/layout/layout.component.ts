@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal, HostListener } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -27,14 +27,24 @@ interface UsageData {
     <div class="layout">
       <app-global-loader />
       @if (auth.user()) {
+        <!-- Overlay para cerrar sidebar en móvil -->
+        @if (mobileSidebarOpen()) {
+          <div class="sidebar-overlay" (click)="mobileSidebarOpen.set(false)"></div>
+        }
+
         <app-sidebar
           [isSuperAdmin]="auth.isSuperAdmin()"
           [user]="auth.user()!"
           [plan]="auth.currentPlan()"
           [usagePercent]="usagePercent()"
+          [mobileOpen]="mobileSidebarOpen()"
+          (mobileClose)="mobileSidebarOpen.set(false)"
         />
         <div class="main-area">
-          <app-navbar [user]="auth.user()!" />
+          <app-navbar
+            [user]="auth.user()!"
+            (toggleMobileSidebar)="toggleMobileSidebar()"
+          />
           <main class="content">
             <router-outlet />
           </main>
@@ -49,17 +59,28 @@ interface UsageData {
       background: var(--bg, #f0f4f9);
     }
     .main-area {
-      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
     }
     .content {
       flex: 1; overflow-y: auto; padding: 28px;
     }
+    /* Overlay móvil */
+    .sidebar-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      z-index: 199; display: none;
+    }
     @media (max-width: 768px) {
-      .content { padding: 16px; }
+      .content { padding: 16px 14px; }
+      .sidebar-overlay { display: block; }
+    }
+    @media (max-width: 480px) {
+      .content { padding: 12px 10px; }
     }
   `],
 })
 export class LayoutComponent {
+  mobileSidebarOpen = signal(false);
+
  private http = inject(HttpClient);
   protected auth = inject(AuthService);
   /**
@@ -85,5 +106,9 @@ export class LayoutComponent {
       catchError(() => of(null)),
     ),
   );
+
+  toggleMobileSidebar() {
+    this.mobileSidebarOpen.update(value => !value);
+  }
 
 }

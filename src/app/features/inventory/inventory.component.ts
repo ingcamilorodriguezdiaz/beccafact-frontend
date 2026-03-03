@@ -454,7 +454,36 @@ interface ProductForm {
     .btn-danger { background:#dc2626; color:#fff; }
     .btn-danger:hover:not(:disabled) { background:#b91c1c; }
     .btn-sm { padding:7px 14px; font-size:13px; }
-  `]
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .page-header { flex-direction: column; align-items: stretch; gap: 10px; }
+      .header-actions { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+      .header-actions .btn { flex: 1; justify-content: center; min-width: 120px; }
+      .filters-bar { flex-wrap: wrap; }
+      .search-wrap { width: 100%; max-width: 100%; flex: unset; }
+      .view-toggle { margin-left: 0; }
+      /* Product grid adaptado */
+      .product-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+    }
+    @media (max-width: 640px) {
+      .table-card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .data-table { min-width: 560px; }
+      /* Modal bottom-sheet */
+      .modal-overlay { align-items: flex-end; }
+      .modal {
+        width: 100%; max-width: 100%;
+        border-radius: 18px 18px 0 0;
+        max-height: 92dvh; overflow-y: auto;
+      }
+      .product-grid { grid-template-columns: 1fr 1fr; }
+      .pagination { flex-direction: column; gap: 8px; align-items: center; }
+    }
+    @media (max-width: 420px) {
+      .product-grid { grid-template-columns: 1fr; }
+      .alert-bar { flex-wrap: wrap; }
+      .alert-link { margin-left: 0; }
+    }`]
 })
 export class InventoryComponent implements OnInit {
   private readonly API = `${environment.apiUrl}/products`;

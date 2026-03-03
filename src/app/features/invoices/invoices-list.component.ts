@@ -443,8 +443,8 @@ interface InvoiceLine {
 
     <!-- ── Edit Draft Modal ───────────────────────────────── -->
     @if (showEditModal()) {
-      <div class="modal-overlay" (click)="closeEditModal()">
-        <div class="modal modal-xl" (click)="$event.stopPropagation()">
+      <div class="modal-overlay modal-invoice-overlay" (click)="closeEditModal()">
+        <div class="modal modal-xl modal-invoice" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>
               <svg viewBox="0 0 20 20" fill="currentColor" width="16" style="color:#1a407e"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
@@ -505,7 +505,8 @@ interface InvoiceLine {
               </div>
               @for (line of editLines; track $index; let i = $index) {
                 <div class="lines-row">
-                  <div style="flex:3">
+                  <div class="line-cell line-cell--desc">
+                    <span class="line-label">Descripción</span>
                     <select [(ngModel)]="line.productId" (ngModelChange)="onEditProductSelect(i, $event)" class="form-control form-sm">
                       <option value="">Descripción libre</option>
                       @for (p of lineProducts(); track p.id) {
@@ -516,11 +517,26 @@ interface InvoiceLine {
                       <input type="text" [(ngModel)]="line.description" class="form-control form-sm" style="margin-top:4px" placeholder="Descripción..."/>
                     }
                   </div>
-                  <input type="number" [(ngModel)]="line.quantity"  min="0.01" class="form-control form-sm" style="flex:1"/>
-                  <input type="number" [(ngModel)]="line.unitPrice" min="0"    class="form-control form-sm" style="flex:1.5"/>
-                  <input type="number" [(ngModel)]="line.taxRate"   min="0" max="100" class="form-control form-sm" style="flex:1"/>
-                  <input type="number" [(ngModel)]="line.discount"  min="0" max="100" class="form-control form-sm" style="flex:1"/>
-                  <span class="line-total" style="flex:1.5">{{ fmtCOP(lineTotal(line)) }}</span>
+                  <div class="line-cell line-cell--qty">
+                    <span class="line-label">Cant.</span>
+                    <input type="number" [(ngModel)]="line.quantity" min="0.01" class="form-control form-sm"/>
+                  </div>
+                  <div class="line-cell line-cell--price">
+                    <span class="line-label">Precio unit.</span>
+                    <input type="number" [(ngModel)]="line.unitPrice" min="0" class="form-control form-sm"/>
+                  </div>
+                  <div class="line-cell line-cell--tax">
+                    <span class="line-label">IVA %</span>
+                    <input type="number" [(ngModel)]="line.taxRate" min="0" max="100" class="form-control form-sm"/>
+                  </div>
+                  <div class="line-cell line-cell--disc">
+                    <span class="line-label">Desc. %</span>
+                    <input type="number" [(ngModel)]="line.discount" min="0" max="100" class="form-control form-sm"/>
+                  </div>
+                  <div class="line-cell line-cell--total">
+                    <span class="line-label">Total</span>
+                    <span class="line-total">{{ fmtCOP(lineTotal(line)) }}</span>
+                  </div>
                   <button class="btn-remove" (click)="removeEditLine(i)" [disabled]="editLines.length===1">×</button>
                 </div>
               }
@@ -549,8 +565,8 @@ interface InvoiceLine {
 
     <!-- ── New Invoice Modal ──────────────────────────────── -->
     @if (showModal()) {
-      <div class="modal-overlay" (click)="closeModal()">
-        <div class="modal modal-xl" (click)="$event.stopPropagation()">
+      <div class="modal-overlay modal-invoice-overlay" (click)="closeModal()">
+        <div class="modal modal-xl modal-invoice" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Nueva factura electrónica</h3>
             <button class="modal-close" (click)="closeModal()">
@@ -608,7 +624,8 @@ interface InvoiceLine {
               </div>
               @for (line of lines; track $index; let i = $index) {
                 <div class="lines-row">
-                  <div style="flex:3">
+                  <div class="line-cell line-cell--desc">
+                    <span class="line-label">Descripción</span>
                     <select [(ngModel)]="line.productId" (ngModelChange)="onProductSelect(i, $event)" class="form-control form-sm">
                       <option value="">Descripción libre</option>
                       @for (p of lineProducts(); track p.id) {
@@ -619,11 +636,26 @@ interface InvoiceLine {
                       <input type="text" [(ngModel)]="line.description" class="form-control form-sm" style="margin-top:4px" placeholder="Descripción del ítem..."/>
                     }
                   </div>
-                  <input type="number" [(ngModel)]="line.quantity" (ngModelChange)="calcLine(i)" min="0.01" class="form-control form-sm" style="flex:1"/>
-                  <input type="number" [(ngModel)]="line.unitPrice" (ngModelChange)="calcLine(i)" min="0" class="form-control form-sm" style="flex:1.5"/>
-                  <input type="number" [(ngModel)]="line.taxRate" (ngModelChange)="calcLine(i)" min="0" max="100" class="form-control form-sm" style="flex:1"/>
-                  <input type="number" [(ngModel)]="line.discount" (ngModelChange)="calcLine(i)" min="0" max="100" class="form-control form-sm" style="flex:1"/>
-                  <span class="line-total" style="flex:1.5">{{ fmtCOP(lineTotal(line)) }}</span>
+                  <div class="line-cell line-cell--qty">
+                    <span class="line-label">Cant.</span>
+                    <input type="number" [(ngModel)]="line.quantity" (ngModelChange)="calcLine(i)" min="0.01" class="form-control form-sm"/>
+                  </div>
+                  <div class="line-cell line-cell--price">
+                    <span class="line-label">Precio unit.</span>
+                    <input type="number" [(ngModel)]="line.unitPrice" (ngModelChange)="calcLine(i)" min="0" class="form-control form-sm"/>
+                  </div>
+                  <div class="line-cell line-cell--tax">
+                    <span class="line-label">IVA %</span>
+                    <input type="number" [(ngModel)]="line.taxRate" (ngModelChange)="calcLine(i)" min="0" max="100" class="form-control form-sm"/>
+                  </div>
+                  <div class="line-cell line-cell--disc">
+                    <span class="line-label">Desc. %</span>
+                    <input type="number" [(ngModel)]="line.discount" (ngModelChange)="calcLine(i)" min="0" max="100" class="form-control form-sm"/>
+                  </div>
+                  <div class="line-cell line-cell--total">
+                    <span class="line-label">Total</span>
+                    <span class="line-total">{{ fmtCOP(lineTotal(line)) }}</span>
+                  </div>
                   <button class="btn-remove" (click)="removeLine(i)" [disabled]="lines.length === 1">×</button>
                 </div>
               }
@@ -863,6 +895,150 @@ interface InvoiceLine {
     .btn-outline:disabled { opacity:.5; cursor:not-allowed; }
     .btn-spinner { width:13px; height:13px; border:2px solid rgba(0,0,0,.15); border-top-color:#1a407e; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
     .btn-sm { padding:7px 14px; font-size:13px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       RESPONSIVE — Modal de factura (Nueva / Editar)
+       Estrategia: bottom-sheet en móvil, scroll interno completo
+    ═══════════════════════════════════════════════════════════ */
+
+    /* ── Labels de línea: ocultos en desktop, visibles en móvil ── */
+    .line-label { display: none; }
+
+    /* ── Celdas de línea: flex en desktop ── */
+    .line-cell { display: contents; }
+
+    /* ── Líneas: fila horizontal en desktop ── */
+    .lines-row {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 8px 12px; border-top: 1px solid #f0f4f8;
+    }
+    .line-cell--desc  { flex: 3; }
+    .line-cell--qty   { flex: 1; }
+    .line-cell--price { flex: 1.5; }
+    .line-cell--tax   { flex: 1; }
+    .line-cell--disc  { flex: 1; }
+    .line-cell--total { flex: 1.5; display: flex; align-items: center; justify-content: flex-end; }
+
+    /* Sobreescribir display:contents para desktop */
+    @media (min-width: 601px) {
+      .line-cell { display: flex; flex-direction: column; }
+    }
+
+    /* ── TABLET: reducir padding, 2 cols en form-row-3 ── */
+    @media (max-width: 768px) {
+      .modal-invoice { max-width: 100% !important; }
+      .modal-body  { padding: 16px 18px; }
+      .modal-header { padding: 14px 18px; }
+      .modal-footer { padding: 12px 18px; gap: 8px; }
+      .form-row-3 { grid-template-columns: 1fr 1fr !important; gap: 10px; }
+    }
+
+    /* ── MÓVIL: bottom-sheet completo ── */
+    @media (max-width: 600px) {
+      /* Bottom-sheet */
+      .modal-invoice-overlay {
+        align-items: flex-end !important;
+        padding: 0 !important;
+      }
+      .modal-invoice {
+        border-radius: 20px 20px 0 0 !important;
+        max-height: 96vh !important;
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+
+      /* Header compacto */
+      .modal-header { padding: 14px 16px 12px; }
+      .modal-header h3 { font-size: 15px; }
+
+      /* Body */
+      .modal-body { padding: 14px 16px 8px; }
+
+      /* 1 columna en form-row-3 */
+      .form-row-3 { grid-template-columns: 1fr 1fr !important; gap: 8px; }
+
+      /* Footer — botones apilados */
+      .modal-footer {
+        padding: 10px 16px 16px;
+        flex-direction: column-reverse !important;
+        gap: 8px !important;
+        align-items: stretch !important;
+      }
+      .modal-footer .btn {
+        width: 100% !important;
+        justify-content: center !important;
+      }
+
+      /* ── Líneas de factura: tarjetas apiladas ── */
+      .lines-header { display: none !important; }
+
+      .lines-row {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        grid-template-rows: auto auto auto auto !important;
+        gap: 8px !important;
+        padding: 12px 12px 14px !important;
+        border-top: 1px solid #f0f4f8;
+        border-radius: 8px;
+        background: #fafcff;
+        margin: 6px 0;
+        position: relative;
+      }
+
+      /* Reactivar las celdas como bloques normales */
+      .line-cell {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px;
+      }
+
+      /* Posicionamiento en el grid 2 cols */
+      .line-cell--desc  { grid-column: 1 / -1; }   /* Descripción: fila completa */
+      .line-cell--qty   { grid-column: 1; }
+      .line-cell--price { grid-column: 2; }
+      .line-cell--tax   { grid-column: 1; }
+      .line-cell--disc  { grid-column: 2; }
+      .line-cell--total {
+        grid-column: 1 / -1;
+        justify-content: flex-end !important;
+        border-top: 1px dashed #e5e7eb;
+        padding-top: 6px;
+        margin-top: 2px;
+      }
+
+      /* Mostrar labels en móvil */
+      .line-label {
+        display: block !important;
+        font-size: 10px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.06em;
+        color: #9ca3af; margin-bottom: 2px;
+      }
+
+      /* Botón eliminar: esquina superior derecha de la tarjeta */
+      .btn-remove {
+        position: absolute !important;
+        top: 10px; right: 10px;
+        background: #fee2e2 !important;
+        color: #dc2626 !important;
+        border-radius: 6px;
+        width: 26px; height: 26px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 16px; padding: 0 !important;
+      }
+      .btn-remove:disabled { background: #f1f5f9 !important; color: #cbd5e1 !important; }
+
+      /* Totales más compactos */
+      .totals-box { padding: 12px 14px; }
+      .totals-row { font-size: 13px; }
+      .totals-total { font-size: 14px !important; }
+      .totals-total span, .totals-total strong { font-size: 14px !important; }
+    }
+
+    /* ── MUY PEQUEÑO (320px) ── */
+    @media (max-width: 400px) {
+      .form-row-3 { grid-template-columns: 1fr !important; }
+      .modal-header h3 { font-size: 14px; }
+    }
   `]
 })
 export class InvoicesListComponent implements OnInit {

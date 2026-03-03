@@ -258,7 +258,24 @@ const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov
     .rank-value { font-size:13px; font-weight:700; color:#0c1c35; flex-shrink:0; }
     .rank-value-orange { color:#d97706; }
     .rank-empty { padding:24px; text-align:center; color:#9ca3af; font-size:13px; }
-  `]
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+      .charts-row { grid-template-columns: 1fr !important; }
+      .bottom-row { grid-template-columns: 1fr !important; }
+    }
+    @media (max-width: 640px) {
+      .page-header { flex-direction: column; align-items: stretch; gap: 10px; }
+      .period-selector { flex-wrap: wrap; gap: 8px; }
+      .period-selector select,
+      .period-selector input { flex: 1; min-width: 110px; }
+      .kpi-grid { grid-template-columns: 1fr 1fr !important; gap: 10px; }
+      .kpi-val { font-size: 22px !important; }
+    }
+    @media (max-width: 480px) {
+      .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+    }`]
 })
 export class ReportsComponent implements OnInit {
   private readonly API = `${environment.apiUrl}/reports`;

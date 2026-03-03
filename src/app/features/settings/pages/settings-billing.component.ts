@@ -70,6 +70,9 @@ interface Plan {
     .plan-price span { font-size: 14px; font-weight: 500; color: #64748b; }
     .plan-desc { font-size: 13px; color: #64748b; margin-bottom: 16px; }
     .btn-upgrade { width: 100%; background: #1d4ed8; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    @media (max-width: 640px) {
+      .plans-grid { grid-template-columns: 1fr !important; }
+    }
   `],
 })
 export class SettingsBillingComponent implements OnInit {

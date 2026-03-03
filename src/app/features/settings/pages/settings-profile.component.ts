@@ -72,6 +72,12 @@ import { environment } from '../../../../environments/environment';
     .hint { font-size: 12px; color: #94a3b8; margin-top: 4px; display: block; }
     .form-footer { display: flex; justify-content: flex-end; margin-top: 8px; }
     .btn-primary { background: #1d4ed8; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    @media (max-width: 640px) {
+      .form-row { flex-direction: column !important; gap: 0; }
+      .form-row .form-group { width: 100%; }
+      .form-footer { justify-content: stretch; }
+      .btn-primary { width: 100%; }
+    }
   `],
 })
 export class SettingsProfileComponent implements OnInit {

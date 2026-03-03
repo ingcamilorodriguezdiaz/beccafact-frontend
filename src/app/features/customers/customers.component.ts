@@ -55,7 +55,7 @@ interface CustomerForm {
         </button>
       </div>
 
-      <!-- Filters -->
+      <!-- Filters + View Toggle -->
       <div class="filters-bar">
         <div class="search-wrap">
           <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
@@ -67,25 +67,139 @@ interface CustomerForm {
           <option value="true">Activos</option>
           <option value="false">Inactivos</option>
         </select>
+
+        <!-- View Toggle -->
+        <div class="view-toggle">
+          <button [class.active]="viewMode() === 'table'" (click)="viewMode.set('table')" title="Vista tabla">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z"/></svg>
+          </button>
+          <button [class.active]="viewMode() === 'grid'" (click)="viewMode.set('grid')" title="Vista cuadrícula">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          </button>
+        </div>
       </div>
 
-      <!-- Table -->
-      <div class="table-card">
+      <!-- ══ TABLE VIEW ══ -->
+      @if (viewMode() === 'table') {
+        <div class="table-card">
+          @if (loading()) {
+            <div class="table-loading">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="skeleton-row">
+                  <div class="sk sk-avatar"></div>
+                  <div class="sk sk-line" style="width:180px"></div>
+                  <div class="sk sk-line" style="width:120px"></div>
+                  <div class="sk sk-line" style="width:140px"></div>
+                  <div class="sk sk-line" style="width:80px"></div>
+                  <div class="sk sk-line" style="width:60px"></div>
+                </div>
+              }
+            </div>
+          } @else if (customers().length === 0) {
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+                <path stroke-linecap="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>
+              </svg>
+              <p>{{ search ? 'Sin resultados para "' + search + '"' : 'No hay clientes registrados aún' }}</p>
+              @if (!search) {
+                <button class="btn btn-primary btn-sm" (click)="openModal()">Crear primer cliente</button>
+              }
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Documento</th>
+                  <th>Contacto</th>
+                  <th>Ciudad</th>
+                  <th>Crédito</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of customers(); track c.id) {
+                  <tr>
+                    <td>
+                      <div class="customer-cell">
+                        <div class="cust-avatar">{{ initials(c.name) }}</div>
+                        <div>
+                          <div class="cust-name">{{ c.name }}</div>
+                          @if (c.email) { <div class="cust-email">{{ c.email }}</div> }
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="doc-badge">{{ c.documentType }}</span>
+                      <span class="doc-number">{{ c.documentNumber }}</span>
+                    </td>
+                    <td class="text-muted">{{ c.phone || '—' }}</td>
+                    <td class="text-muted">{{ c.city || '—' }}</td>
+                    <td>
+                      @if (c.creditDays) {
+                        <span class="credit-badge">{{ c.creditDays }}d / {{ formatCurrency(c.creditLimit) }}</span>
+                      } @else {
+                        <span class="text-muted">Contado</span>
+                      }
+                    </td>
+                    <td>
+                      <span class="status-badge" [class.active]="c.isActive" [class.inactive]="!c.isActive">
+                        {{ c.isActive ? 'Activo' : 'Inactivo' }}
+                      </span>
+                    </td>
+                    <td class="actions-cell">
+                      <button class="btn-icon" title="Ver detalle" (click)="viewDetail(c)">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                      </button>
+                      <button class="btn-icon" title="Editar" (click)="openModal(c)">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                      </button>
+                      <button class="btn-icon btn-icon-danger" title="Eliminar" (click)="confirmDelete(c)">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            @if (totalPages() > 1) {
+              <div class="pagination">
+                <span class="pagination-info">{{ (page()-1)*limit + 1 }}–{{ min(page()*limit, total()) }} de {{ total() }}</span>
+                <div class="pagination-btns">
+                  <button class="btn-page" [disabled]="page() === 1" (click)="setPage(page()-1)">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"/></svg>
+                  </button>
+                  @for (p of pageRange(); track p) {
+                    <button class="btn-page" [class.active]="p === page()" (click)="setPage(p)">{{ p }}</button>
+                  }
+                  <button class="btn-page" [disabled]="page() === totalPages()" (click)="setPage(page()+1)">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"/></svg>
+                  </button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      <!-- ══ GRID VIEW ══ -->
+      @if (viewMode() === 'grid') {
         @if (loading()) {
-          <div class="table-loading">
-            @for (i of [1,2,3,4,5]; track i) {
-              <div class="skeleton-row">
-                <div class="sk sk-avatar"></div>
-                <div class="sk sk-line" style="width:180px"></div>
-                <div class="sk sk-line" style="width:120px"></div>
-                <div class="sk sk-line" style="width:140px"></div>
-                <div class="sk sk-line" style="width:80px"></div>
-                <div class="sk sk-line" style="width:60px"></div>
+          <div class="customer-grid">
+            @for (i of [1,2,3,4,5,6]; track i) {
+              <div class="customer-card customer-card--skeleton">
+                <div class="sk sk-avatar cc-sk-avatar"></div>
+                <div class="sk sk-line" style="width:70%;margin:10px auto 6px"></div>
+                <div class="sk sk-line" style="width:50%;margin:0 auto 14px"></div>
+                <div class="sk sk-line" style="width:90%"></div>
+                <div class="sk sk-line" style="width:80%;margin-top:6px"></div>
               </div>
             }
           </div>
         } @else if (customers().length === 0) {
-          <div class="empty-state">
+          <div class="empty-state-grid">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
               <path stroke-linecap="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>
             </svg>
@@ -95,67 +209,73 @@ interface CustomerForm {
             }
           </div>
         } @else {
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Documento</th>
-                <th>Contacto</th>
-                <th>Ciudad</th>
-                <th>Crédito</th>
-                <th>Estado</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (c of customers(); track c.id) {
-                <tr>
-                  <td>
-                    <div class="customer-cell">
-                      <div class="cust-avatar">{{ initials(c.name) }}</div>
-                      <div>
-                        <div class="cust-name">{{ c.name }}</div>
-                        @if (c.email) { <div class="cust-email">{{ c.email }}</div> }
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="doc-badge">{{ c.documentType }}</span>
-                    <span class="doc-number">{{ c.documentNumber }}</span>
-                  </td>
-                  <td class="text-muted">{{ c.phone || '—' }}</td>
-                  <td class="text-muted">{{ c.city || '—' }}</td>
-                  <td>
-                    @if (c.creditDays) {
-                      <span class="credit-badge">{{ c.creditDays }}d / {{ formatCurrency(c.creditLimit) }}</span>
-                    } @else {
-                      <span class="text-muted">Contado</span>
-                    }
-                  </td>
-                  <td>
-                    <span class="status-badge" [class.active]="c.isActive" [class.inactive]="!c.isActive">
-                      {{ c.isActive ? 'Activo' : 'Inactivo' }}
-                    </span>
-                  </td>
-                  <td class="actions-cell">
-                    <button class="btn-icon" title="Ver detalle" (click)="viewDetail(c)">
-                      <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                    </button>
-                    <button class="btn-icon" title="Editar" (click)="openModal(c)">
-                      <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
-                    </button>
-                    <button class="btn-icon btn-icon-danger" title="Eliminar" (click)="confirmDelete(c)">
-                      <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"/></svg>
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+          <div class="customer-grid">
+            @for (c of customers(); track c.id) {
+              <div class="customer-card" [class.customer-card--inactive]="!c.isActive">
 
-          <!-- Pagination -->
+                <!-- Status badge top-right -->
+                <span class="cc-status status-badge" [class.active]="c.isActive" [class.inactive]="!c.isActive">
+                  {{ c.isActive ? 'Activo' : 'Inactivo' }}
+                </span>
+
+                <!-- Avatar + nombre -->
+                <div class="cc-top">
+                  <div class="cc-avatar">{{ initials(c.name) }}</div>
+                  <div class="cc-name">{{ c.name }}</div>
+                  <div class="cc-doc">
+                    <span class="doc-badge">{{ c.documentType }}</span>
+                    {{ c.documentNumber }}
+                  </div>
+                </div>
+
+                <!-- Info rows -->
+                <div class="cc-info">
+                  @if (c.email) {
+                    <div class="cc-info-row">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+                      <span>{{ c.email }}</span>
+                    </div>
+                  }
+                  @if (c.phone) {
+                    <div class="cc-info-row">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+                      <span>{{ c.phone }}</span>
+                    </div>
+                  }
+                  @if (c.city) {
+                    <div class="cc-info-row">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/></svg>
+                      <span>{{ c.city }}</span>
+                    </div>
+                  }
+                  @if (c.creditDays) {
+                    <div class="cc-info-row cc-credit">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/></svg>
+                      <span>{{ c.creditDays }}d · {{ formatCurrency(c.creditLimit) }}</span>
+                    </div>
+                  }
+                </div>
+
+                <!-- Actions -->
+                <div class="cc-actions">
+                  <button class="btn btn-sm btn-secondary" (click)="viewDetail(c)">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    Ver
+                  </button>
+                  <button class="btn btn-sm btn-secondary" (click)="openModal(c)">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                    Editar
+                  </button>
+                  <button class="btn-icon btn-icon-danger" title="Eliminar" (click)="confirmDelete(c)">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"/></svg>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
           @if (totalPages() > 1) {
-            <div class="pagination">
+            <div class="pagination pagination--standalone">
               <span class="pagination-info">{{ (page()-1)*limit + 1 }}–{{ min(page()*limit, total()) }} de {{ total() }}</span>
               <div class="pagination-btns">
                 <button class="btn-page" [disabled]="page() === 1" (click)="setPage(page()-1)">
@@ -171,7 +291,8 @@ interface CustomerForm {
             </div>
           }
         }
-      </div>
+      }
+
     </div>
 
     <!-- ── Detail Drawer ───────────────────────────────────── -->
@@ -316,29 +437,95 @@ interface CustomerForm {
     .page-subtitle { font-size:13px; color:#7ea3cc; margin:0; }
 
     /* Filters */
-    .filters-bar { display:flex; gap:12px; margin-bottom:16px; }
-    .search-wrap { flex:1; position:relative; max-width:420px; }
+    .filters-bar { display:flex; gap:12px; margin-bottom:16px; align-items:center; flex-wrap:wrap; }
+    .search-wrap { flex:1; position:relative; max-width:420px; min-width:180px; }
     .search-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; }
     .search-input { width:100%; padding:8px 12px 8px 36px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; background:#fff; }
     .search-input:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,0.08); }
     .filter-select { padding:8px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; background:#fff; color:#374151; }
 
-    /* Table card */
+    /* View toggle — idéntico a inventario */
+    .view-toggle { display:flex; gap:2px; border:1px solid #dce6f0; border-radius:8px; overflow:hidden; margin-left:auto; flex-shrink:0; }
+    .view-toggle button { padding:7px 10px; background:#fff; border:none; cursor:pointer; color:#9ca3af; transition:all .15s; }
+    .view-toggle button:hover { background:#f0f4f9; color:#1a407e; }
+    .view-toggle button.active { background:#1a407e; color:#fff; }
+
+    /* ── TABLE VIEW ─────────────────────────────────────────── */
     .table-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; }
     .data-table { width:100%; border-collapse:collapse; }
     .data-table th { padding:11px 16px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; background:#f8fafc; border-bottom:1px solid #dce6f0; text-align:left; }
     .data-table td { padding:12px 16px; font-size:13.5px; color:#374151; border-bottom:1px solid #f0f4f8; vertical-align:middle; }
     .data-table tr:last-child td { border-bottom:none; }
     .data-table tr:hover td { background:#fafcff; }
-
-    /* Customer cell */
     .customer-cell { display:flex; align-items:center; gap:10px; }
     .cust-avatar { width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,#1a407e,#00c6a0); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:'Sora',sans-serif; }
     .cust-name { font-weight:600; color:#0c1c35; font-size:14px; }
     .cust-email { font-size:12px; color:#9ca3af; margin-top:1px; }
 
-    /* Badges */
-    .doc-badge { background:#e8eef8; color:#1a407e; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; margin-right:6px; }
+    /* ── GRID VIEW ──────────────────────────────────────────── */
+    .customer-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+      gap:14px;
+    }
+    .customer-card {
+      background:#fff; border:1px solid #dce6f0; border-radius:12px;
+      padding:18px 16px 14px; position:relative;
+      transition:box-shadow .18s, transform .18s;
+      display:flex; flex-direction:column; gap:0;
+    }
+    .customer-card:hover { box-shadow:0 4px 20px rgba(26,64,126,.1); transform:translateY(-2px); }
+    .customer-card--inactive { opacity:.7; border-color:#f0d4d4; background:#fdfafa; }
+    .customer-card--skeleton { pointer-events:none; padding:18px 16px; }
+
+    /* Status top-right */
+    .cc-status { position:absolute; top:12px; right:12px; }
+
+    /* Avatar + nombre centrado */
+    .cc-top { display:flex; flex-direction:column; align-items:center; text-align:center; padding:6px 0 12px; }
+    .cc-avatar {
+      width:52px; height:52px; border-radius:12px;
+      background:linear-gradient(135deg,#1a407e,#00c6a0);
+      color:#fff; font-size:16px; font-weight:700;
+      display:flex; align-items:center; justify-content:center;
+      font-family:'Sora',sans-serif; margin-bottom:10px;
+    }
+    .cc-name { font-size:14px; font-weight:700; color:#0c1c35; line-height:1.3; margin-bottom:4px; }
+    .cc-doc { font-size:11.5px; color:#9ca3af; display:flex; align-items:center; gap:5px; justify-content:center; }
+
+    /* Info rows */
+    .cc-info {
+      border-top:1px solid #f0f4f8; padding-top:10px; margin-bottom:12px;
+      display:flex; flex-direction:column; gap:5px; flex:1;
+    }
+    .cc-info-row {
+      display:flex; align-items:center; gap:6px;
+      font-size:12px; color:#64748b;
+    }
+    .cc-info-row svg { color:#94a3b8; flex-shrink:0; }
+    .cc-info-row span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .cc-credit { color:#065f46; font-weight:600; }
+    .cc-credit svg { color:#059669; }
+
+    /* Card actions */
+    .cc-actions { display:flex; gap:6px; align-items:center; border-top:1px solid #f0f4f8; padding-top:10px; }
+    .cc-actions .btn { flex:1; justify-content:center; }
+
+    /* Standalone pagination (grid view) */
+    .pagination--standalone {
+      background:#fff; border:1px solid #dce6f0; border-radius:12px;
+      margin-top:4px;
+    }
+
+    /* Empty state grid */
+    .empty-state-grid {
+      grid-column:1/-1; padding:64px 24px; text-align:center; color:#9ca3af;
+      background:#fff; border:1px solid #dce6f0; border-radius:12px;
+    }
+    .empty-state-grid p { margin:16px 0; font-size:14px; }
+
+    /* ── Shared badges ─────────────────────────────────────── */
+    .doc-badge { background:#e8eef8; color:#1a407e; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; margin-right:4px; }
     .doc-number { font-family:monospace; font-size:13px; color:#374151; }
     .text-muted { color:#9ca3af; }
     .credit-badge { font-size:12px; color:#065f46; background:#d1fae5; padding:3px 8px; border-radius:6px; font-weight:600; }
@@ -356,7 +543,7 @@ interface CustomerForm {
     .pagination { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid #f0f4f8; }
     .pagination-info { font-size:13px; color:#9ca3af; }
     .pagination-btns { display:flex; gap:4px; }
-    .btn-page { padding:5px 10px; border:1px solid #dce6f0; border-radius:6px; background:#fff; font-size:13px; cursor:pointer; color:#374151; min-width:32px; }
+    .btn-page { padding:5px 10px; border:1px solid #dce6f0; border-radius:6px; background:#fff; font-size:13px; cursor:pointer; color:#374151; min-width:32px; display:flex; align-items:center; justify-content:center; }
     .btn-page:hover:not(:disabled) { background:#f0f4f9; border-color:#1a407e; color:#1a407e; }
     .btn-page.active { background:#1a407e; border-color:#1a407e; color:#fff; }
     .btn-page:disabled { opacity:.4; cursor:default; }
@@ -366,9 +553,10 @@ interface CustomerForm {
     .skeleton-row { display:flex; align-items:center; gap:16px; padding:12px 0; border-bottom:1px solid #f0f4f8; }
     .sk { background:linear-gradient(90deg,#f0f4f8 25%,#e8eef8 50%,#f0f4f8 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:6px; height:14px; }
     .sk-avatar { width:34px; height:34px; border-radius:8px; flex-shrink:0; }
+    .cc-sk-avatar { width:52px; height:52px; border-radius:12px; display:block; margin:0 auto 10px; }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-    /* Empty state */
+    /* Empty state table */
     .empty-state { padding:64px 24px; text-align:center; color:#9ca3af; }
     .empty-state p { margin:16px 0; font-size:14px; }
 
@@ -379,7 +567,7 @@ interface CustomerForm {
     .drawer-avatar { width:44px; height:44px; border-radius:10px; background:linear-gradient(135deg,#1a407e,#00c6a0); color:#fff; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:'Sora',sans-serif; }
     .drawer-title { font-weight:700; font-size:16px; color:#0c1c35; }
     .drawer-sub { font-size:12px; color:#9ca3af; margin-top:2px; }
-    .drawer-close { margin-left:auto; background:none; border:none; cursor:pointer; color:#9ca3af; padding:4px; border-radius:6px; }
+    .drawer-close { margin-left:auto; background:none; border:none; cursor:pointer; color:#9ca3af; padding:4px; border-radius:6px; flex-shrink:0; }
     .drawer-close:hover { background:#f0f4f8; color:#374151; }
     .drawer-body { flex:1; overflow-y:auto; padding:20px; }
     .drawer-footer { padding:16px 20px; border-top:1px solid #f0f4f8; }
@@ -411,7 +599,7 @@ interface CustomerForm {
     .form-group label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:6px; }
     .form-control { width:100%; padding:9px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; background:#fff; color:#0c1c35; box-sizing:border-box; }
     .form-control:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,0.08); }
-    .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; }
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; white-space:nowrap; }
     .btn-primary { background:#1a407e; color:#fff; }
     .btn-primary:hover:not(:disabled) { background:#15336a; }
     .btn-primary:disabled { opacity:.6; cursor:default; }
@@ -420,6 +608,33 @@ interface CustomerForm {
     .btn-danger { background:#dc2626; color:#fff; }
     .btn-danger:hover:not(:disabled) { background:#b91c1c; }
     .btn-sm { padding:7px 14px; font-size:13px; }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .page-header { flex-direction:column; align-items:stretch; gap:10px; }
+      .page-header .btn { width:100%; justify-content:center; }
+      .filters-bar { gap:8px; }
+      .search-wrap { max-width:100%; flex:1 1 100%; }
+      .view-toggle { margin-left:0; }
+      .drawer { width:100%; max-width:100%; }
+      .customer-grid { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; }
+    }
+    @media (max-width: 640px) {
+      .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .data-table { min-width:520px; }
+      .drawer-overlay { align-items:flex-end; justify-content:stretch; }
+      .drawer { width:100%; height:90dvh; border-radius:18px 18px 0 0; }
+      .modal-overlay { align-items:flex-end; padding:0; }
+      .modal { border-radius:20px 20px 0 0; max-height:95dvh; max-width:100%; }
+      .modal-footer { flex-direction:column-reverse; gap:8px; }
+      .modal-footer .btn { width:100%; justify-content:center; }
+      .form-row { grid-template-columns:1fr; }
+      .pagination { flex-direction:column; gap:8px; align-items:center; }
+      .customer-grid { grid-template-columns:repeat(2, 1fr); gap:8px; }
+    }
+    @media (max-width: 400px) {
+      .customer-grid { grid-template-columns:1fr; }
+    }
   `]
 })
 export class CustomersComponent implements OnInit {
@@ -432,6 +647,8 @@ export class CustomersComponent implements OnInit {
   page = signal(1);
   totalPages = signal(1);
   readonly limit = 20;
+
+  viewMode = signal<'table' | 'grid'>('table');
 
   search = '';
   filterActive = '';
@@ -455,7 +672,7 @@ export class CustomersComponent implements OnInit {
     if (this.filterActive !== '') params.isActive = this.filterActive;
 
     this.http.get<PaginatedResponse<Customer>>(`${this.API}`, { params }).subscribe({
-      next: ({data:customers,total,totalPages}) => {
+      next: ({data: customers, total, totalPages}) => {
         this.customers.set(customers ?? []);
         this.total.set(total ?? 0);
         this.totalPages.set(totalPages ?? 1);

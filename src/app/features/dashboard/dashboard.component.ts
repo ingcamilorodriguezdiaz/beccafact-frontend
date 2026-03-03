@@ -366,6 +366,29 @@ import { DashboardMetrics } from '../../model/dashboard-metrics.model';
       from { opacity: 0; transform: translateY(14px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+
+    /* ── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .welcome-bar { flex-direction: column; align-items: stretch; }
+      .upgrade-banner { max-width: 100%; }
+      .uc-meters { flex-direction: column; gap: 16px; }
+      .meter { min-width: 0; }
+    }
+    @media (max-width: 640px) {
+      .welcome-name { font-size: 20px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .stat-card { padding: 14px; }
+      .sc-val { font-size: 26px; }
+      .qs-grid { flex-direction: column; }
+      .qa-card { flex-direction: row; }
+    }
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .kpi-strip { grid-template-columns: 1fr 1fr; gap: 8px; }
+    }
   `],
 })
 export class DashboardComponent implements OnInit {

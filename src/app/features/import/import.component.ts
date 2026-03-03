@@ -474,6 +474,18 @@ interface ImportJob {
     /* Empty */
     .empty-history { text-align: center; padding: 36px; color: #c8d8eb; }
     .empty-history p { margin-top: 12px; font-size: 14px; color: #9ab5cc; }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .page-header { flex-direction: column; align-items: stretch; gap: 10px; }
+      .import-layout { flex-direction: column !important; }
+      .import-sidebar { width: 100% !important; }
+    }
+    @media (max-width: 640px) {
+      .upload-zone { padding: 28px 16px; }
+      .table-card { overflow-x: auto; }
+      .history-table { min-width: 480px; }
+    }
   `],
 })
 export class ImportComponent implements OnDestroy {

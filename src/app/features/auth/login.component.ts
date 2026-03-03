@@ -305,6 +305,11 @@ import { AuthService } from '../../core/auth/auth.service';
       .login-form-panel { flex: 1; }
       .lf-inner { padding: 40px 28px; }
     }
+    @media (max-width: 480px) {
+      .lf-inner { padding: 28px 18px; }
+      .lf-title { font-size: 22px; }
+      .login-container { height: auto; min-height: 100dvh; }
+    }
   `],
 })
 export class LoginComponent {

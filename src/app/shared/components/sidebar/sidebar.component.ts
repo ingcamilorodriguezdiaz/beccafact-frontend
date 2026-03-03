@@ -1,5 +1,5 @@
 import {
-  Component, Input, signal, computed, inject,
+  Component, Input, Output, EventEmitter, signal, computed, inject, OnChanges, SimpleChanges,
 } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -51,7 +51,7 @@ const FEATURE_LABELS: Record<string, string> = {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
-    <aside class="sidebar" [class.collapsed]="collapsed()">
+    <aside class="sidebar" [class.collapsed]="collapsed()" [class.mobile-open]="mobileOpen">
 
       <!-- ── Brand ──────────────────────────────────────────── -->
       <div class="sidebar-brand">
@@ -68,6 +68,12 @@ const FEATURE_LABELS: Record<string, string> = {
             <span class="brand-sub">ERP Cloud</span>
           </div>
         }
+        <!-- Botón cerrar en móvil -->
+        <button class="mobile-close-btn" (click)="mobileClose.emit()" type="button" aria-label="Cerrar menú">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+          </svg>
+        </button>
         <button class="collapse-btn" (click)="toggleCollapse()" type="button"
                 [title]="collapsed() ? 'Expandir sidebar' : 'Colapsar sidebar'">
           @if (collapsed()) {
@@ -115,7 +121,8 @@ const FEATURE_LABELS: Record<string, string> = {
                [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
                class="nav-item"
                [class.nav-item--collapsed]="collapsed()"
-               [title]="collapsed() ? item.label : ''">
+               [title]="collapsed() ? item.label : ''"
+               (click)="mobileClose.emit()">
               <span class="nav-icon">
                 <ng-container *ngTemplateOutlet="iconTpl; context: { id: item.iconId }"/>
               </span>
@@ -400,6 +407,38 @@ const FEATURE_LABELS: Record<string, string> = {
     .usage-dot { width: 8px; height: 8px; border-radius: 50%; background: #f87171; animation: pulse-dot 2s ease infinite; }
     @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
 
+    /* ── Mobile close button (solo visible en móvil) ────────── */
+    .mobile-close-btn {
+      display: none; align-items: center; justify-content: center;
+      width: 32px; height: 32px; background: rgba(255,255,255,0.08);
+      border: none; border-radius: 7px; color: #7ea3cc; cursor: pointer;
+      margin-left: auto; flex-shrink: 0; transition: background 0.15s;
+    }
+    .mobile-close-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+    /* ── Responsive: en móvil el sidebar se oculta y desliza ── */
+    @media (max-width: 768px) {
+      :host { position: fixed; top: 0; left: 0; height: 100%; z-index: 200; }
+      .sidebar {
+        position: fixed; top: 0; left: 0; height: 100%;
+        transform: translateX(-100%);
+        transition: transform 0.27s cubic-bezier(0.4,0,0.2,1);
+        width: 260px !important;
+        box-shadow: 4px 0 32px rgba(0,0,0,0.35);
+      }
+      .sidebar.mobile-open {
+        transform: translateX(0);
+      }
+      .sidebar.collapsed { width: 260px !important; }
+      .collapse-btn { display: none; }
+      .mobile-close-btn { display: flex; }
+
+      /* En móvil nunca mostrar colapsado */
+      .nav-item.nav-item--collapsed { justify-content: flex-start !important; padding: 9px 10px !important; gap: 10px !important; }
+      .sidebar.collapsed .sidebar-brand { justify-content: flex-start; padding: 0 12px; }
+      .sidebar.collapsed .company-info { justify-content: flex-start; padding: 12px 14px; }
+    }
+
     /* ── Upgrade toast ──────────────────────────────────────── */
     .upgrade-toast {
       position: fixed; bottom: 24px; left: 64px; z-index: 9999;
@@ -431,6 +470,8 @@ export class SidebarComponent {
   @Input() plan: PlanInfo = null;
   @Input() isSuperAdmin = false;
   @Input() usagePercent = 0;
+  @Input() mobileOpen = false;
+  @Output() mobileClose = new EventEmitter<void>();
 
   collapsed        = signal(false);
   showUpgradeToast = signal(false);
