@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/auth/auth.service';
 import { environment } from '../../../environments/environment';
+import { DashboardMetrics } from '../../model/dashboard-metrics.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -92,7 +93,7 @@ import { environment } from '../../../environments/environment';
             </div>
             <a routerLink="/customers" class="sc-link">Gestionar →</a>
           </div>
-          <div class="sc-val">{{ stats().totalCustomers }}</div>
+          <div class="sc-val">{{ stats().activeCustomers }}</div>
           <div class="sc-label">Clientes activos</div>
           <div class="sc-delta up">+5 este mes</div>
         </div>
@@ -105,7 +106,7 @@ import { environment } from '../../../environments/environment';
               </div>
               <a routerLink="/inventory" class="sc-link">Ver inventario →</a>
             </div>
-            <div class="sc-val">{{ stats().totalProducts }}</div>
+            <div class="sc-val">{{ stats().activeCatalog }}</div>
             <div class="sc-label">Productos en catálogo</div>
             <div class="sc-delta neutral">Catálogo activo</div>
           </div>
@@ -371,7 +372,7 @@ export class DashboardComponent implements OnInit {
   currentPeriod = new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
 
   usageData   = signal({ docsUsed: 0, productsUsed: 0 });
-  stats       = signal({ invoicesThisMonth: 0, totalCustomers: 0, totalProducts: 0, lowStock: 0 });
+  stats       = signal({ invoicesThisMonth: 0, totalCustomers: 0, totalProducts: 0, lowStock: 0 ,activeCatalog:0,activeCustomers:0});
 
   docLimit = computed(() => {
     const v = this.auth.planFeatures()['max_documents_per_month'];
@@ -416,17 +417,18 @@ export class DashboardComponent implements OnInit {
       error: () => this.usageData.set({ docsUsed: 127, productsUsed: 234 }),
     });
 
-    this.http.get<any>(`${environment.apiUrl}/reports/dashboard`).subscribe({
-      next: (res) => {
-        const d = res?.data;
-        if (d) this.stats.set({
-          invoicesThisMonth: d.invoices?.current ?? 0,
-          totalCustomers: d.customers ?? 0,
-          totalProducts: d.productCount ?? 0,
-          lowStock: d.lowStock ?? 0,
+    this.http.get<DashboardMetrics>(`${environment.apiUrl}/reports/dashboard`).subscribe({
+      next: (metricts) => {
+        if (metricts) this.stats.set({
+          invoicesThisMonth: metricts.invoices?.current ?? 0,
+          totalCustomers: metricts.topCustomers.length ?? 0,
+          totalProducts: metricts.topProducts.length ?? 0,
+          lowStock: metricts.productCount ?? 0,
+          activeCatalog: metricts.activeCatalog ?? 0,
+          activeCustomers: metricts.activeCustomers ?? 0,
         });
       },
-      error: () => this.stats.set({ invoicesThisMonth: 127, totalCustomers: 48, totalProducts: 234, lowStock: 3 }),
+      error: () => this.stats.set({ invoicesThisMonth: 127, totalCustomers: 48, totalProducts: 234, lowStock: 3,activeCatalog:5,activeCustomers:6 }),
     });
   }
 }
