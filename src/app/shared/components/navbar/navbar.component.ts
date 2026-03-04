@@ -26,7 +26,7 @@ import { AuthService, User } from '../../../core/auth/auth.service';
       <div class="navbar-right">
         <!-- Upgrade pill -->
         @if (showUpgradeBanner()) {
-          <a routerLink="/settings" class="upgrade-pill">
+          <a routerLink="/settings/billing" class="upgrade-pill">
             <svg viewBox="0 0 16 16" fill="currentColor" width="13">
               <path d="M8 1.5a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5a.5.5 0 01.5-.5z"/>
             </svg>

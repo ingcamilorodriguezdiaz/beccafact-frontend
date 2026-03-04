@@ -6,6 +6,7 @@ import { NotificationService } from '../../../core/services/notification.service
 import { AuthService } from '../../../core/auth/auth.service';
 import { environment } from '../../../../environments/environment';
 
+/** Usuario tal como lo retorna GET /users (roles ya normalizados como string[]) */
 interface UserEntry {
   id: string;
   firstName: string;
@@ -13,7 +14,15 @@ interface UserEntry {
   email: string;
   isActive: boolean;
   lastLoginAt?: string;
-  roles: string[];
+  roles: string[]; // nombres: 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'VIEWER'
+}
+
+/** Rol tal como lo retorna GET /users/roles */
+interface RoleEntry {
+  id: string;
+  name: string;        // 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'VIEWER'
+  displayName: string; // 'Administrador' | 'Gerente' | etc.
+  description?: string;
 }
 
 @Component({
@@ -129,6 +138,7 @@ interface UserEntry {
       }
     </div>
 
+    <!-- ── Modal invitar / editar usuario ────────────────── -->
     @if (showModal() && canManage()) {
       <div class="modal-overlay" (click)="closeModal()">
         <div class="modal" (click)="$event.stopPropagation()">
@@ -147,11 +157,13 @@ interface UserEntry {
                 <input type="text" [(ngModel)]="form.lastName" class="form-control" placeholder="Pérez"/>
               </div>
             </div>
+
             <div class="form-group">
               <label>Email *</label>
               <input type="email" [(ngModel)]="form.email" class="form-control"
                      [disabled]="!!editingId()" placeholder="usuario@empresa.com"/>
             </div>
+
             @if (!editingId()) {
               <div class="form-group">
                 <label>Contraseña temporal *</label>
@@ -159,16 +171,18 @@ interface UserEntry {
                        placeholder="Mínimo 8 caracteres"/>
               </div>
             }
+
             <div class="form-group">
               <label>Rol *</label>
-              <select [(ngModel)]="form.role" class="form-control">
-                @if (isAdmin()) {
-                  <option value="ADMIN">Administrador — acceso total</option>
-                }
-                <option value="MANAGER">Gerente — puede ver todo, crear y editar</option>
-                <option value="OPERATOR">Operador — crea facturas y productos</option>
-                <option value="VIEWER">Visualizador — solo lectura</option>
-              </select>
+              @if (loadingRoles()) {
+                <div class="form-control roles-loading">Cargando roles…</div>
+              } @else {
+                <select [(ngModel)]="form.roleId" class="form-control">
+                  @for (r of availableRoles(); track r.id) {
+                    <option [value]="r.id">{{ r.displayName }}</option>
+                  }
+                </select>
+              }
               @if (!isAdmin()) {
                 <p class="form-hint">Como gerente, no puedes asignar el rol Administrador.</p>
               }
@@ -176,7 +190,7 @@ interface UserEntry {
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
-            <button class="btn btn-primary" [disabled]="saving()" (click)="save()">
+            <button class="btn btn-primary" [disabled]="saving() || loadingRoles()" (click)="save()">
               {{ saving() ? 'Guardando...' : (editingId() ? 'Actualizar' : 'Enviar invitación') }}
             </button>
           </div>
@@ -204,7 +218,6 @@ interface UserEntry {
     .user-name { font-size:14px; font-weight:600; color:#0c1c35; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .user-email { font-size:12px; color:#9ca3af; margin-top:1px; }
 
-    /* Fila de meta datos solo visible en móvil */
     .user-meta-mobile { display:none; }
 
     .you-badge { font-size:10px; font-weight:700; background:#e0f2fe; color:#0369a1; padding:1px 7px; border-radius:99px; }
@@ -253,6 +266,7 @@ interface UserEntry {
     .form-control { width:100%; padding:9px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; box-sizing:border-box; }
     .form-control:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,.08); }
     .form-control:disabled { background:#f8fafc; color:#9ca3af; }
+    .roles-loading { color:#94a3b8; pointer-events:none; }
 
     .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; }
     .btn-primary { background:#1a407e; color:#fff; }
@@ -263,31 +277,22 @@ interface UserEntry {
 
     /* ── Responsive ──────────────────────────────────────────── */
 
-    /* Tablet: ocultar última sesión */
     @media (max-width: 768px) {
       .user-login { display: none; }
     }
 
-    /* Móvil: ocultar columnas y mostrar meta inline */
     @media (max-width: 580px) {
       .section-header { flex-direction: column; align-items: stretch; }
       .btn.btn-primary { width: 100%; justify-content: center; }
       .readonly-badge { align-self: flex-start; }
-
-      /* Ocultar columnas de tabla */
       .user-roles  { display: none; }
       .user-status { display: none; }
-
-      /* Mostrar roles + status debajo del nombre/email */
       .user-meta-mobile {
         display: flex; align-items: center; gap: 6px;
         flex-wrap: wrap; margin-top: 5px;
       }
-
       .user-row { padding: 11px 14px; gap: 10px; }
       .user-actions { min-width: auto; }
-
-      /* Modal: bottom sheet */
       .modal-overlay { align-items: flex-end; padding: 0; }
       .modal { border-radius: 18px 18px 0 0; max-height: 92dvh; overflow-y: auto; }
       .form-row { grid-template-columns: 1fr; }
@@ -295,7 +300,6 @@ interface UserEntry {
       .modal-footer .btn { flex: 1; justify-content: center; }
     }
 
-    /* Móvil pequeño */
     @media (max-width: 400px) {
       .user-avatar { width: 30px; height: 30px; font-size: 10px; border-radius: 7px; }
       .user-name { font-size: 13px; }
@@ -308,24 +312,47 @@ interface UserEntry {
   `]
 })
 export class SettingsUsersComponent implements OnInit {
-  private readonly API = `${environment.apiUrl}/users`;
+  private readonly API      = `${environment.apiUrl}/users`;
+  private readonly ROLES_API = `${environment.apiUrl}/users/roles`;
   private auth = inject(AuthService);
 
-  users     = signal<UserEntry[]>([]);
-  loading   = signal(true);
-  saving    = signal(false);
-  showModal = signal(false);
-  editingId = signal<string | null>(null);
-  form = { firstName: '', lastName: '', email: '', password: '', role: 'OPERATOR' };
+  // ── Estado principal ──────────────────────────────────────
+  users        = signal<UserEntry[]>([]);
+  loading      = signal(true);
+  saving       = signal(false);
+  showModal    = signal(false);
+  editingId    = signal<string | null>(null);
 
+  // ── Roles dinámicos desde backend ─────────────────────────
+  availableRoles = signal<RoleEntry[]>([]);
+  loadingRoles   = signal(false);
+
+  // ── Formulario ────────────────────────────────────────────
+  /** roleId almacena el UUID del rol seleccionado */
+  form = { firstName: '', lastName: '', email: '', password: '', roleId: '' };
+
+  // ── Computed desde AuthService ────────────────────────────
   currentUserId = computed(() => this.auth.user()?.id ?? '');
   private userRoles = computed(() => this.auth.user()?.roles ?? []);
   canManage = computed(() => this.userRoles().some(r => r === 'ADMIN' || r === 'MANAGER'));
   isAdmin   = computed(() => this.userRoles().includes('ADMIN'));
 
+  /** Roles que el usuario actual puede asignar:
+   *  ADMIN → todos; MANAGER → excluye ADMIN */
+  assignableRoles = computed(() =>
+    this.isAdmin()
+      ? this.availableRoles()
+      : this.availableRoles().filter(r => r.name !== 'ADMIN')
+  );
+
   constructor(private http: HttpClient, private notify: NotificationService) {}
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.loadRoles(); // carga roles primero; luego usuarios
+    this.load();
+  }
+
+  // ── Carga de datos ────────────────────────────────────────
 
   load() {
     this.loading.set(true);
@@ -335,56 +362,116 @@ export class SettingsUsersComponent implements OnInit {
     });
   }
 
+  /** Carga roles desde GET /users/roles y preselecciona OPERATOR por defecto */
+  loadRoles() {
+    this.loadingRoles.set(true);
+    this.http.get<RoleEntry[]>(this.ROLES_API).subscribe({
+      next: roles => {
+        this.availableRoles.set(roles);
+        // Preseleccionar OPERATOR como valor por defecto del form
+        const defaultRole = roles.find(r => r.name === 'OPERATOR') ?? roles[0];
+        if (defaultRole && !this.form.roleId) {
+          this.form.roleId = defaultRole.id;
+        }
+        this.loadingRoles.set(false);
+      },
+      error: () => {
+        this.loadingRoles.set(false);
+        this.notify.error('No se pudieron cargar los roles');
+      },
+    });
+  }
+
+  // ── Modal ─────────────────────────────────────────────────
+
   openModal(u?: UserEntry) {
     if (!this.canManage()) return;
+
     if (u) {
+      // Editar: buscar el roleId del primer rol del usuario por nombre
+      const currentRoleName = u.roles[0] ?? 'OPERATOR';
+      const matchedRole = this.availableRoles().find(r => r.name === currentRoleName);
+      const defaultRole  = this.availableRoles().find(r => r.name === 'OPERATOR') ?? this.availableRoles()[0];
+
       this.editingId.set(u.id);
-      this.form = { firstName: u.firstName, lastName: u.lastName, email: u.email, password: '', role: u.roles[0] ?? 'OPERATOR' };
+      this.form = {
+        firstName: u.firstName,
+        lastName:  u.lastName,
+        email:     u.email,
+        password:  '',
+        roleId:    matchedRole?.id ?? defaultRole?.id ?? '',
+      };
     } else {
+      // Crear: preseleccionar OPERATOR
+      const defaultRole = this.availableRoles().find(r => r.name === 'OPERATOR') ?? this.availableRoles()[0];
       this.editingId.set(null);
-      this.form = { firstName: '', lastName: '', email: '', password: '', role: 'OPERATOR' };
+      this.form = { firstName: '', lastName: '', email: '', password: '', roleId: defaultRole?.id ?? '' };
     }
+
     this.showModal.set(true);
   }
 
   closeModal() { this.showModal.set(false); }
 
+  // ── Guardar ───────────────────────────────────────────────
+
   save() {
     if (!this.canManage()) return;
-    if (!this.form.firstName || !this.form.email) { this.notify.warning('Nombre y email son obligatorios'); return; }
+    if (!this.form.firstName || !this.form.email) {
+      this.notify.warning('Nombre y email son obligatorios'); return;
+    }
+    if (!this.form.roleId) {
+      this.notify.warning('Selecciona un rol'); return;
+    }
+
     this.saving.set(true);
+
+    // CreateUserDto / UpdateUserDto esperan roleId (UUID), no roles[]
     const body: any = {
       firstName: this.form.firstName,
-      lastName: this.form.lastName,
-      email: this.form.email,
-      roles: [this.form.role],
+      lastName:  this.form.lastName,
+      email:     this.form.email,
+      roleId:    this.form.roleId,
     };
     if (!this.editingId() && this.form.password) body.password = this.form.password;
 
     const req = this.editingId()
-      ? this.http.patch(`${this.API}/${this.editingId()}`, body)
-      : this.http.post(this.API, body);
+      ? this.http.put(`${this.API}/${this.editingId()}`, body)   // PUT /users/:id
+      : this.http.post(this.API, body);                          // POST /users
 
     req.subscribe({
       next: () => {
-        this.notify.success(this.editingId() ? 'Usuario actualizado' : 'Usuario creado');
+        this.notify.success(this.editingId() ? 'Usuario actualizado' : 'Invitación enviada');
         this.saving.set(false); this.closeModal(); this.load();
       },
       error: e => { this.saving.set(false); this.notify.error(e?.error?.message ?? 'Error al guardar'); },
     });
   }
 
+  // ── Activar / Desactivar ──────────────────────────────────
+
   toggleActive(u: UserEntry) {
-    if (!this.canManage()) return;
-    if (u.id === this.currentUserId()) return;
-    this.http.patch(`${this.API}/${u.id}`, { isActive: !u.isActive }).subscribe({
+    if (!this.canManage() || u.id === this.currentUserId()) return;
+    this.http.put(`${this.API}/${u.id}`, { isActive: !u.isActive }).subscribe({
       next: () => { this.notify.success(u.isActive ? 'Usuario desactivado' : 'Usuario activado'); this.load(); },
       error: e => this.notify.error(e?.error?.message ?? 'Error'),
     });
   }
 
-  initials(u: UserEntry): string { return `${u.firstName[0] ?? ''}${u.lastName[0] ?? ''}`.toUpperCase(); }
-  roleLabel(r: string): string {
-    return ({ ADMIN:'Admin', MANAGER:'Gerente', OPERATOR:'Operador', VIEWER:'Viewer', SUPER_ADMIN:'SuperAdmin' } as any)[r] ?? r;
+  // ── Helpers ───────────────────────────────────────────────
+
+  initials(u: UserEntry): string {
+    return `${u.firstName[0] ?? ''}${u.lastName[0] ?? ''}`.toUpperCase();
+  }
+
+  /** Muestra displayName del backend si el rol existe en availableRoles,
+   *  con fallback a mapa estático para los casos pre-carga */
+  roleLabel(roleName: string): string {
+    const found = this.availableRoles().find(r => r.name === roleName);
+    if (found) return found.displayName;
+    const fallback: Record<string, string> = {
+      ADMIN: 'Admin', MANAGER: 'Gerente', OPERATOR: 'Operador', VIEWER: 'Visualizador',
+    };
+    return fallback[roleName] ?? roleName;
   }
 }

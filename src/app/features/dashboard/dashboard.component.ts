@@ -27,7 +27,7 @@ import { DashboardMetrics } from '../../model/dashboard-metrics.model';
               <strong>Actualiza a Empresarial</strong>
               <span>Desbloquea inventario, nómina y más funciones</span>
             </div>
-            <a routerLink="/settings" class="ub-btn">Ver planes</a>
+            <a routerLink="/settings/billing" class="ub-btn">Ver planes</a>
           </div>
         }
       </div>
