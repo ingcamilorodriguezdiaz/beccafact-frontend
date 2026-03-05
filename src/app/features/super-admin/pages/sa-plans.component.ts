@@ -6,21 +6,33 @@ import { NotificationService } from '../../../core/services/notification.service
 import { environment } from '../../../../environments/environment';
 
 interface PlanFeature { id?: string; key: string; label: string; value: string; }
-interface Plan { id: string; name: string; displayName: string; description: string; price: number; currency: string; isActive: boolean; isCustom: boolean; createdAt: string; features: PlanFeature[]; _count?: { subscriptions: number }; }
+interface Plan {
+  id: string; name: string; displayName: string; description: string;
+  price: number; currency: string; isActive: boolean; isCustom: boolean;
+  createdAt: string; features: PlanFeature[];
+  _count?: { subscriptions: number };
+}
 
-const FEATURE_DEFAULTS: PlanFeature[] = [
-  { key:'max_documents_per_month', label:'Documentos / mes',   value:'100' },
-  { key:'max_products',            label:'Productos',           value:'500' },
-  { key:'max_users',               label:'Usuarios',            value:'5' },
-  { key:'max_integrations',        label:'Integraciones',       value:'2' },
-  { key:'storage_months',          label:'Historial (meses)',   value:'12' },
-  { key:'has_inventory',           label:'Inventario',          value:'true' },
-  { key:'has_reports',             label:'Reportes',            value:'true' },
-  { key:'has_integrations',        label:'Integraciones',       value:'false' },
-  { key:'bulk_import',             label:'Importación masiva',  value:'false' },
-  { key:'dian_enabled',            label:'Facturación DIAN',    value:'false' },
+// Contrato del catálogo — espejo del tipo en el backend
+interface FeatureDef {
+  key: string; label: string; description: string;
+  type: 'bool' | 'number' | 'months';
+  defaultValue: string; icon: string;
+  group: 'limits' | 'modules' | 'support';
+  numberHint?: string;
+}
+
+const GROUPS: { id: 'limits' | 'modules' | 'support'; label: string }[] = [
+  { id: 'limits',  label: 'Límites'  },
+  { id: 'modules', label: 'Módulos'  },
+  { id: 'support', label: 'Soporte'  },
 ];
-const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import','dian_enabled'];
+
+// Keys prioritarias para las cards (no cambian con el catálogo)
+const CARD_PRIORITY = [
+  'max_documents_per_month', 'max_users', 'max_products',
+  'has_invoices', 'has_inventory', 'has_reports', 'dian_enabled', 'priority_support',
+];
 
 @Component({
   selector: 'app-sa-plans',
@@ -33,21 +45,22 @@ const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import
           <h2 class="page-title">Gestión de Planes</h2>
           <p class="page-subtitle">{{ plans().length }} planes configurados</p>
         </div>
-        <button class="btn btn-primary" (click)="openCreate()">
+        <button class="btn btn-primary" (click)="openCreate()" [disabled]="loadingCatalog()">
           <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
-          Nuevo Plan
+          {{ loadingCatalog() ? 'Cargando...' : 'Nuevo Plan' }}
         </button>
       </div>
 
+      <!-- ── Plan cards ─────────────────────────────────────── -->
       @if (loading()) {
         <div class="plans-grid">
           @for (i of [1,2,3]; track i) {
             <div class="plan-card">
-              <div class="sk sk-line" style="width:60%;height:18px;margin-bottom:8px"></div>
-              <div class="sk sk-line" style="width:40%;height:12px;margin-bottom:14px"></div>
-              <div class="sk sk-line" style="width:80%;height:11px;margin-bottom:6px"></div>
-              <div class="sk sk-line" style="width:70%;height:11px;margin-bottom:6px"></div>
-              <div class="sk sk-line" style="width:90%;height:11px"></div>
+              <div class="sk" style="width:60%;height:18px;margin-bottom:8px"></div>
+              <div class="sk" style="width:40%;height:12px;margin-bottom:14px"></div>
+              <div class="sk" style="width:80%;height:11px;margin-bottom:6px"></div>
+              <div class="sk" style="width:70%;height:11px;margin-bottom:6px"></div>
+              <div class="sk" style="width:90%;height:11px"></div>
             </div>
           }
         </div>
@@ -62,7 +75,9 @@ const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import
                   <div class="plan-name">{{ plan.displayName }}</div>
                   <code class="plan-slug">{{ plan.name }}</code>
                 </div>
-                <span class="type-badge" [class.custom-badge]="plan.isCustom">{{ plan.isCustom ? 'Custom' : 'Estándar' }}</span>
+                <span class="type-badge" [class.custom-badge]="plan.isCustom">
+                  {{ plan.isCustom ? 'Custom' : 'Estándar' }}
+                </span>
               </div>
 
               <div class="plan-price">
@@ -73,17 +88,30 @@ const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import
               @if (plan.description) { <p class="plan-desc">{{ plan.description }}</p> }
 
               <div class="plan-features">
-                @for (feat of plan.features.slice(0,5); track feat.key) {
+                @for (feat of cardFeatures(plan); track feat.key) {
                   <div class="feat-row">
-                    <span class="feat-label">{{ feat.label || feat.key }}</span>
-                    <span class="feat-val" [class.feat-true]="feat.value==='true'" [class.feat-false]="feat.value==='false'">
-                      @if (feat.value === 'true') { ✓ }
-                      @else if (feat.value === 'false') { ✗ }
-                      @else { {{ feat.value === '-1' ? '∞' : feat.value }} }
+                    <div class="feat-row-left">
+                      @if (featDef(feat.key); as def) {
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13" class="feat-icon">
+                          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="def.icon"/>
+                        </svg>
+                        <span class="feat-label">{{ def.label }}</span>
+                      } @else {
+                        <span class="feat-label">{{ feat.label || feat.key }}</span>
+                      }
+                    </div>
+                    <span class="feat-val">
+                      @if (feat.value === 'true')        { <span class="feat-check">✓</span> }
+                      @else if (feat.value === 'false')  { <span class="feat-x">✗</span> }
+                      @else {
+                        {{ feat.value === '-1' ? '∞' : feat.value }}{{ featDef(feat.key)?.type === 'months' ? ' meses' : '' }}
+                      }
                     </span>
                   </div>
                 }
-                @if (plan.features.length > 5) { <div class="feat-more">+{{ plan.features.length - 5 }} más</div> }
+                @if (plan.features.length > 6) {
+                  <div class="feat-more">+{{ plan.features.length - 6 }} características más</div>
+                }
               </div>
 
               <div class="plan-footer">
@@ -110,28 +138,39 @@ const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import
       }
     </div>
 
-    <!-- Modal -->
+    <!-- ════════════════════════════════════
+         MODAL CREAR / EDITAR PLAN
+         ════════════════════════════════════ -->
     @if (showModal()) {
       <div class="modal-overlay" (click)="closeModal()">
         <div class="modal" (click)="$event.stopPropagation()">
+
           <div class="modal-header">
             <h3>{{ isNew() ? 'Nuevo Plan' : 'Editar Plan' }}</h3>
             <button class="modal-close" (click)="closeModal()">
               <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
             </button>
           </div>
+
           <div class="modal-body">
             <div class="form-grid">
-              <!-- Info básica -->
+
+              <!-- ── Info básica ──────────────────────────────── -->
               <div class="form-section">
-                <div class="section-title">Información General</div>
+                <div class="section-title">Información general</div>
+
                 <label class="form-label">Nombre interno (slug) *</label>
-                <input type="text" [(ngModel)]="form.name" placeholder="BASICO" class="form-control" [disabled]="!isNew()" (input)="form.name = form.name.toUpperCase()"/>
-                <p class="form-hint">Solo mayúsculas y guiones bajos.</p>
+                <input type="text" [(ngModel)]="form.name" placeholder="BASICO" class="form-control"
+                       [disabled]="!isNew()" (input)="form.name = form.name.toUpperCase()"/>
+                <p class="form-hint">Solo mayúsculas y guiones bajos. No se puede cambiar.</p>
+
                 <label class="form-label">Nombre visible *</label>
                 <input type="text" [(ngModel)]="form.displayName" placeholder="Plan Básico" class="form-control"/>
+
                 <label class="form-label">Descripción</label>
-                <textarea [(ngModel)]="form.description" placeholder="Descripción breve..." class="form-control" rows="2"></textarea>
+                <textarea [(ngModel)]="form.description" placeholder="Descripción breve del plan..."
+                          class="form-control" rows="2"></textarea>
+
                 <div class="form-row-2">
                   <div>
                     <label class="form-label">Precio *</label>
@@ -145,37 +184,97 @@ const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import
                     </select>
                   </div>
                 </div>
+
                 <div class="check-row">
                   <label class="check-label"><input type="checkbox" [(ngModel)]="form.isActive"/> Plan activo</label>
                   <label class="check-label"><input type="checkbox" [(ngModel)]="form.isCustom"/> Personalizado</label>
                 </div>
               </div>
 
-              <!-- Features -->
+              <!-- ── Features dinámicas ──────────────────────── -->
               <div class="form-section">
-                <div class="section-title">Límites y Features</div>
-                <div class="features-grid">
-                  @for (feat of form.features; track feat.key) {
-                    <div class="feat-editor">
-                      <div class="feat-editor-label">{{ feat.label || feat.key }}</div>
-                      @if (isBoolKey(feat.key)) {
-                        <select [(ngModel)]="feat.value" class="form-control feat-input">
-                          <option value="true">✓ Sí</option>
-                          <option value="false">✗ No</option>
-                        </select>
-                      } @else {
-                        <input type="text" [(ngModel)]="feat.value" class="form-control feat-input" placeholder="-1 = ilimitado"/>
-                      }
-                    </div>
+                <div class="section-title">Límites y características</div>
+
+                <!-- Tabs por grupo -->
+                <div class="feature-tabs">
+                  @for (g of groups; track g.id) {
+                    <button class="feature-tab" [class.active]="activeGroup() === g.id"
+                            (click)="activeGroup.set(g.id)">
+                      {{ g.label }}
+                      <span class="tab-count">{{ groupCount(g.id) }}</span>
+                    </button>
                   }
                 </div>
+
+                <!-- Lista de features del grupo activo -->
+                <div class="features-list">
+                  @for (feat of groupFeatures(activeGroup()); track feat.key) {
+                    @if (featDef(feat.key); as def) {
+                      <div class="feat-editor-row">
+                        <div class="feat-editor-info">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                               width="16" height="16" class="feat-editor-icon">
+                            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="def.icon"/>
+                          </svg>
+                          <div>
+                            <div class="feat-editor-label">{{ def.label }}</div>
+                            <div class="feat-editor-desc">{{ def.description }}</div>
+                          </div>
+                        </div>
+                        <div class="feat-editor-control">
+                          @if (def.type === 'bool') {
+                            <label class="toggle">
+                              <input type="checkbox"
+                                     [checked]="feat.value === 'true'"
+                                     (change)="feat.value = $any($event.target).checked ? 'true' : 'false'"/>
+                              <span class="toggle-slider"></span>
+                            </label>
+                          } @else {
+                            <div class="num-input-wrap">
+                              <input type="number" [(ngModel)]="feat.value"
+                                     class="form-control num-input"
+                                     [placeholder]="def.numberHint ?? '0'"/>
+                              @if (def.type === 'months') {
+                                <span class="num-unit">meses</span>
+                              }
+                            </div>
+                            <div class="feat-hint">-1 = ilimitado</div>
+                          }
+                        </div>
+                      </div>
+                    }
+                  }
+                </div>
+
+                <!-- Features custom (no en catálogo) -->
+                @if (customFeatures().length) {
+                  <div class="custom-features-section">
+                    <div class="custom-features-title">Características personalizadas</div>
+                    @for (feat of customFeatures(); track feat.key) {
+                      <div class="feat-editor-row feat-custom-row">
+                        <div class="feat-editor-info">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="14" class="feat-editor-icon"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
+                          <div>
+                            <div class="feat-editor-label">{{ feat.label || feat.key }}</div>
+                            <code class="feat-key-code">{{ feat.key }}</code>
+                          </div>
+                        </div>
+                        <div class="feat-editor-control">
+                          <input type="text" [(ngModel)]="feat.value" class="form-control num-input"/>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
               </div>
+
             </div>
           </div>
+
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
             <button class="btn btn-primary" (click)="save()" [disabled]="saving()">
-              {{ saving() ? 'Guardando...' : (isNew() ? 'Crear Plan' : 'Guardar') }}
+              {{ saving() ? 'Guardando...' : (isNew() ? 'Crear Plan' : 'Guardar cambios') }}
             </button>
           </div>
         </div>
@@ -184,6 +283,9 @@ const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import
   `,
   styles: [`
     .page { max-width: 1200px; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .animate-in { animation: fadeUp .25s ease; }
+
     .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:12px; flex-wrap:wrap; }
     .page-title { font-family:'Sora',sans-serif; font-size:22px; font-weight:700; color:#0c1c35; margin:0 0 4px; }
     .page-subtitle { font-size:13px; color:#64748b; margin:0; }
@@ -194,9 +296,9 @@ const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import
     .btn-secondary { background:#f0f4f9; color:#374151; border:1px solid #dce6f0; }
     .btn-secondary:hover { background:#e8eef8; }
 
-    /* Plans grid */
+    /* ── Plan cards ────────────────────────────────────────── */
     .plans-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:16px; }
-    .plan-card { background:#fff; border:1px solid #dce6f0; border-radius:14px; padding:18px; position:relative; overflow:hidden; transition:box-shadow .15s, transform .15s; }
+    .plan-card { background:#fff; border:1px solid #dce6f0; border-radius:14px; padding:18px; position:relative; overflow:hidden; transition:box-shadow .15s, transform .15s; display:flex; flex-direction:column; }
     .plan-card:hover { box-shadow:0 4px 20px rgba(12,28,53,.1); transform:translateY(-1px); }
     .plan-inactive { opacity:.55; }
     .inactive-ribbon { position:absolute; top:10px; left:50%; transform:translateX(-50%); background:#ef4444; color:#fff; font-size:9px; font-weight:800; letter-spacing:.12em; padding:2px 8px; border-radius:99px; }
@@ -209,14 +311,19 @@ const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import
     .price-val { font-family:'Sora',sans-serif; font-size:24px; font-weight:800; color:#0c1c35; }
     .price-period { font-size:12px; color:#94a3b8; margin-left:4px; }
     .plan-desc { font-size:12.5px; color:#64748b; margin:0 0 10px; line-height:1.5; }
-    .plan-features { border-top:1px solid #f0f4f8; padding-top:10px; margin-bottom:12px; }
-    .feat-row { display:flex; justify-content:space-between; align-items:center; padding:3px 0; font-size:12.5px; }
-    .feat-label { color:#64748b; }
-    .feat-val { font-weight:600; color:#334155; font-size:12px; }
-    .feat-true { color:#10b981; }
-    .feat-false { color:#ef4444; }
-    .feat-more { font-size:11px; color:#94a3b8; margin-top:4px; text-align:right; }
-    .plan-footer { display:flex; align-items:center; justify-content:space-between; }
+
+    /* Features en card */
+    .plan-features { border-top:1px solid #f0f4f8; padding-top:10px; margin-bottom:12px; flex:1; }
+    .feat-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; gap:8px; }
+    .feat-row-left { display:flex; align-items:center; gap:5px; min-width:0; flex:1; }
+    .feat-icon { color:#94a3b8; flex-shrink:0; }
+    .feat-label { font-size:12.5px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .feat-val { font-weight:600; font-size:12px; color:#334155; flex-shrink:0; }
+    .feat-check { color:#10b981; font-size:13px; }
+    .feat-x     { color:#ef4444; font-size:13px; }
+    .feat-more  { font-size:11px; color:#94a3b8; margin-top:6px; text-align:right; font-style:italic; }
+
+    .plan-footer { display:flex; align-items:center; justify-content:space-between; border-top:1px solid #f0f4f8; padding-top:12px; margin-top:auto; }
     .plan-subs { display:flex; align-items:center; gap:5px; font-size:12px; color:#64748b; }
     .plan-actions-row { display:flex; gap:6px; }
     .btn-icon { width:30px; height:30px; border-radius:7px; border:1px solid #dce6f0; background:#f8fafc; color:#475569; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
@@ -227,17 +334,18 @@ const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import
     .sk { background:linear-gradient(90deg,#f0f4f8 25%,#e8eef8 50%,#f0f4f8 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:6px; display:block; margin-bottom:6px; }
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
 
-    /* Modal */
+    /* ── Modal ─────────────────────────────────────────────── */
     .modal-overlay { position:fixed; inset:0; background:rgba(12,28,53,.55); display:flex; align-items:center; justify-content:center; z-index:1000; padding:16px; backdrop-filter:blur(2px); }
-    .modal { background:#fff; border-radius:16px; width:100%; max-width:820px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(12,28,53,.25); }
+    .modal { background:#fff; border-radius:16px; width:100%; max-width:860px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(12,28,53,.25); }
     .modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 22px; border-bottom:1px solid #f0f4f8; flex-shrink:0; }
     .modal-header h3 { font-family:'Sora',sans-serif; font-size:16px; font-weight:700; color:#0c1c35; margin:0; }
     .modal-close { background:none; border:none; color:#94a3b8; cursor:pointer; padding:4px; border-radius:6px; }
     .modal-close:hover { background:#f0f4f8; }
     .modal-body { flex:1; overflow-y:auto; padding:18px 22px; }
     .modal-footer { padding:14px 22px; border-top:1px solid #f0f4f8; display:flex; justify-content:flex-end; gap:10px; flex-shrink:0; }
-    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
-    .section-title { font-size:11px; font-weight:700; color:#1a407e; text-transform:uppercase; letter-spacing:.08em; margin-bottom:12px; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+    .form-section { display:flex; flex-direction:column; }
+    .section-title { font-size:11px; font-weight:700; color:#1a407e; text-transform:uppercase; letter-spacing:.08em; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid #f0f4f8; }
     .form-label { display:block; font-size:12.5px; font-weight:600; color:#475569; margin-bottom:4px; }
     .form-hint { font-size:11px; color:#94a3b8; margin:2px 0 10px; }
     .form-control { width:100%; padding:8px 11px; border:1px solid #dce6f0; border-radius:8px; font-size:13.5px; color:#0c1c35; background:#fff; box-sizing:border-box; outline:none; margin-bottom:10px; }
@@ -247,11 +355,46 @@ const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import
     .form-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .check-row { display:flex; gap:14px; margin-top:4px; }
     .check-label { display:flex; align-items:center; gap:6px; font-size:13px; color:#475569; cursor:pointer; }
-    .features-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .feat-editor-label { font-size:11.5px; font-weight:600; color:#475569; margin-bottom:3px; }
-    .feat-input { margin-bottom:0 !important; }
 
-    /* ── Responsive ──────────────────────────────────────────── */
+    /* ── Feature tabs ─────────────────────────────────────── */
+    .feature-tabs { display:flex; gap:3px; margin-bottom:14px; background:#f8fafc; border:1px solid #dce6f0; border-radius:9px; padding:3px; }
+    .feature-tab { flex:1; padding:6px 8px; border:none; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; color:#64748b; transition:all .15s; display:flex; align-items:center; justify-content:center; gap:5px; }
+    .feature-tab:hover { background:#fff; color:#1a407e; }
+    .feature-tab.active { background:#fff; color:#1a407e; box-shadow:0 1px 4px rgba(0,0,0,.1); }
+    .tab-count { background:#e8eef8; color:#1a407e; font-size:10px; font-weight:700; padding:1px 5px; border-radius:99px; }
+    .feature-tab.active .tab-count { background:#1a407e; color:#fff; }
+
+    /* ── Feature editor ───────────────────────────────────── */
+    .features-list { display:flex; flex-direction:column; gap:1px; overflow-y:auto; max-height:320px; padding-right:2px; }
+    .feat-editor-row { display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:8px; gap:12px; transition:background .1s; }
+    .feat-editor-row:hover { background:#f8fafc; }
+    .feat-editor-info { display:flex; align-items:flex-start; gap:8px; flex:1; min-width:0; }
+    .feat-editor-icon { color:#94a3b8; flex-shrink:0; margin-top:1px; }
+    .feat-editor-label { font-size:13px; font-weight:600; color:#0c1c35; line-height:1.3; }
+    .feat-editor-desc  { font-size:11px; color:#94a3b8; margin-top:1px; line-height:1.3; }
+    .feat-editor-control { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
+
+    /* Toggle switch */
+    .toggle { position:relative; display:inline-block; width:38px; height:22px; cursor:pointer; flex-shrink:0; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; inset:0; background:#dce6f0; border-radius:99px; transition:.2s; }
+    .toggle-slider:before { content:''; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+    .toggle input:checked + .toggle-slider { background:#1a407e; }
+    .toggle input:checked + .toggle-slider:before { transform:translateX(16px); }
+
+    /* Numeric input */
+    .num-input-wrap { display:flex; align-items:center; gap:4px; }
+    .num-input { width:82px; margin-bottom:0 !important; padding:5px 8px !important; text-align:right; }
+    .num-unit { font-size:11.5px; color:#64748b; white-space:nowrap; }
+    .feat-hint { font-size:10.5px; color:#94a3b8; }
+
+    /* Custom features */
+    .custom-features-section { margin-top:12px; border-top:1px solid #f0f4f8; padding-top:10px; }
+    .custom-features-title { font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+    .feat-custom-row { border:1px dashed #dce6f0; border-radius:8px; }
+    .feat-key-code { font-size:10px; color:#94a3b8; }
+
+    /* ── Responsive ────────────────────────────────────────── */
     @media (max-width: 768px) {
       .page-header { flex-direction:column; align-items:stretch; }
       .page-header .btn { width:100%; justify-content:center; }
@@ -262,62 +405,162 @@ const BOOL_KEYS = ['has_inventory','has_reports','has_integrations','bulk_import
       .modal-overlay { align-items:flex-end; padding:0; }
       .modal { border-radius:20px 20px 0 0; max-height:95dvh; max-width:100%; }
       .form-grid { grid-template-columns:1fr; }
-      .features-grid { grid-template-columns:1fr; }
       .modal-footer { flex-direction:column-reverse; gap:8px; }
       .modal-footer .btn { width:100%; justify-content:center; }
+      .features-list { max-height:260px; }
     }
     @media (max-width: 400px) {
       .form-row-2 { grid-template-columns:1fr; }
+      .num-input { width:64px; }
     }
   `],
 })
 export class SaPlansComponent implements OnInit {
-  plans = signal<Plan[]>([]);
-  loading = signal(true);
-  saving = signal(false);
-  showModal = signal(false);
-  editId = signal<string | null>(null);
+  plans        = signal<Plan[]>([]);
+  catalog      = signal<FeatureDef[]>([]);
+  catalogMap   = computed(() => new Map(this.catalog().map(f => [f.key, f])));
+  loading      = signal(true);
+  loadingCatalog = signal(true);
+  saving       = signal(false);
+  showModal    = signal(false);
+  editId       = signal<string | null>(null);
+  activeGroup  = signal<'limits' | 'modules' | 'support'>('limits');
+
   form = this.emptyForm();
   isNew = computed(() => !this.editId());
-  private readonly api = `${environment.apiUrl}/super-admin`;
+
+  readonly groups = GROUPS;
+
+  private readonly plansApi   = `${environment.apiUrl}/super-admin`;
+  private readonly catalogApi = `${environment.apiUrl}/plans/feature-catalog`;
 
   constructor(private http: HttpClient, private notify: NotificationService) {}
-  ngOnInit() { this.load(); }
 
-  load() {
-    this.loading.set(true);
-    this.http.get<Plan[]>(`${this.api}/plans`).subscribe({
-      next: d => { this.plans.set(d); this.loading.set(false); },
-      error: () => { this.loading.set(false); this.notify.error('Error al cargar planes'); }
+  ngOnInit() {
+    // Cargar catálogo y planes en paralelo
+    this.loadCatalog();
+    this.load();
+  }
+
+  loadCatalog() {
+    this.loadingCatalog.set(true);
+    this.http.get<FeatureDef[]>(this.catalogApi).subscribe({
+      next: catalog => {
+        this.catalog.set(catalog);
+        this.loadingCatalog.set(false);
+      },
+      error: () => {
+        this.loadingCatalog.set(false);
+        this.notify.error('Error al cargar catálogo de features');
+      },
     });
   }
 
-  openCreate() { this.editId.set(null); this.form = this.emptyForm(); this.showModal.set(true); }
-  openEdit(plan: Plan) {
-    this.editId.set(plan.id);
-    this.form = { name:plan.name, displayName:plan.displayName, description:plan.description??'', price:plan.price, currency:plan.currency??'COP', isActive:plan.isActive, isCustom:plan.isCustom,
-      features: FEATURE_DEFAULTS.map(def => { const e = plan.features.find(f => f.key===def.key); return { key:def.key, label:def.label, value:e?.value??def.value }; }) };
+  load() {
+    this.loading.set(true);
+    this.http.get<any>(`${this.plansApi}/plans`).subscribe({
+      next: d => { this.plans.set(d.data ?? d); this.loading.set(false); },
+      error: () => { this.loading.set(false); this.notify.error('Error al cargar planes'); },
+    });
+  }
+
+  openCreate() {
+    this.editId.set(null);
+    this.activeGroup.set('limits');
+    this.form = this.emptyForm();
     this.showModal.set(true);
   }
+
+  openEdit(plan: Plan) {
+    this.editId.set(plan.id);
+    this.activeGroup.set('limits');
+    const map = this.catalogMap();
+    // Mapear cada key del catálogo al valor almacenado en BD (o default)
+    const features = this.catalog().map(def => {
+      const existing = plan.features.find(f => f.key === def.key);
+      return { key: def.key, label: def.label, value: existing?.value ?? def.defaultValue };
+    });
+    // Preservar features custom (keys no presentes en el catálogo)
+    plan.features
+      .filter(f => !map.has(f.key))
+      .forEach(f => features.push({ key: f.key, label: f.label, value: f.value }));
+
+    this.form = {
+      name: plan.name, displayName: plan.displayName,
+      description: plan.description ?? '', price: plan.price,
+      currency: plan.currency ?? 'COP', isActive: plan.isActive,
+      isCustom: plan.isCustom, features,
+    };
+    this.showModal.set(true);
+  }
+
   closeModal() { this.showModal.set(false); }
 
   save() {
-    if (!this.form.name || !this.form.displayName || this.form.price == null) { this.notify.error('Completa los campos obligatorios'); return; }
+    if (!this.form.name || !this.form.displayName || this.form.price == null) {
+      this.notify.error('Completa los campos obligatorios'); return;
+    }
     this.saving.set(true);
-    const req = this.isNew() ? this.http.post<Plan>(`${this.api}/plans`, this.form) : this.http.put<Plan>(`${this.api}/plans/${this.editId()}`, this.form);
+    const req = this.isNew()
+      ? this.http.post<Plan>(`${this.plansApi}/plans`, this.form)
+      : this.http.put<Plan>(`${this.plansApi}/plans/${this.editId()}`, this.form);
+
     req.subscribe({
-      next: () => { this.saving.set(false); this.closeModal(); this.notify.success(this.isNew() ? 'Plan creado' : 'Plan actualizado'); this.load(); },
-      error: e => { this.saving.set(false); this.notify.error(e?.error?.message ?? 'Error'); }
+      next: () => {
+        this.saving.set(false); this.closeModal();
+        this.notify.success(this.isNew() ? 'Plan creado' : 'Plan actualizado');
+        this.load();
+      },
+      error: e => { this.saving.set(false); this.notify.error(e?.error?.message ?? 'Error'); },
     });
   }
 
   toggleActive(plan: Plan) {
-    this.http.put(`${this.api}/plans/${plan.id}`, { ...plan, isActive: !plan.isActive, features: plan.features }).subscribe({
+    this.http.put(`${this.plansApi}/plans/${plan.id}`, { ...plan, isActive: !plan.isActive, features: plan.features }).subscribe({
       next: () => { this.notify.success(plan.isActive ? 'Plan desactivado' : 'Plan activado'); this.load(); },
-      error: () => this.notify.error('Error al cambiar estado')
+      error: () => this.notify.error('Error al cambiar estado'),
     });
   }
 
-  isBoolKey(key: string) { return BOOL_KEYS.includes(key); }
-  private emptyForm() { return { name:'', displayName:'', description:'', price:0, currency:'COP', isActive:true, isCustom:false, features: FEATURE_DEFAULTS.map(f => ({...f})) }; }
+  // ── Helpers ──────────────────────────────────────────────
+
+  /** Features del form filtradas por grupo */
+  groupFeatures(group: string): PlanFeature[] {
+    const map = this.catalogMap();
+    return this.form.features.filter(f => map.get(f.key)?.group === group);
+  }
+
+  /** Features del form que no están en el catálogo */
+  customFeatures = computed(() => {
+    const map = this.catalogMap();
+    return this.form.features.filter(f => !map.has(f.key));
+  });
+
+  /** Cantidad de features por grupo */
+  groupCount(group: string): number {
+    const map = this.catalogMap();
+    return this.form.features.filter(f => map.get(f.key)?.group === group).length;
+  }
+
+  /** Definición del catálogo para una key */
+  featDef(key: string): FeatureDef | undefined { return this.catalogMap().get(key); }
+
+  /** Top 6 features para la card, ordenadas por prioridad */
+  cardFeatures(plan: Plan): PlanFeature[] {
+    const sorted = [...plan.features].sort((a, b) => {
+      const ia = CARD_PRIORITY.indexOf(a.key);
+      const ib = CARD_PRIORITY.indexOf(b.key);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+    return sorted.slice(0, 6);
+  }
+
+  private emptyForm() {
+    return {
+      name: '', displayName: '', description: '',
+      price: 0, currency: 'COP', isActive: true, isCustom: false,
+      // Al crear, inicializar features desde el catálogo cargado
+      features: this.catalog().map(f => ({ key: f.key, label: f.label, value: f.defaultValue })),
+    };
+  }
 }

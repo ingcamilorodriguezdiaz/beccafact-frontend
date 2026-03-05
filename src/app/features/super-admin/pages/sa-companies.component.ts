@@ -68,9 +68,20 @@ const EMPTY_FORM = () => ({
           <option value="SUSPENDED">Suspendidas</option>
           <option value="CANCELLED">Canceladas</option>
         </select>
+
+        <!-- View Toggle -->
+        <div class="view-toggle">
+          <button [class.active]="viewMode() === 'table'" (click)="viewMode.set('table')" title="Vista tabla">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z"/></svg>
+          </button>
+          <button [class.active]="viewMode() === 'grid'" (click)="viewMode.set('grid')" title="Vista cuadrícula">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          </button>
+        </div>
       </div>
 
       <!-- ── Tabla desktop ────────────────────────────────── -->
+      @if (viewMode() === 'table') {
       <div class="table-card desktop-only">
         @if (loading()) {
           @for (i of [1,2,3,4,5]; track i) {
@@ -181,10 +192,131 @@ const EMPTY_FORM = () => ({
               </button>
             </div>
           </div>
-        }
-      </div>
+        }\n      </div>
+      } <!-- /viewMode table -->
 
-      <!-- ── Cards móvil ──────────────────────────────────── -->
+      <!-- ══ GRID VIEW ══ -->
+      @if (viewMode() === 'grid') {
+        @if (loading()) {
+          <div class="company-grid">
+            @for (i of [1,2,3,4,5,6]; track i) {
+              <div class="co-grid-card co-grid-card--skeleton">
+                <div class="sk sk-avatar-grid"></div>
+                <div class="sk sk-line" style="width:70%;margin:10px auto 6px"></div>
+                <div class="sk sk-line" style="width:50%;margin:0 auto 14px"></div>
+                <div class="sk sk-line" style="width:90%;margin-bottom:6px"></div>
+                <div class="sk sk-line" style="width:75%"></div>
+              </div>
+            }
+          </div>
+        } @else if (companies().length === 0) {
+          <div class="grid-empty-state">
+            <svg viewBox="0 0 48 48" fill="none" width="44"><rect width="48" height="48" rx="12" fill="#f0f4f9"/><path d="M14 34V18l10-6 10 6v16M18 34v-8h4v8M26 34v-8h4v8" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <p>{{ search ? 'Sin resultados para "' + search + '"' : 'No hay empresas registradas aún' }}</p>
+            @if (!search) {
+              <button class="btn btn-primary btn-sm" (click)="openCreate()">Crear primera empresa</button>
+            }
+          </div>
+        } @else {
+          <div class="company-grid">
+            @for (c of companies(); track c.id) {
+              <div class="co-grid-card" [class.co-grid-card--suspended]="c.status === 'SUSPENDED'" [class.co-grid-card--cancelled]="c.status === 'CANCELLED'">
+
+                <!-- Status badge top-right -->
+                <span class="badge cc-status-badge" [class]="statusClass(c.status)">{{ statusLabel(c.status) }}</span>
+
+                <!-- Avatar + nombre -->
+                <div class="co-grid-top">
+                  <div class="co-grid-avatar">{{ c.name[0].toUpperCase() }}</div>
+                  <div class="co-grid-name">{{ c.name }}</div>
+                  <div class="co-grid-nit">
+                    <span class="badge badge-muted">{{ c.nit }}</span>
+                  </div>
+                </div>
+
+                <!-- Info rows -->
+                <div class="co-grid-info">
+                  @if (c.subscriptions?.length) {
+                    <div class="co-grid-row">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/></svg>
+                      <span class="badge badge-primary">{{ c.subscriptions![0].plan.displayName }}</span>
+                    </div>
+                  } @else {
+                    <div class="co-grid-row co-grid-row--muted">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/></svg>
+                      <span>Sin plan</span>
+                    </div>
+                  }
+                  <div class="co-grid-row">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+                    <span>{{ c.email }}</span>
+                  </div>
+                  @if (c.city) {
+                    <div class="co-grid-row">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/></svg>
+                      <span>{{ c.city }}</span>
+                    </div>
+                  }
+                  <!-- Contadores -->
+                  <div class="co-grid-counters">
+                    <button class="co-grid-count" (click)="openUsers(c)" title="Ver usuarios">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+                      {{ c._count?.users ?? 0 }} usuarios
+                    </button>
+                    <span class="co-grid-count co-grid-count--plain">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"/></svg>
+                      {{ c._count?.invoices ?? 0 }} facturas
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="co-grid-actions">
+                  <button class="btn btn-sm btn-secondary" (click)="openDetail(c)">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    Ver
+                  </button>
+                  <button class="btn btn-sm btn-secondary" (click)="openEdit(c)">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                    Editar
+                  </button>
+                  <button class="btn btn-sm btn-secondary" (click)="openUsers(c)">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+                    Usuarios
+                  </button>
+                  @if (c.status === 'ACTIVE' || c.status === 'TRIAL') {
+                    <button class="btn-icon btn-icon-danger" title="Suspender" (click)="suspend(c)">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524L13.477 14.89zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z"/></svg>
+                    </button>
+                  }
+                  @if (c.status === 'SUSPENDED') {
+                    <button class="btn-icon btn-icon-success" title="Activar" (click)="activate(c)">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (totalPages() > 1) {
+            <div class="pagination pagination--standalone">
+              <span class="text-muted">{{ (page()-1)*20 + 1 }}–{{ min(page()*20, total()) }} de {{ total() }}</span>
+              <div class="pag-btns">
+                <button class="page-btn" [disabled]="page()===1" (click)="setPage(page()-1)">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"/></svg>
+                </button>
+                <button class="page-btn" [disabled]="page()===totalPages()" (click)="setPage(page()+1)">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"/></svg>
+                </button>
+              </div>
+            </div>
+          }
+        }
+      } <!-- /viewMode grid -->
+
+      <!-- ── Cards móvil (solo en vista tabla) ───────────── -->
+      @if (viewMode() === 'table') {
       <div class="mobile-only">
         @if (loading()) {
           @for (i of [1,2,3]; track i) {
@@ -243,6 +375,7 @@ const EMPTY_FORM = () => ({
           }
         }
       </div>
+      } <!-- /viewMode table mobile -->
     </div>
 
     <!-- ════════════════════════════════════════════════════════
@@ -744,13 +877,94 @@ const EMPTY_FORM = () => ({
     .cu-meta-mobile  { display:none; }
     .cu-roles-desktop, .cu-status-desktop { display:flex; }
 
-    /* ── Visibilidad responsive ──────────────────────── */
+    /* ── View toggle ─────────────────────────────────────── */
+    .view-toggle { display:flex; gap:2px; border:1px solid #dce6f0; border-radius:8px; overflow:hidden; margin-left:auto; flex-shrink:0; }
+    .view-toggle button { padding:7px 10px; background:#fff; border:none; cursor:pointer; color:#9ca3af; transition:all .15s; }
+    .view-toggle button:hover { background:#f0f4f9; color:#1a407e; }
+    .view-toggle button.active { background:#1a407e; color:#fff; }
+
+    /* ── Grid view ───────────────────────────────────────── */
+    .company-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(248px, 1fr));
+      gap:14px;
+    }
+    .co-grid-card {
+      background:#fff; border:1px solid #dce6f0; border-radius:13px;
+      padding:18px 16px 14px; position:relative;
+      display:flex; flex-direction:column; gap:0;
+      transition:box-shadow .18s, transform .18s;
+    }
+    .co-grid-card:hover { box-shadow:0 4px 20px rgba(26,64,126,.1); transform:translateY(-2px); }
+    .co-grid-card--suspended { opacity:.75; border-color:#fde8d8; background:#fffaf8; }
+    .co-grid-card--cancelled  { opacity:.6; border-color:#f0d4d4; background:#fdfafa; }
+    .co-grid-card--skeleton   { pointer-events:none; }
+
+    .cc-status-badge { position:absolute; top:12px; right:12px; }
+
+    .co-grid-top { display:flex; flex-direction:column; align-items:center; text-align:center; padding:6px 0 12px; }
+    .co-grid-avatar {
+      width:52px; height:52px; border-radius:13px;
+      background:linear-gradient(135deg,#1a407e,#00c6a0);
+      color:#fff; font-size:18px; font-weight:700;
+      display:flex; align-items:center; justify-content:center;
+      font-family:'Sora',sans-serif; margin-bottom:10px;
+    }
+    .co-grid-name { font-size:14px; font-weight:700; color:#0c1c35; line-height:1.3; margin-bottom:5px; }
+    .co-grid-nit  { display:flex; justify-content:center; }
+
+    .co-grid-info {
+      border-top:1px solid #f0f4f8; padding-top:10px; margin-bottom:12px;
+      display:flex; flex-direction:column; gap:6px; flex:1;
+    }
+    .co-grid-row {
+      display:flex; align-items:center; gap:6px;
+      font-size:12px; color:#64748b;
+    }
+    .co-grid-row svg { color:#94a3b8; flex-shrink:0; }
+    .co-grid-row span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .co-grid-row--muted { color:#94a3b8; }
+
+    .co-grid-counters { display:flex; gap:6px; flex-wrap:wrap; margin-top:2px; }
+    .co-grid-count {
+      display:inline-flex; align-items:center; gap:4px;
+      background:#f0f4f9; border:none; border-radius:7px;
+      padding:3px 8px; font-size:11.5px; font-weight:600;
+      color:#475569; cursor:pointer; transition:all .15s;
+    }
+    .co-grid-count:hover { background:#dbeafe; color:#1d4ed8; }
+    .co-grid-count--plain { cursor:default; }
+    .co-grid-count--plain:hover { background:#f0f4f9; color:#475569; }
+
+    .co-grid-actions {
+      display:flex; gap:6px; align-items:center;
+      border-top:1px solid #f0f4f8; padding-top:10px; flex-wrap:wrap;
+    }
+    .co-grid-actions .btn { flex:1; justify-content:center; min-width:0; }
+
+    .sk-avatar-grid { width:52px; height:52px; border-radius:13px; display:block; margin:0 auto 10px; }
+
+    .grid-empty-state {
+      padding:64px 24px; text-align:center; color:#9ca3af;
+      background:#fff; border:1px solid #dce6f0; border-radius:13px;
+      display:flex; flex-direction:column; align-items:center; gap:12px;
+    }
+    .grid-empty-state p { font-size:14px; margin:0; }
+
+    .pagination--standalone {
+      background:#fff; border:1px solid #dce6f0; border-radius:12px;
+      margin-top:4px;
+    }
+    .btn-sm { padding:6px 12px; font-size:12.5px; }
+
+    /* ── Responsive ──────────────────────────────────────── */
     .desktop-only { display:block; }
     .mobile-only  { display:none; }
     .mobile-pag   { background:#fff; border:1px solid #dce6f0; border-radius:12px; margin-top:4px; justify-content:center; }
 
     @media (max-width: 900px) {
       .filter-select { max-width:180px; }
+      .company-grid { grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; }
     }
 
     @media (max-width: 700px) {
@@ -761,6 +975,12 @@ const EMPTY_FORM = () => ({
       .filters-bar { flex-direction:column; align-items:stretch; }
       .search-wrap { max-width:100%; }
       .filter-select { max-width:100%; }
+      .view-toggle { margin-left:0; align-self:flex-end; }
+      .company-grid { grid-template-columns:repeat(2, 1fr); gap:10px; }
+    }
+
+    @media (max-width: 480px) {
+      .company-grid { grid-template-columns:1fr; }
     }
 
     @media (max-width: 560px) {
@@ -816,6 +1036,8 @@ export class SaCompaniesComponent implements OnInit {
   savingUser    = signal(false);
   editingUserId = signal<string | null>(null);
   userForm      = { firstName: '', lastName: '', email: '', password: '', roleId: '' };
+
+  viewMode = signal<'table' | 'grid'>('table');
 
   // Formulario empresa
   form = EMPTY_FORM();
@@ -1054,4 +1276,5 @@ export class SaCompaniesComponent implements OnInit {
   fmtCOP(v: number) {
     return new Intl.NumberFormat('es-CO', { style:'currency', currency:'COP', minimumFractionDigits:0 }).format(v);
   }
+  min(a: number, b: number) { return Math.min(a, b); }
 }
