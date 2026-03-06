@@ -1,5 +1,5 @@
 import {
-  Component, Input, Output, EventEmitter, signal, computed, inject, OnChanges, SimpleChanges,
+  Component, Input, Output, EventEmitter, signal, inject,
 } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -16,34 +16,34 @@ export interface NavItem {
   label: string;
   iconId: string;
   route: string;
-  /** feature key del plan requerida para acceder al módulo */
   feature?: string;
-  /** roles que pueden ver el ítem (si no se define, todos) */
   roles?: string[];
 }
 
-// ── Definición central del menú ────────────────────────────────────────────
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard',     iconId: 'dashboard', route: '/dashboard' },
-  { label: 'Facturación',   iconId: 'invoice',   route: '/invoices',  feature: 'has_invoices' },
-  { label: 'Inventario',    iconId: 'inventory', route: '/inventory', feature: 'has_inventory' },
-  { label: 'Clientes',      iconId: 'customers', route: '/customers' },
-  { label: 'Reportes',      iconId: 'reports',   route: '/reports',   feature: 'has_reports' },
-  { label: 'Importar',      iconId: 'import',    route: '/import',    feature: 'bulk_import', roles: ['ADMIN', 'MANAGER'] },
-  { label: 'Configuración', iconId: 'settings',  route: '/settings',  roles: ['ADMIN'] },
+  { label: 'Dashboard',     iconId: 'dashboard',  route: '/dashboard' },
+  { label: 'Facturación',   iconId: 'invoice',    route: '/invoices',  feature: 'has_invoices' },
+  { label: 'Inventario',    iconId: 'inventory',  route: '/inventory', feature: 'has_inventory' },
+  { label: 'Clientes',      iconId: 'customers',  route: '/customers' },
+  { label: 'Cartera',       iconId: 'cartera',    route: '/cartera',   feature: 'has_cartera',  roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+  { label: 'Nómina',        iconId: 'payroll',    route: '/payroll',   feature: 'has_payroll',  roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+  { label: 'Reportes',      iconId: 'reports',    route: '/reports',   feature: 'has_reports' },
+  { label: 'Importar',      iconId: 'import',     route: '/import',    feature: 'bulk_import',  roles: ['ADMIN', 'MANAGER'] },
+  { label: 'Configuración', iconId: 'settings',   route: '/settings',  roles: ['ADMIN'] },
 ];
 
-// Feature keys que tienen etiqueta amigable para mostrar en la sección de plan
 const FEATURE_LABELS: Record<string, string> = {
-  has_invoices:             'Facturación electrónica',
-  has_inventory:            'Inventario',
-  has_reports:              'Reportes avanzados',
-  has_integrations:         'Integraciones',
-  bulk_import:              'Importación masiva',
-  dian_enabled:             'Facturación DIAN',
-  max_documents_per_month:  'Documentos / mes',
-  max_products:             'Productos',
-  max_users:                'Usuarios',
+  has_invoices:            'Facturación electrónica',
+  has_inventory:           'Inventario',
+  has_cartera:             'Cartera y cobros',
+  has_payroll:             'Nómina electrónica',
+  has_reports:             'Reportes avanzados',
+  has_integrations:        'Integraciones',
+  bulk_import:             'Importación masiva',
+  dian_enabled:            'Facturación DIAN',
+  max_documents_per_month: 'Documentos / mes',
+  max_products:            'Productos',
+  max_users:               'Usuarios',
 };
 
 @Component({
@@ -53,7 +53,7 @@ const FEATURE_LABELS: Record<string, string> = {
   template: `
     <aside class="sidebar" [class.collapsed]="collapsed()" [class.mobile-open]="mobileOpen">
 
-      <!-- ── Brand ──────────────────────────────────────────── -->
+      <!-- Brand -->
       <div class="sidebar-brand">
         @if (!collapsed()) {
           <div class="brand-logo">
@@ -68,7 +68,6 @@ const FEATURE_LABELS: Record<string, string> = {
             <span class="brand-sub">ERP Cloud</span>
           </div>
         }
-        <!-- Botón cerrar en móvil -->
         <button class="mobile-close-btn" (click)="mobileClose.emit()" type="button" aria-label="Cerrar menú">
           <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
@@ -88,18 +87,16 @@ const FEATURE_LABELS: Record<string, string> = {
         </button>
       </div>
 
-      <!-- ── Company info ────────────────────────────────────── -->
+      <!-- Company info -->
       <div class="company-info" [class.company-info--center]="collapsed()">
-        <div class="company-avatar" [title]="user.company?.name ?? 'Mi Empresa'">
+        <div class="company-avatar" [title]="user.company?.name ">
           {{ companyInitials() }}
         </div>
         @if (!collapsed()) {
           <div class="company-details">
             <div class="company-name">{{ user.company?.name ?? 'Mi Empresa' }}</div>
             @if (plan) {
-              <span class="plan-badge plan-{{ plan.name.toLowerCase() }}">
-                {{ plan.displayName }}
-              </span>
+              <span class="plan-badge plan-{{ plan.name.toLowerCase() }}">{{ plan.displayName }}</span>
             } @else {
               <span class="plan-badge plan-free">Sin plan</span>
             }
@@ -107,15 +104,13 @@ const FEATURE_LABELS: Record<string, string> = {
         }
       </div>
 
-      <!-- ── Nav ────────────────────────────────────────────── -->
+      <!-- Nav -->
       <nav class="sidebar-nav">
         @if (!collapsed()) {
           <div class="nav-section-label">MENÚ PRINCIPAL</div>
         }
-
         @for (item of navItems(); track item.route) {
           @if (isItemEnabled(item)) {
-            <!-- ITEM ACTIVO: puede navegar -->
             <a [routerLink]="item.route"
                routerLinkActive="active"
                [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
@@ -131,7 +126,6 @@ const FEATURE_LABELS: Record<string, string> = {
               }
             </a>
           } @else {
-            <!-- ITEM BLOQUEADO: visible pero no navegable -->
             <div class="nav-item nav-item--locked"
                  [class.nav-item--collapsed]="collapsed()"
                  (click)="onLockedClick(item)"
@@ -153,7 +147,7 @@ const FEATURE_LABELS: Record<string, string> = {
         }
       </nav>
 
-      <!-- ── Plan features panel (expandido) ────────────────── -->
+      <!-- Plan features -->
       @if (!collapsed() && plan && planFeatureList().length > 0) {
         <div class="plan-section">
           <div class="plan-section-header">
@@ -177,7 +171,7 @@ const FEATURE_LABELS: Record<string, string> = {
         </div>
       }
 
-      <!-- ── Usage meter (expandido) ────────────────────────── -->
+      <!-- Usage meter -->
       @if (!collapsed() && plan && usagePercent > 0) {
         <div class="usage-section">
           <div class="usage-header">
@@ -185,26 +179,21 @@ const FEATURE_LABELS: Record<string, string> = {
             <span class="usage-pct" [class.high]="usagePercent > 80">{{ usagePercent }}%</span>
           </div>
           <div class="usage-track">
-            <div class="usage-fill"
-                 [style.width.%]="usagePercent"
-                 [class.high]="usagePercent > 80"></div>
+            <div class="usage-fill" [style.width.%]="usagePercent" [class.high]="usagePercent > 80"></div>
           </div>
           @if (usagePercent > 80) {
             <div class="usage-warn">Considera actualizar tu plan</div>
           }
         </div>
       }
-
-      <!-- ── Usage dot (colapsado, uso alto) ─────────────────── -->
       @if (collapsed() && plan && usagePercent > 80) {
         <div class="usage-dot-wrap" [title]="'Uso al ' + usagePercent + '%'">
           <div class="usage-dot"></div>
         </div>
       }
-
     </aside>
 
-    <!-- ── Upgrade toast ──────────────────────────────────────── -->
+    <!-- Upgrade toast -->
     @if (showUpgradeToast()) {
       <div class="upgrade-toast" (click)="showUpgradeToast.set(false)">
         <svg viewBox="0 0 20 20" fill="currentColor" width="16">
@@ -214,13 +203,11 @@ const FEATURE_LABELS: Record<string, string> = {
           <strong>Módulo no disponible</strong>
           <span>Actualiza tu plan para acceder a <em>{{ lockedItemLabel() }}</em></span>
         </div>
-        <a routerLink="/settings/billing" class="upgrade-btn" (click)="showUpgradeToast.set(false)">
-          Ver planes
-        </a>
+        <a routerLink="/settings/billing" class="upgrade-btn" (click)="showUpgradeToast.set(false)">Ver planes</a>
       </div>
     }
 
-    <!-- ── Icon templates ─────────────────────────────────────── -->
+    <!-- Icon templates -->
     <ng-template #iconTpl let-id="id">
       @switch (id) {
         @case ('dashboard') {
@@ -245,6 +232,17 @@ const FEATURE_LABELS: Record<string, string> = {
             <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
           </svg>
         }
+        @case ('cartera') {
+          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/>
+            <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/>
+          </svg>
+        }
+        @case ('payroll') {
+          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+          </svg>
+        }
         @case ('reports') {
           <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
             <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
@@ -266,7 +264,6 @@ const FEATURE_LABELS: Record<string, string> = {
   styles: [`
     :host { display: flex; height: 100%; position: relative; }
 
-    /* ── Sidebar container ──────────────────────────────────── */
     .sidebar {
       width: 248px; height: 100%; background: #0c1c35;
       display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
@@ -274,7 +271,6 @@ const FEATURE_LABELS: Record<string, string> = {
     }
     .sidebar.collapsed { width: 64px; }
 
-    /* ── Brand ──────────────────────────────────────────────── */
     .sidebar-brand {
       display: flex; align-items: center; gap: 10px;
       padding: 0 12px; height: 64px; min-height: 64px;
@@ -289,6 +285,7 @@ const FEATURE_LABELS: Record<string, string> = {
     .brand-text { flex: 1; min-width: 0; }
     .brand-name { display: block; font-family: 'Sora',sans-serif; font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; }
     .brand-sub  { display: block; font-size: 10px; color: #4d7ab3; letter-spacing: 0.1em; text-transform: uppercase; }
+
     .collapse-btn {
       display: flex; align-items: center; justify-content: center;
       width: 28px; height: 28px; background: none; border: none;
@@ -303,7 +300,6 @@ const FEATURE_LABELS: Record<string, string> = {
     }
     .sidebar.collapsed .collapse-btn:hover { background: rgba(0,198,160,0.18); }
 
-    /* ── Company info ───────────────────────────────────────── */
     .company-info {
       display: flex; align-items: center; gap: 10px; padding: 12px 14px;
       border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
@@ -317,19 +313,17 @@ const FEATURE_LABELS: Record<string, string> = {
     }
     .company-details { min-width: 0; flex: 1; }
     .company-name { font-size: 13px; font-weight: 600; color: #d4e4f7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .plan-badge { display: inline-block; margin-top: 3px; padding: 1px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; }
+    .plan-badge { display: inline-block; margin-top: 3px; padding: 1px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; }
     .plan-basic       { background: rgba(59,130,246,0.2);  color: #93c5fd; }
     .plan-empresarial { background: rgba(0,198,160,0.2);   color: #5eead4; }
     .plan-corporativo { background: rgba(245,158,11,0.2);  color: #fcd34d; }
     .plan-free        { background: rgba(100,116,139,0.2); color: #94a3b8; }
 
-    /* ── Nav ────────────────────────────────────────────────── */
     .sidebar-nav { flex: 1; padding: 8px; overflow-y: auto; overflow-x: hidden; }
     .sidebar-nav::-webkit-scrollbar { width: 3px; }
     .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
     .nav-section-label { padding: 8px 10px 4px; font-size: 10px; font-weight: 700; color: #2e4a6e; letter-spacing: 0.12em; }
 
-    /* ── Nav item base ──────────────────────────────────────── */
     .nav-item {
       display: flex; align-items: center; gap: 10px;
       padding: 9px 10px; margin-bottom: 2px; border-radius: 8px;
@@ -337,67 +331,37 @@ const FEATURE_LABELS: Record<string, string> = {
       transition: background 0.15s, color 0.15s; cursor: pointer;
     }
     .nav-item.nav-item--collapsed { justify-content: center; padding: 9px 0; gap: 0; }
-    .nav-item:hover                      { background: rgba(255,255,255,0.06); color: #d4e4f7; }
-    .nav-item.active                     { background: rgba(0,198,160,0.16); color: #00c6a0; box-shadow: inset 3px 0 0 #00c6a0; }
+    .nav-item:hover   { background: rgba(255,255,255,0.06); color: #d4e4f7; }
+    .nav-item.active  { background: rgba(0,198,160,0.16); color: #00c6a0; box-shadow: inset 3px 0 0 #00c6a0; }
     .nav-item.active.nav-item--collapsed { box-shadow: none; border: 1px solid rgba(0,198,160,0.3); }
 
-    /* ── Item bloqueado ─────────────────────────────────────── */
-    .nav-item--locked {
-      opacity: 0.45; cursor: pointer;
-      transition: opacity 0.15s, background 0.15s;
-    }
-    .nav-item--locked:hover {
-      opacity: 0.7;
-      background: rgba(245,158,11,0.07);
-      color: #fcd34d;
-    }
+    .nav-item--locked { opacity: 0.45; cursor: pointer; transition: opacity 0.15s, background 0.15s; }
+    .nav-item--locked:hover { opacity: 0.7; background: rgba(245,158,11,0.07); color: #fcd34d; }
     .nav-icon--locked { color: #64748b; }
     .lock-chip {
-      display: inline-flex; align-items: center; gap: 3px;
-      margin-left: auto; font-size: 9.5px; font-weight: 700;
-      background: rgba(245,158,11,0.15); color: #f59e0b;
-      padding: 2px 7px; border-radius: 99px; white-space: nowrap;
+      display: inline-flex; align-items: center; gap: 3px; margin-left: auto;
+      font-size: 9.5px; font-weight: 700; background: rgba(245,158,11,0.15);
+      color: #f59e0b; padding: 2px 7px; border-radius: 99px; white-space: nowrap;
     }
 
-    /* ── Nav icon ───────────────────────────────────────────── */
-    .nav-icon {
-      display: flex; align-items: center; justify-content: center;
-      width: 18px; height: 18px; min-width: 18px; flex-shrink: 0; color: inherit;
-    }
+    .nav-icon { display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; min-width: 18px; flex-shrink: 0; color: inherit; }
     .nav-label { flex: 1; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* ── Plan features section ──────────────────────────────── */
-    .plan-section {
-      margin: 0 8px 4px; border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.02);
-      flex-shrink: 0;
-    }
-    .plan-section-header {
-      display: flex; align-items: center; gap: 6px;
-      padding: 8px 12px; font-size: 10px; font-weight: 800;
-      color: #2e4a6e; letter-spacing: 0.12em;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    .plan-section-header svg { color: #2e4a6e; }
+    .plan-section { margin: 0 8px 4px; border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.02); flex-shrink: 0; }
+    .plan-section-header { display: flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 10px; font-weight: 800; color: #2e4a6e; letter-spacing: 0.12em; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .plan-features-list { padding: 6px 10px 8px; }
-    .plan-feat-row {
-      display: flex; align-items: center; gap: 7px;
-      padding: 3px 0; font-size: 12px; color: #7ea3cc;
-    }
+    .plan-feat-row { display: flex; align-items: center; gap: 7px; padding: 3px 0; font-size: 12px; color: #7ea3cc; }
     .plan-feat-row.feat-off { opacity: 0.4; }
-    .feat-dot {
-      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-    }
+    .feat-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
     .feat-dot--on  { background: #00c6a0; box-shadow: 0 0 6px rgba(0,198,160,0.5); }
     .feat-dot--off { background: #ef4444; }
-    .feat-name { flex: 1; font-size: 11.5px; }
+    .feat-name  { flex: 1; font-size: 11.5px; }
     .feat-limit { font-size: 11px; font-weight: 700; color: #00c6a0; background: rgba(0,198,160,0.12); padding: 1px 6px; border-radius: 4px; }
 
-    /* ── Usage meter ────────────────────────────────────────── */
     .usage-section { padding: 10px 14px 14px; border-top: 1px solid rgba(255,255,255,0.07); flex-shrink: 0; }
-    .usage-header { display: flex; justify-content: space-between; margin-bottom: 7px; }
-    .usage-label { font-size: 11px; color: #4d7ab3; font-weight: 600; }
-    .usage-pct   { font-size: 11px; color: #4d7ab3; font-weight: 700; }
+    .usage-header  { display: flex; justify-content: space-between; margin-bottom: 7px; }
+    .usage-label   { font-size: 11px; color: #4d7ab3; font-weight: 600; }
+    .usage-pct     { font-size: 11px; color: #4d7ab3; font-weight: 700; }
     .usage-pct.high { color: #f87171; }
     .usage-track { background: rgba(255,255,255,0.07); border-radius: 9999px; height: 5px; overflow: hidden; }
     .usage-fill  { height: 100%; border-radius: 9999px; background: linear-gradient(90deg,#1a407e,#00c6a0); transition: width 0.5s ease; }
@@ -407,7 +371,6 @@ const FEATURE_LABELS: Record<string, string> = {
     .usage-dot { width: 8px; height: 8px; border-radius: 50%; background: #f87171; animation: pulse-dot 2s ease infinite; }
     @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
 
-    /* ── Mobile close button (solo visible en móvil) ────────── */
     .mobile-close-btn {
       display: none; align-items: center; justify-content: center;
       width: 32px; height: 32px; background: rgba(255,255,255,0.08);
@@ -416,7 +379,6 @@ const FEATURE_LABELS: Record<string, string> = {
     }
     .mobile-close-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
 
-    /* ── Responsive: en móvil el sidebar se oculta y desliza ── */
     @media (max-width: 768px) {
       :host { position: fixed; top: 0; left: 0; height: 100%; z-index: 200; }
       .sidebar {
@@ -426,41 +388,34 @@ const FEATURE_LABELS: Record<string, string> = {
         width: 260px !important;
         box-shadow: 4px 0 32px rgba(0,0,0,0.35);
       }
-      .sidebar.mobile-open {
-        transform: translateX(0);
-      }
-      .sidebar.collapsed { width: 260px !important; }
-      .collapse-btn { display: none; }
-      .mobile-close-btn { display: flex; }
-
-      /* En móvil nunca mostrar colapsado */
+      .sidebar.mobile-open { transform: translateX(0); }
+      .sidebar.collapsed   { width: 260px !important; }
+      .collapse-btn        { display: none; }
+      .mobile-close-btn    { display: flex; }
       .nav-item.nav-item--collapsed { justify-content: flex-start !important; padding: 9px 10px !important; gap: 10px !important; }
-      .sidebar.collapsed .sidebar-brand { justify-content: flex-start; padding: 0 12px; }
-      .sidebar.collapsed .company-info { justify-content: flex-start; padding: 12px 14px; }
+      .sidebar.collapsed .sidebar-brand  { justify-content: flex-start; padding: 0 12px; }
+      .sidebar.collapsed .company-info   { justify-content: flex-start; padding: 12px 14px; }
     }
 
-    /* ── Upgrade toast ──────────────────────────────────────── */
     .upgrade-toast {
       position: fixed; bottom: 24px; left: 64px; z-index: 9999;
       display: flex; align-items: center; gap: 12px;
       background: #1e2d47; border: 1px solid rgba(245,158,11,0.3);
       border-radius: 12px; padding: 12px 16px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-      animation: slideUp 0.25s ease;
-      max-width: 340px;
+      animation: slideUp 0.25s ease; max-width: 340px;
     }
     @keyframes slideUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-    .upgrade-toast svg { color: #f59e0b; flex-shrink: 0; }
-    .upgrade-toast div { flex: 1; }
+    .upgrade-toast svg  { color: #f59e0b; flex-shrink: 0; }
+    .upgrade-toast div  { flex: 1; }
     .upgrade-toast strong { display: block; font-size: 13px; color: #f0f7ff; font-weight: 700; margin-bottom: 2px; }
-    .upgrade-toast span  { font-size: 12px; color: #7ea3cc; }
-    .upgrade-toast em    { font-style: normal; color: #fcd34d; font-weight: 600; }
+    .upgrade-toast span   { font-size: 12px; color: #7ea3cc; }
+    .upgrade-toast em     { font-style: normal; color: #fcd34d; font-weight: 600; }
     .upgrade-btn {
       display: inline-block; padding: 6px 12px; border-radius: 8px;
       background: rgba(245,158,11,0.2); color: #f59e0b;
       font-size: 12px; font-weight: 700; text-decoration: none;
-      border: 1px solid rgba(245,158,11,0.3); white-space: nowrap;
-      transition: background 0.15s;
+      border: 1px solid rgba(245,158,11,0.3); white-space: nowrap; transition: background 0.15s;
     }
     .upgrade-btn:hover { background: rgba(245,158,11,0.35); }
   `],
@@ -468,25 +423,17 @@ const FEATURE_LABELS: Record<string, string> = {
 export class SidebarComponent {
   @Input() user!: User;
   @Input() plan: PlanInfo = null;
-  @Input() isSuperAdmin = false;
-  @Input() usagePercent = 0;
-  @Input() mobileOpen = false;
-  @Output() mobileClose = new EventEmitter<void>();
+  @Input() isSuperAdmin  = false;
+  @Input() usagePercent  = 0;
+  @Input() mobileOpen    = false;
+  @Output() mobileClose  = new EventEmitter<void>();
 
   collapsed        = signal(false);
   showUpgradeToast = signal(false);
   lockedItemLabel  = signal('');
 
-  /**
-   * Consume planFeatures() directamente desde AuthService (signal reactivo).
-   * Esto garantiza que el mapa se actualice cada vez que el plan cambie,
-   * sin depender de ngOnChanges ni de la referencia del @Input.
-   */
   private auth = inject(AuthService);
-  private get featureMap(): Record<string, string> {
-    return this.auth.planFeatures();
-  }
-
+  private get featureMap(): Record<string, string> { return this.auth.planFeatures(); }
   private toastTimer: any;
 
   toggleCollapse(): void { this.collapsed.update(v => !v); }
@@ -496,7 +443,6 @@ export class SidebarComponent {
     return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'BF';
   }
 
-  /** Items filtrados por rol (la feature solo afecta si está habilitado/bloqueado, no si se muestra) */
   navItems(): NavItem[] {
     return NAV_ITEMS.filter(item => {
       if (!item.roles) return true;
@@ -506,7 +452,6 @@ export class SidebarComponent {
     });
   }
 
-  /** Determina si el ítem está habilitado (no bloqueado por plan) */
   isItemEnabled(item: NavItem): boolean {
     if (!item.feature) return true;
     if (this.isSuperAdmin) return true;
@@ -521,17 +466,11 @@ export class SidebarComponent {
     this.toastTimer = setTimeout(() => this.showUpgradeToast.set(false), 4000);
   }
 
-  /**
-   * Lista de features del plan actual para mostrar en el panel lateral.
-   * Incluye booleans (habilitado/no) y límites numéricos relevantes.
-   */
   planFeatureList(): Array<{ key: string; label: string; enabled: boolean; isBoolean: boolean; value: string }> {
     if (!this.plan) return [];
-    const BOOL_KEYS = ['has_invoices','has_inventory','has_reports','has_integrations','bulk_import','dian_enabled'];
+    const BOOL_KEYS = ['has_invoices','has_inventory','has_cartera','has_payroll','has_reports','has_integrations','bulk_import','dian_enabled'];
     const NUM_KEYS  = ['max_documents_per_month','max_products','max_users'];
-    const allKeys   = [...BOOL_KEYS, ...NUM_KEYS];
-
-    return allKeys
+    return [...BOOL_KEYS, ...NUM_KEYS]
       .filter(k => FEATURE_LABELS[k] && this.featureMap[k] !== undefined)
       .map(k => {
         const val       = this.featureMap[k] ?? 'false';

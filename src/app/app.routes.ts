@@ -59,6 +59,20 @@ export const routes: Routes = [
           import('./features/import/import.routes').then((m) => m.IMPORT_ROUTES),
       },
       {
+        path: 'cartera',
+        canActivate: [planGuard, roleGuard],
+        data: { feature: 'has_cartera', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+        loadChildren: () =>
+          import('./features/cartera/cartera.routes').then((m) => m.CARTERA_ROUTES),
+      },
+      {
+        path: 'payroll',
+        canActivate: [planGuard, roleGuard],
+        data: { feature: 'has_payroll', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+        loadChildren: () =>
+          import('./features/payroll/payroll.routes').then((m) => m.PAYROLL_ROUTES),
+      },
+      {
         path: 'settings',
         loadChildren: () =>
           import('./features/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
