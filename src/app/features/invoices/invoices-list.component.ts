@@ -17,6 +17,7 @@ interface Invoice {
   discountAmount?: number; total: number; notes?: string; currency?: string;
   dianCufe?: string; dianStatus?: string; dianQrCode?: string;
   dianStatusCode?: string; dianStatusMsg?: string;
+  dianErrors?: string;        // JSON array string: DIAN ErrorMessageList
   dianZipKey?: string; dianSentAt?: string; dianResponseAt?: string;
   dianAttempts?: number; xmlSigned?: string;
   customer: { id: string; name: string; documentNumber: string; email?: string; phone?: string; address?: string };
@@ -144,8 +145,8 @@ interface InvoiceLine {
                   <td><span class="type-badge type-{{ inv.type.toLowerCase() }}">{{ typeLabel(inv.type) }}</span></td>
                   <td>
                     <div class="client-cell">
-                      <span class="client-name">{{ inv.customer.name }}</span>
-                      <span class="client-doc">{{ inv.customer.documentNumber }}</span>
+                      <span class="client-name">{{ inv?.customer?.name }}</span>
+                      <span class="client-doc">{{ inv?.customer?.documentNumber }}</span>
                     </div>
                   </td>
                   <td class="text-muted">{{ inv.issueDate | date:'dd/MM/yyyy' }}</td>
@@ -239,15 +240,15 @@ interface InvoiceLine {
                 Cliente
               </div>
               <div class="dw-card">
-                <div class="dw-client-name">{{ detailInvoice()!.customer.name }}</div>
-                <div class="dw-client-doc">{{ detailInvoice()!.customer.documentNumber }}</div>
-                @if (detailInvoice()!.customer.email) {
+                <div class="dw-client-name">{{ detailInvoice()?.customer?.name }}</div>
+                <div class="dw-client-doc">{{ detailInvoice()?.customer?.documentNumber }}</div>
+                @if (detailInvoice()?.customer?.email) {
                   <div class="dw-client-extra">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
-                    {{ detailInvoice()!.customer.email }}
+                    {{ detailInvoice()?.customer?.email }}
                   </div>
                 }
-                @if (detailInvoice()!.customer.phone) {
+                @if (detailInvoice()?.customer?.phone) {
                   <div class="dw-client-extra">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
                     {{ detailInvoice()!.customer.phone }}
@@ -302,7 +303,7 @@ interface InvoiceLine {
                     <div class="dw-items-row" [class.dw-items-row-odd]="odd">
                       <div class="dwi-col-desc">
                         <span class="dwi-desc-text">{{ it.description }}</span>
-                        @if (it.product) { <span class="dwi-sku">{{ it.product.sku }}</span> }
+                        @if (it.product) { <span class="dwi-sku">{{ it?.product?.sku }}</span> }
                         @if (it.discount > 0) { <span class="dwi-disc">-{{ it.discount }}% dto.</span> }
                       </div>
                       <div class="dwi-col-qty">{{ it.quantity }}</div>
@@ -343,18 +344,29 @@ interface InvoiceLine {
                 DIAN
               </div>
               <div class="dw-card dw-dian-card">
+
+                <!-- Estado factura -->
                 <div class="dw-dian-row">
-                  <span class="dw-dian-lbl">Estado</span>
-                  <span class="dian-badge dian-{{ (detailInvoice()!.dianStatus ?? 'pendiente').toLowerCase() }}">
-                    {{ dianLabel(detailInvoice()!.dianStatus) }}
+                  <span class="dw-dian-lbl">Estado factura</span>
+                  <span class="status-pill status-{{ detailInvoice()!.status.toLowerCase() }}">
+                    {{ statusLabel(detailInvoice()!.status) }}
                   </span>
                 </div>
+
+                <!-- Código DIAN -->
                 @if (detailInvoice()!.dianStatusCode) {
                   <div class="dw-dian-row" style="margin-top:6px">
-                    <span class="dw-dian-lbl">Código</span>
-                    <span style="font-size:12px;color:#374151;font-family:monospace">{{ detailInvoice()!.dianStatusCode }} — {{ dianCodeDesc(detailInvoice()!.dianStatusCode) }}</span>
+                    <span class="dw-dian-lbl">Código DIAN</span>
+                    <span style="font-size:12px;color:#374151;font-family:monospace;font-weight:600">
+                      {{ detailInvoice()!.dianStatusCode }}
+                      @if (dianCodeDesc(detailInvoice()!.dianStatusCode)) {
+                        <span style="font-weight:400;color:#6b7280"> — {{ dianCodeDesc(detailInvoice()!.dianStatusCode) }}</span>
+                      }
+                    </span>
                   </div>
                 }
+
+                <!-- ZipKey -->
                 @if (detailInvoice()!.dianZipKey) {
                   <div class="dw-dian-row" style="margin-top:6px">
                     <span class="dw-dian-lbl">ZipKey</span>
@@ -366,33 +378,68 @@ interface InvoiceLine {
                     </span>
                   </div>
                 }
+
+                <!-- Fechas -->
                 @if (detailInvoice()!.dianSentAt) {
                   <div class="dw-dian-row" style="margin-top:6px">
                     <span class="dw-dian-lbl">Enviado</span>
                     <span style="font-size:12px;color:#374151">{{ detailInvoice()!.dianSentAt! | date:'dd/MM/yyyy HH:mm' }}</span>
                   </div>
                 }
-                @if (detailInvoice()!.dianStatusMsg) {
-                  <div class="dian-msg-block" [class.dian-msg-ok]="detailInvoice()!.dianStatus==='ACCEPTED_DIAN'" [class.dian-msg-err]="detailInvoice()!.dianStatus==='REJECTED_DIAN'">
+                @if (detailInvoice()!.dianResponseAt) {
+                  <div class="dw-dian-row" style="margin-top:4px">
+                    <span class="dw-dian-lbl">Última consulta</span>
+                    <span style="font-size:12px;color:#374151">{{ detailInvoice()!.dianResponseAt! | date:'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                }
+
+                <!-- Mensaje DIAN de estado (texto plano) -->
+                @if (detailInvoice()!.dianStatusMsg && !detailInvoice()!.dianErrors) {
+                  <div class="dian-msg-block"
+                       [class.dian-msg-ok]="detailInvoice()!.status === 'ACCEPTED_DIAN'"
+                       [class.dian-msg-err]="detailInvoice()!.status === 'REJECTED_DIAN'">
                     {{ detailInvoice()!.dianStatusMsg }}
                   </div>
                 }
-                @if (detailInvoice()!.dianCufe) {
-                  <div class="dw-dian-cufe">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-                      <span class="dw-dian-lbl">CUFE (SHA-384)</span>
-                      <button class="btn-icon" style="padding:3px" title="Copiar CUFE" (click)="copyText(detailInvoice()!.dianCufe!)">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg>
-                      </button>
+
+                <!-- Lista de errores DIAN (ErrorMessageList) -->
+                @if (parseDianErrors(detailInvoice()!.dianErrors).length > 0) {
+                  <div class="dian-errors-block">
+                    <div class="dian-errors-header">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="13" style="flex-shrink:0">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                      </svg>
+                      <span>Respuesta de validación DIAN ({{ parseDianErrors(detailInvoice()!.dianErrors).length }} reglas)</span>
                     </div>
-                    <code class="dw-cufe-code">{{ detailInvoice()!.dianCufe }}</code>
+                    <ul class="dian-errors-list">
+                      @for (err of parseDianErrors(detailInvoice()!.dianErrors); track $index) {
+                        <li class="dian-error-item"
+                            [class.dian-error-rechazo]="dianErrorSeverity(err) === 'rechazo'"
+                            [class.dian-error-notif]="dianErrorSeverity(err) === 'notificacion'">
+                          <span class="dian-error-badge">
+                            {{ dianErrorSeverity(err) === 'notificacion' ? 'Notif.' : 'Rechazo' }}
+                          </span>
+                          <span class="dian-error-text">{{ err }}</span>
+                        </li>
+                      }
+                    </ul>
                   </div>
                 }
+
+                                <!-- Pendiente -->
                 @if (!detailInvoice()!.dianCufe && detailInvoice()!.status === 'DRAFT') {
                   <div class="dian-pending-note">
                     <strong>Factura pendiente de envío.</strong> Usa el botón "Enviar a DIAN" para generar el XML UBL 2.1 y transmitirla.
                   </div>
                 }
+
+                <!-- Enviada sin respuesta aún -->
+                @if (detailInvoice()!.status === 'SENT_DIAN' && !detailInvoice()!.dianStatusCode) {
+                  <div class="dian-pending-note" style="background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
+                    <strong>En proceso.</strong> La DIAN está validando la factura. Pulsa "Consultar DIAN" para obtener el resultado.
+                  </div>
+                }
+
               </div>
             </div>
 
@@ -794,6 +841,19 @@ interface InvoiceLine {
     .dian-msg-ok { border-left-color:#10b981; background:#f0fdf4; }
     .dian-msg-err { border-left-color:#dc2626; background:#fef2f2; }
     .dian-pending-note { margin-top:10px; padding:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; font-size:12px; color:#92400e; line-height:1.5; }
+
+    /* DIAN error list */
+    .dian-errors-block { margin-top:10px; border:1px solid #fca5a5; border-radius:8px; overflow:hidden; }
+    .dian-errors-header { display:flex; align-items:center; gap:6px; padding:7px 10px; background:#fef2f2; font-size:11.5px; font-weight:600; color:#b91c1c; border-bottom:1px solid #fca5a5; }
+    .dian-errors-list { list-style:none; margin:0; padding:0; }
+    .dian-error-item { display:flex; align-items:flex-start; gap:6px; padding:6px 10px; font-size:11.5px; line-height:1.45; border-bottom:1px solid #fee2e2; }
+    .dian-error-item:last-child { border-bottom:none; }
+    .dian-error-rechazo { background:#fff5f5; }
+    .dian-error-notif { background:#fafafa; }
+    .dian-error-badge { flex-shrink:0; margin-top:1px; padding:1px 5px; border-radius:3px; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+    .dian-error-rechazo .dian-error-badge { background:#fee2e2; color:#b91c1c; }
+    .dian-error-notif .dian-error-badge { background:#e0f2fe; color:#0369a1; }
+    .dian-error-text { color:#374151; }
     .dw-notes { font-size:13px; color:#475569; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; line-height:1.5; }
     .drawer-footer { padding:14px 22px; border-top:1px solid #f0f4f8; display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; }
 
@@ -959,11 +1019,11 @@ export class InvoicesListComponent implements OnInit {
     if (this.filterTo)     params.to     = this.filterTo;
     this.http.get<any>(this.API, { params }).subscribe({
       next: r => {
-        this.invoices.set(r.data ?? r);
-        this.total.set(r.total ?? r.length);
-        this.totalPages.set(r.totalPages ?? 1);
+        this.invoices.set(r?.data ?? r);
+        this.total.set(r?.total ?? r.length);
+        this.totalPages.set(r?.totalPages ?? 1);
         this.loading.set(false);
-        this.computeKpis(r.data ?? r);
+        this.computeKpis(r?.data ?? r);
       },
       error: () => { this.loading.set(false); this.notify.error('Error al cargar facturas'); }
     });
@@ -1032,16 +1092,25 @@ export class InvoicesListComponent implements OnInit {
     this.http.post<any>(`${this.API}/${inv.id}/issue`, {}).subscribe({
       next: res => {
         this.sending.update(s => ({ ...s, [inv.id]: false }));
+        // Backend returns the updated invoice directly (Prisma record)
+        const updated: Invoice = res?.data ?? res;
         this.load();
-        if (this.detailInvoice()?.id === inv.id) this.detailInvoice.set(res?.data ?? res);
-        const zipKey = res?.dianResult?.zipKey ?? res?.dianZipKey;
+        if (this.detailInvoice()?.id === inv.id) this.detailInvoice.set(updated);
+        const zipKey  = updated?.dianZipKey  ?? res?.dianResult?.zipKey;
+        const errors: string[] = res?.dianResult?.errorMessages ?? [];
         if (zipKey) {
-          this.notify.success(`✓ Factura enviada a DIAN. ZipKey: ${zipKey.slice(0,8)}…`);
+          this.notify.success(`✓ Enviada a DIAN (ZipKey: ${zipKey.slice(0,8)}…) — pulsa "Consultar DIAN" para confirmar aceptación.`);
+        } else if (errors.length > 0) {
+          this.notify.error(`DIAN rechazó: ${errors.slice(0, 2).join(' | ')}`);
         } else {
-          this.notify.warning(`Procesada con observaciones: ${res?.dianResult?.errorMessages?.join(' | ') ?? 'sin ZipKey'}`);
+          this.notify.warning(`Factura procesada sin ZipKey — revisa el estado manualmente.`);
         }
       },
-      error: err => { this.sending.update(s => ({ ...s, [inv.id]: false })); this.notify.error(err?.error?.message ?? 'Error al enviar a la DIAN'); }
+      error: err => {
+        this.sending.update(s => ({ ...s, [inv.id]: false }));
+        const msg = err?.error?.message ?? err?.message ?? 'Error al enviar a la DIAN';
+        this.notify.error(msg);
+      }
     });
   }
 
@@ -1051,14 +1120,27 @@ export class InvoicesListComponent implements OnInit {
     this.http.post<any>(`${this.API}/${inv.id}/dian-status`, {}).subscribe({
       next: res => {
         this.querying.update(q => ({ ...q, [inv.id]: false }));
+        // Backend returns the updated Prisma invoice record directly
+        const updated: Invoice = res?.data ?? res;
         this.load();
-        if (this.detailInvoice()?.id === inv.id) this.detailInvoice.set(res?.data ?? res);
-        const st = res?.status ?? res?.dianStatus;
-        if (st === 'ACCEPTED_DIAN') { this.notify.success('✓ Factura aceptada por la DIAN (código 00)'); }
-        else if (st === 'REJECTED_DIAN') { this.notify.error('✗ Factura rechazada por la DIAN. Revisa los errores.'); }
-        else { this.notify.info(`Estado DIAN: ${res?.dianStatusCode ?? '—'} — ${res?.dianStatusMsg ?? 'En proceso'}`); }
+        if (this.detailInvoice()?.id === inv.id) this.detailInvoice.set(updated);
+        const invStatus = updated?.status ?? res?.status;
+        const code      = updated?.dianStatusCode ?? res?.dianStatusCode ?? '—';
+        const msg       = updated?.dianStatusMsg  ?? res?.dianStatusMsg  ?? '';
+        if (invStatus === 'ACCEPTED_DIAN') {
+          this.notify.success('✓ Factura aceptada por la DIAN (código 00)');
+        } else if (invStatus === 'REJECTED_DIAN') {
+          const detail = msg ? ` — ${msg.slice(0, 120)}` : '';
+          this.notify.error(`✗ Rechazada por DIAN (código ${code})${detail}`);
+        } else {
+          this.notify.info(`Estado DIAN: código ${code} — ${msg || 'En proceso'}`);
+        }
       },
-      error: err => { this.querying.update(q => ({ ...q, [inv.id]: false })); this.notify.error(err?.error?.message ?? 'Error al consultar DIAN'); }
+      error: err => {
+        this.querying.update(q => ({ ...q, [inv.id]: false }));
+        const msg = err?.error?.message ?? err?.message ?? 'Error al consultar DIAN';
+        this.notify.error(msg);
+      }
     });
   }
 
@@ -1129,6 +1211,14 @@ export class InvoicesListComponent implements OnInit {
   statusLabel(s: string) { return ({ DRAFT:'Borrador', SENT_DIAN:'Enviada', ISSUED:'Enviada', ACCEPTED_DIAN:'Aceptada', REJECTED_DIAN:'Rechazada', PAID:'Pagada', CANCELLED:'Anulada', OVERDUE:'Vencida' } as any)[s] ?? s; }
   dianLabel(s?: string)  { if (!s) return 'Pendiente'; return ({ ACEPTADO:'Aceptado', RECHAZADO:'Rechazado', PENDIENTE:'Pendiente', ACCEPTED_DIAN:'Aceptado', REJECTED_DIAN:'Rechazado', SENT:'Enviado', ISSUED:'Enviado', ERROR:'Error' } as any)[s] ?? s; }
   dianCodeDesc(code?: string): string { return ({ '00':'Procesado correctamente','0':'Procesado correctamente','66':'NSU no encontrado','90':'TrackId no encontrado','99':'Errores de validación' } as any)[code??''] ?? ''; }
+  parseDianErrors(raw?: string): string[] {
+    if (!raw) return [];
+    try { const arr = JSON.parse(raw); return Array.isArray(arr) ? arr : [String(arr)]; }
+    catch { return raw.split(';').map(s => s.trim()).filter(Boolean); }
+  }
+  dianErrorSeverity(msg: string): 'rechazo' | 'notificacion' {
+    return /Notificaci/i.test(msg) ? 'notificacion' : 'rechazo';
+  }
   fmtCOP(v: number) { return new Intl.NumberFormat('es-CO',{ style:'currency', currency:'COP', minimumFractionDigits:0 }).format(v); }
   min(a: number, b: number) { return Math.min(a, b); }
   private newLine(): InvoiceLine { return { productId:'', description:'', quantity:1, unitPrice:0, taxRate:19, discount:0 }; }
