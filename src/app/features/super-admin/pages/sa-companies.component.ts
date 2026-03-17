@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, computed } from '@angular/core';
+import { Component, HostListener, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -384,7 +384,7 @@ const EMPTY_FORM = () => ({
 
     <!-- ── Crear / Editar empresa ──────────────────────────── -->
     @if (modal() === 'create' || modal() === 'edit') {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay" >
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>{{ modal() === 'create' ? 'Nueva empresa' : 'Editar empresa' }}</h3>
@@ -454,7 +454,7 @@ const EMPTY_FORM = () => ({
 
     <!-- ── Detalle empresa ─────────────────────────────────── -->
     @if (modal() === 'detail' && detailCompany()) {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay" >
         <div class="modal modal-lg" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <div class="detail-title">
@@ -531,7 +531,7 @@ const EMPTY_FORM = () => ({
 
     <!-- ── Cambiar plan ─────────────────────────────────────── -->
     @if (modal() === 'plan' && planTarget()) {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay" >
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Cambiar plan — {{ planTarget()!.name }}</h3>
@@ -560,7 +560,7 @@ const EMPTY_FORM = () => ({
 
     <!-- ── Usuarios de la empresa ──────────────────────────── -->
     @if (modal() === 'users' && usersCompany()) {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay" >
         <div class="modal modal-lg" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <div>
@@ -668,7 +668,7 @@ const EMPTY_FORM = () => ({
 
     <!-- ── Formulario invitar / editar usuario ─────────────── -->
     @if (modal() === 'user-form' && usersCompany()) {
-      <div class="modal-overlay" (click)="backToUsers()">
+      <div class="modal-overlay" >
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <div>
@@ -1116,7 +1116,12 @@ export class SaCompaniesComponent implements OnInit {
     this.loadUsers(c.id);
   }
 
-  closeModal() {
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    // Escape no cierra los modales — solo el botón X
+  }
+
+    closeModal() {
     this.modal.set('none');
     this.detailCompany.set(null);
     this.planTarget.set(null);

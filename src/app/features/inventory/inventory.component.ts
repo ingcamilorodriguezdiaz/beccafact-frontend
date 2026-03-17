@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, HostListener, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -42,6 +42,9 @@ interface ProductForm {
   barcode: string;
   status: string;
 }
+
+/** Estructura de cada unidad de medida tal como viene en el JSON del parámetro */
+interface UnitMeasure { name: string; usage: string; }
 
 @Component({
   selector: 'app-inventory',
@@ -161,7 +164,7 @@ interface ProductForm {
                     <td><strong>{{ fmtCOP(p.price) }}</strong></td>
                     <td>
                       <div class="stock-cell" [class.low]="p.stock <= p.minStock">
-                        <span>{{ p.stock }} {{ p.unit }}</span>
+                        <span>{{ p.stock }} {{ unitLabel(p.unit) }}</span>
                         @if (p.stock <= p.minStock) {
                           <svg viewBox="0 0 20 20" fill="currentColor" width="12" title="Stock bajo"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z"/></svg>
                         }
@@ -226,11 +229,7 @@ interface ProductForm {
           <div class="product-grid">
             @for (p of products(); track p.id) {
               <div class="product-card" [class.low-stock-card]="p.stock <= p.minStock" [class.inactive-card]="p.status === 'INACTIVE'">
-
-                <!-- Status top-right -->
                 <span class="pc-status status-pill status-{{ p.status.toLowerCase() }}">{{ statusLabel(p.status) }}</span>
-
-                <!-- Icon + nombre -->
                 <div class="pc-top">
                   <div class="pc-icon" [class.low]="p.stock <= p.minStock">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="22"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/><path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/></svg>
@@ -238,8 +237,6 @@ interface ProductForm {
                   <div class="pc-name">{{ p.name }}</div>
                   <code class="sku-badge">{{ p.sku }}</code>
                 </div>
-
-                <!-- Info rows -->
                 <div class="pc-info">
                   @if (p.category) {
                     <div class="pc-info-row">
@@ -253,7 +250,7 @@ interface ProductForm {
                   </div>
                   <div class="pc-info-row" [class.pc-low-stock]="p.stock <= p.minStock">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z"/></svg>
-                    <span>{{ p.stock }} {{ p.unit }}
+                    <span>{{ p.stock }} {{ unitLabel(p.unit) }}
                       @if (p.stock <= p.minStock) { <span class="pc-low-label">· Stock bajo</span> }
                     </span>
                   </div>
@@ -262,8 +259,6 @@ interface ProductForm {
                     <span>IVA {{ p.taxRate }}%</span>
                   </div>
                 </div>
-
-                <!-- Actions -->
                 <div class="pc-actions">
                   <button class="btn btn-sm btn-secondary" (click)="viewDetail(p)">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
@@ -323,7 +318,6 @@ interface ProductForm {
           </div>
 
           <div class="drawer-body">
-            <!-- Precios -->
             <div class="dw-section">
               <div class="dw-section-title">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z"/></svg>
@@ -345,7 +339,6 @@ interface ProductForm {
               </div>
             </div>
 
-            <!-- Inventario -->
             <div class="dw-section">
               <div class="dw-section-title">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z"/></svg>
@@ -362,12 +355,12 @@ interface ProductForm {
                 </div>
                 <div class="dw-date-chip">
                   <span class="dw-date-lbl">Unidad</span>
-                  <span class="dw-date-val">{{ detailProduct()!.unit }}</span>
+                  <!-- Muestra el nombre completo si está en el catálogo, si no el código -->
+                  <span class="dw-date-val">{{ unitLabel(detailProduct()!.unit) }}</span>
                 </div>
               </div>
             </div>
 
-            <!-- Descripción -->
             @if (detailProduct()!.description) {
               <div class="dw-section">
                 <div class="dw-section-title">
@@ -378,7 +371,6 @@ interface ProductForm {
               </div>
             }
 
-            <!-- Barcode -->
             @if (detailProduct()!.barcode) {
               <div class="dw-section">
                 <div class="dw-section-title">
@@ -406,7 +398,7 @@ interface ProductForm {
 
     <!-- ══ PRODUCT MODAL ══ -->
     @if (showModal()) {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay" >
         <div class="modal modal-lg" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>{{ editingId() ? 'Editar producto' : 'Nuevo producto' }}</h3>
@@ -415,6 +407,7 @@ interface ProductForm {
             </button>
           </div>
           <div class="modal-body">
+
             <div class="form-section-title">Información básica</div>
             <div class="form-row">
               <div class="form-group fg-2">
@@ -436,17 +429,34 @@ interface ProductForm {
                   }
                 </select>
               </div>
+
+              <!-- ── Unidad de medida dinámica desde catálogo ── -->
               <div class="form-group">
                 <label>Unidad de medida</label>
-                <select [(ngModel)]="form.unit" class="form-control">
-                  <option value="UND">Unidad (UND)</option>
-                  <option value="KG">Kilogramo (KG)</option>
-                  <option value="MT">Metro (MT)</option>
-                  <option value="LT">Litro (LT)</option>
-                  <option value="HR">Hora (HR)</option>
-                  <option value="SRV">Servicio (SRV)</option>
-                </select>
+                @if (loadingUnits()) {
+                  <select class="form-control" disabled>
+                    <option>Cargando unidades...</option>
+                  </select>
+                } @else {
+                  <select [(ngModel)]="form.unit" class="form-control">
+                    @for (entry of unitEntries(); track entry.code) {
+                      <option [value]="entry.code">{{ entry.name }} ({{ entry.code }})</option>
+                    }
+                    <!-- Fallback: si la unidad del producto no está en el catálogo, mostrarla igual -->
+                    @if (form.unit && !unitMap()[form.unit]) {
+                      <option [value]="form.unit">{{ form.unit }}</option>
+                    }
+                  </select>
+                  <!-- Descripción de uso de la unidad seleccionada -->
+                  @if (selectedUnitUsage()) {
+                    <div class="unit-hint">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="11"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"/></svg>
+                      {{ selectedUnitUsage() }}
+                    </div>
+                  }
+                }
               </div>
+
               <div class="form-group">
                 <label>Estado</label>
                 <select [(ngModel)]="form.status" class="form-control">
@@ -506,6 +516,7 @@ interface ProductForm {
                 <input type="text" [(ngModel)]="form.barcode" class="form-control" placeholder="7707123456789"/>
               </div>
             </div>
+
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
@@ -519,7 +530,7 @@ interface ProductForm {
 
     <!-- Delete Confirm -->
     @if (deleteTarget()) {
-      <div class="modal-overlay" (click)="deleteTarget.set(null)">
+      <div class="modal-overlay" >
         <div class="modal modal-sm" (click)="$event.stopPropagation()">
           <div class="modal-header"><h3>Eliminar producto</h3></div>
           <div class="modal-body"><p>¿Eliminar <strong>{{ deleteTarget()!.name }}</strong>? Esta acción no se puede deshacer.</p></div>
@@ -540,8 +551,6 @@ interface ProductForm {
     .alert-bar { display:flex; align-items:center; gap:10px; background:#fef3c7; border:1px solid #fcd34d; border-radius:10px; padding:10px 16px; margin-bottom:14px; font-size:13.5px; color:#92400e; }
     .alert-bar svg { color:#d97706; flex-shrink:0; }
     .alert-link { margin-left:auto; background:none; border:none; cursor:pointer; font-size:13px; font-weight:700; color:#d97706; text-decoration:underline; }
-
-    /* Filters */
     .filters-bar { display:flex; gap:10px; margin-bottom:16px; align-items:center; flex-wrap:wrap; }
     .search-wrap { flex:1; min-width:200px; max-width:360px; position:relative; }
     .search-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; }
@@ -552,8 +561,6 @@ interface ProductForm {
     .view-toggle button { padding:7px 10px; background:#fff; border:none; cursor:pointer; color:#9ca3af; transition:all .15s; }
     .view-toggle button:hover { background:#f0f4f9; color:#1a407e; }
     .view-toggle button.active { background:#1a407e; color:#fff; }
-
-    /* ── TABLE VIEW ─────────────────────────────────────────── */
     .table-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; }
     .data-table { width:100%; border-collapse:collapse; }
     .data-table th { padding:11px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; background:#f8fafc; border-bottom:1px solid #dce6f0; text-align:left; }
@@ -586,44 +593,19 @@ interface ProductForm {
     .btn-page:hover:not(:disabled) { background:#f0f4f9; border-color:#1a407e; color:#1a407e; }
     .btn-page.active { background:#1a407e; border-color:#1a407e; color:#fff; }
     .btn-page:disabled { opacity:.4; cursor:default; }
-
-    /* ── GRID VIEW ──────────────────────────────────────────── */
-    .product-grid {
-      display:grid;
-      grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
-      gap:14px;
-    }
-    .product-card {
-      background:#fff; border:1px solid #dce6f0; border-radius:12px;
-      padding:18px 16px 14px; position:relative;
-      transition:box-shadow .18s, transform .18s;
-      display:flex; flex-direction:column;
-    }
+    .product-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px; }
+    .product-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; padding:18px 16px 14px; position:relative; transition:box-shadow .18s, transform .18s; display:flex; flex-direction:column; }
     .product-card:hover { box-shadow:0 4px 20px rgba(26,64,126,.1); transform:translateY(-2px); }
     .low-stock-card { border-color:#fcd34d; background:#fffbeb; }
     .inactive-card { opacity:.7; }
     .product-card--skeleton { pointer-events:none; }
-
-    /* Status badge top-right */
     .pc-status { position:absolute; top:12px; right:12px; }
-
-    /* Top section */
     .pc-top { display:flex; flex-direction:column; align-items:center; text-align:center; padding:4px 0 12px; }
-    .pc-icon {
-      width:48px; height:48px; border-radius:12px;
-      background:#e8eef8; color:#1a407e;
-      display:flex; align-items:center; justify-content:center;
-      margin-bottom:10px;
-    }
+    .pc-icon { width:48px; height:48px; border-radius:12px; background:#e8eef8; color:#1a407e; display:flex; align-items:center; justify-content:center; margin-bottom:10px; }
     .pc-icon.low { background:#fef3c7; color:#d97706; }
     .pc-name { font-size:14px; font-weight:700; color:#0c1c35; line-height:1.3; margin-bottom:5px; }
     .pc-sk-icon { width:48px; height:48px; border-radius:12px; display:block; margin:0 auto 10px; }
-
-    /* Info rows */
-    .pc-info {
-      border-top:1px solid #f0f4f8; padding-top:10px; margin-bottom:12px;
-      display:flex; flex-direction:column; gap:5px; flex:1;
-    }
+    .pc-info { border-top:1px solid #f0f4f8; padding-top:10px; margin-bottom:12px; display:flex; flex-direction:column; gap:5px; flex:1; }
     .pc-info-row { display:flex; align-items:center; gap:6px; font-size:12px; color:#64748b; }
     .pc-info-row svg { color:#94a3b8; flex-shrink:0; }
     .pc-info-row span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -631,20 +613,12 @@ interface ProductForm {
     .pc-low-stock { color:#d97706; font-weight:600; }
     .pc-low-stock svg { color:#f59e0b; }
     .pc-low-label { color:#d97706; font-weight:700; }
-
-    /* Card actions */
     .pc-actions { display:flex; gap:6px; align-items:center; border-top:1px solid #f0f4f8; padding-top:10px; }
     .pc-actions .btn { flex:1; justify-content:center; }
-
-    /* Standalone pagination */
-    .pagination--standalone {
-      background:#fff; border:1px solid #dce6f0; border-radius:12px; margin-top:4px;
-    }
+    .pagination--standalone { background:#fff; border:1px solid #dce6f0; border-radius:12px; margin-top:4px; }
     .empty-state-grid-wrap { background:#fff; border:1px solid #dce6f0; border-radius:12px; }
     .empty-state-grid { padding:64px 24px; text-align:center; color:#9ca3af; }
     .empty-state-grid p { margin:16px 0; font-size:14px; }
-
-    /* Skeleton */
     .table-loading { padding:12px 16px; }
     .skeleton-row { display:flex; align-items:center; gap:16px; padding:12px 0; border-bottom:1px solid #f0f4f8; }
     .sk { background:linear-gradient(90deg,#f0f4f8 25%,#e8eef8 50%,#f0f4f8 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:6px; height:14px; }
@@ -652,8 +626,7 @@ interface ProductForm {
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
     .empty-state { padding:64px 24px; text-align:center; color:#9ca3af; }
     .empty-state p { margin:16px 0; font-size:14px; }
-
-    /* ── DETAIL DRAWER ──────────────────────────────────────── */
+    /* Drawer */
     .drawer-overlay { position:fixed; inset:0; background:rgba(12,28,53,.4); z-index:100; display:flex; justify-content:flex-end; backdrop-filter:blur(2px); }
     .drawer { width:420px; max-width:100vw; background:#fff; height:100%; display:flex; flex-direction:column; box-shadow:-8px 0 32px rgba(12,28,53,.12); }
     .drawer-header { display:flex; align-items:center; gap:10px; padding:18px 20px 14px; border-bottom:1px solid #f0f4f8; flex-shrink:0; }
@@ -667,8 +640,6 @@ interface ProductForm {
     .drawer-close:hover { background:#f1f5f9; color:#374151; }
     .drawer-body { flex:1; overflow-y:auto; padding:0; scrollbar-width:thin; scrollbar-color:#e2e8f0 transparent; }
     .drawer-footer { padding:14px 20px; border-top:1px solid #f0f4f8; display:flex; gap:8px; flex-shrink:0; }
-
-    /* Drawer sections — reutiliza clases de invoices drawer */
     .dw-section { padding:14px 20px; border-bottom:1px solid #f8fafc; }
     .dw-section:last-child { border-bottom:none; }
     .dw-section-title { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; margin-bottom:10px; }
@@ -680,8 +651,7 @@ interface ProductForm {
     .dw-date-val { display:block; font-size:12.5px; font-weight:700; color:#1e293b; }
     .dw-notes { font-size:13px; color:#475569; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; line-height:1.5; }
     .dw-barcode { display:block; font-size:13px; font-family:monospace; color:#475569; background:#f1f5f9; padding:8px 12px; border-radius:8px; letter-spacing:.05em; }
-
-    /* ── MODAL ──────────────────────────────────────────────── */
+    /* Modal */
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; display:flex; align-items:center; justify-content:center; padding:16px; }
     .modal { background:#fff; border-radius:16px; width:100%; max-width:560px; max-height:90vh; display:flex; flex-direction:column; }
     .modal-lg { max-width:720px; }
@@ -701,7 +671,11 @@ interface ProductForm {
     .form-group label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:5px; }
     .form-control { width:100%; padding:9px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; background:#fff; color:#0c1c35; box-sizing:border-box; }
     .form-control:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,.08); }
+    .form-control:disabled { background:#f8fafc; color:#9ca3af; cursor:not-allowed; }
     textarea.form-control { resize:vertical; }
+    /* Hint de uso de la unidad */
+    .unit-hint { display:flex; align-items:flex-start; gap:5px; margin-top:5px; font-size:11.5px; color:#6b7280; line-height:1.4; }
+    .unit-hint svg { color:#9ca3af; flex-shrink:0; margin-top:1px; }
     .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; white-space:nowrap; }
     .btn-primary { background:#1a407e; color:#fff; }
     .btn-primary:hover:not(:disabled) { background:#15336a; }
@@ -711,8 +685,6 @@ interface ProductForm {
     .btn-danger { background:#dc2626; color:#fff; }
     .btn-danger:hover:not(:disabled) { background:#b91c1c; }
     .btn-sm { padding:7px 14px; font-size:13px; }
-
-    /* ── RESPONSIVE ─────────────────────────────────────────── */
     @media (max-width: 768px) {
       .page-header { flex-direction:column; align-items:stretch; gap:10px; }
       .header-actions { flex-direction:row; flex-wrap:wrap; gap:8px; }
@@ -721,16 +693,13 @@ interface ProductForm {
       .search-wrap { width:100%; max-width:100%; flex:unset; }
       .view-toggle { margin-left:0; }
       .product-grid { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; }
-      /* Drawer full-width */
       .drawer { width:100%; max-width:100%; }
     }
     @media (max-width: 640px) {
       .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
       .data-table { min-width:560px; }
-      /* Drawer bottom-sheet */
       .drawer-overlay { align-items:flex-end; justify-content:stretch; }
       .drawer { width:100%; height:90dvh; border-radius:18px 18px 0 0; }
-      /* Modal bottom-sheet */
       .modal-overlay { align-items:flex-end; padding:0; }
       .modal { border-radius:20px 20px 0 0; max-height:95dvh; max-width:100%; }
       .modal-footer { flex-direction:column-reverse; gap:8px; }
@@ -753,17 +722,19 @@ interface ProductForm {
   `]
 })
 export class InventoryComponent implements OnInit {
-  private readonly API      = `${environment.apiUrl}/products`;
-  private readonly CATS_API = `${environment.apiUrl}/categories`;
+  private readonly API        = `${environment.apiUrl}/products`;
+  private readonly CATS_API   = `${environment.apiUrl}/categories`;
+  private readonly PARAMS_API = `${environment.apiUrl}/parameters`;
 
-  products    = signal<Product[]>([]);
-  categories  = signal<Category[]>([]);
-  loading     = signal(true);
-  saving      = signal(false);
-  total       = signal(0);
-  page        = signal(1);
-  totalPages  = signal(1);
-  viewMode    = signal<'table' | 'grid'>('table');
+  // ── Productos y categorías ─────────────────────────────────────────────────
+  products      = signal<Product[]>([]);
+  categories    = signal<Category[]>([]);
+  loading       = signal(true);
+  saving        = signal(false);
+  total         = signal(0);
+  page          = signal(1);
+  totalPages    = signal(1);
+  viewMode      = signal<'table' | 'grid'>('table');
   detailProduct = signal<Product | null>(null);
 
   search         = '';
@@ -771,11 +742,43 @@ export class InventoryComponent implements OnInit {
   filterStatus   = '';
   private searchTimer: any;
 
-  showModal  = signal(false);
-  editingId  = signal<string | null>(null);
+  showModal    = signal(false);
+  editingId    = signal<string | null>(null);
   deleteTarget = signal<Product | null>(null);
 
   form: ProductForm = this.emptyForm();
+
+  // ── Unidades de medida desde el catálogo de parámetros ────────────────────
+  /** Mapa raw cargado desde la API: { EA: { name, usage }, HUR: { name, usage }, ... } */
+  unitMap      = signal<Record<string, UnitMeasure>>({});
+  loadingUnits = signal(true);
+
+  /**
+   * Lista ordenada para el <select>: [{ code: 'EA', name: 'Unidad', usage: '...' }, ...]
+   * Se deriva del unitMap. Las unidades DIAN principales van primero (EA, NIU, HUR).
+   */
+  unitEntries = computed(() => {
+    const map = this.unitMap();
+    const PRIORITY = ['EA', 'NIU', 'HUR', 'KGM', 'LTR', 'MTR', 'NAR'];
+    const entries = Object.entries(map).map(([code, meta]) => ({ code, ...meta }));
+    entries.sort((a, b) => {
+      const ia = PRIORITY.indexOf(a.code);
+      const ib = PRIORITY.indexOf(b.code);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return a.name.localeCompare(b.name, 'es');
+    });
+    return entries;
+  });
+
+  /** Texto de uso de la unidad actualmente seleccionada en el formulario */
+  selectedUnitUsage = computed(() => this.unitMap()[this.form.unit]?.usage ?? '');
+
+  /** Etiqueta corta para mostrar en tabla/grid/drawer: "Unidad" en lugar de "EA" si está en catálogo */
+  unitLabel(code: string): string {
+    return this.unitMap()[code]?.name ?? code;
+  }
 
   get lowStockCount() {
     return signal(this.products().filter(p => p.stock <= p.minStock && p.status === 'ACTIVE').length);
@@ -783,19 +786,63 @@ export class InventoryComponent implements OnInit {
 
   constructor(private http: HttpClient, private notify: NotificationService) {}
 
-  ngOnInit() { this.loadCategories(); this.load(); }
+  ngOnInit() {
+    this.loadUnitMeasures();
+    this.loadCategories();
+    this.load();
+  }
+
+  // ── Carga de unidades de medida desde parámetros ───────────────────────────
+
+  private loadUnitMeasures(): void {
+    this.loadingUnits.set(true);
+    this.http.get<{ category: string; value: string; label?: string }>(
+      `${this.PARAMS_API}/UNIT_MEASURES`
+    ).subscribe({
+      next: (param) => {
+        try {
+          const parsed: Record<string, UnitMeasure> = JSON.parse(param.value);
+          this.unitMap.set(parsed);
+        } catch {
+          // JSON inválido en BD: usar fallback
+          this.unitMap.set(this.fallbackUnits());
+        }
+        this.loadingUnits.set(false);
+      },
+      error: () => {
+        // El parámetro no existe todavía (antes del seed) → usar fallback con los códigos DIAN estándar
+        this.unitMap.set(this.fallbackUnits());
+        this.loadingUnits.set(false);
+      },
+    });
+  }
+
+  /** Unidades de fallback si el endpoint no responde (mismos valores que el seed) */
+  private fallbackUnits(): Record<string, UnitMeasure> {
+    return {
+      EA:  { name: 'Unidad',               usage: 'Productos unitarios (computadores, celulares, muebles)' },
+      NIU: { name: 'Unidad DIAN',          usage: 'Unidad estándar recomendada en facturación electrónica' },
+      HUR: { name: 'Hora',                 usage: 'Servicios por hora (consultoría, soporte técnico)' },
+      KGM: { name: 'Kilogramo',            usage: 'Productos vendidos por peso (alimentos, materiales)' },
+      MTR: { name: 'Metro',                usage: 'Productos por longitud (cables, telas)' },
+      LTR: { name: 'Litro',               usage: 'Productos líquidos (combustible, bebidas)' },
+      NAR: { name: 'Número de artículos',  usage: 'Conteo de múltiples artículos en lote' },
+    };
+  }
+
+  // ── Carga de categorías y productos ───────────────────────────────────────
 
   loadCategories() {
     this.http.get<any>(`${this.CATS_API}`).subscribe({
       next: r => this.categories.set(r.data ?? r),
-      error: () => {}
+      error: () => {},
     });
   }
 
   load() {
     this.loading.set(true);
     const params: any = { page: this.page(), limit: 20 };
-    if (this.search) params.search = this.search;
+    if (this.search)         params.search     = this.search;
     if (this.filterCategory) params.categoryId = this.filterCategory;
     if (this.filterStatus && this.filterStatus !== 'low') params.status = this.filterStatus;
 
@@ -806,7 +853,7 @@ export class InventoryComponent implements OnInit {
         this.totalPages.set(r.totalPages ?? 1);
         this.loading.set(false);
       },
-      error: () => { this.loading.set(false); this.notify.error('Error al cargar productos'); }
+      error: () => { this.loading.set(false); this.notify.error('Error al cargar productos'); },
     });
   }
 
@@ -831,11 +878,19 @@ export class InventoryComponent implements OnInit {
     if (p) {
       this.editingId.set(p.id);
       this.form = {
-        categoryId: p.categoryId ?? '', sku: p.sku, name: p.name,
-        description: p.description ?? '', price: p.price, cost: p.cost,
-        stock: p.stock, minStock: p.minStock, unit: p.unit,
-        taxRate: p.taxRate, taxType: p.taxType,
-        barcode: p.barcode ?? '', status: p.status
+        categoryId:  p.categoryId  ?? '',
+        sku:         p.sku,
+        name:        p.name,
+        description: p.description ?? '',
+        price:       p.price,
+        cost:        p.cost,
+        stock:       p.stock,
+        minStock:    p.minStock,
+        unit:        p.unit,
+        taxRate:     p.taxRate,
+        taxType:     p.taxType,
+        barcode:     p.barcode     ?? '',
+        status:      p.status,
       };
     } else {
       this.editingId.set(null);
@@ -845,11 +900,17 @@ export class InventoryComponent implements OnInit {
     this.showModal.set(true);
   }
 
-  closeModal() { this.showModal.set(false); }
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    // Escape no cierra los modales — solo el botón X
+  }
+
+    closeModal() { this.showModal.set(false); }
 
   save() {
     if (!this.form.name || !this.form.sku || this.form.price == null) {
-      this.notify.warning('Nombre, SKU y precio son obligatorios'); return;
+      this.notify.warning('Nombre, SKU y precio son obligatorios');
+      return;
     }
     this.saving.set(true);
     const body = { ...this.form, categoryId: this.form.categoryId || undefined };
@@ -864,14 +925,11 @@ export class InventoryComponent implements OnInit {
         this.closeModal();
         this.load();
       },
-      error: e => { this.saving.set(false); this.notify.error(e?.error?.message ?? 'Error al guardar'); }
+      error: e => { this.saving.set(false); this.notify.error(e?.error?.message ?? 'Error al guardar'); },
     });
   }
 
-  confirmDelete(p: Product) {
-    this.detailProduct.set(null);
-    this.deleteTarget.set(p);
-  }
+  confirmDelete(p: Product) { this.detailProduct.set(null); this.deleteTarget.set(p); }
 
   doDelete() {
     const p = this.deleteTarget();
@@ -884,7 +942,7 @@ export class InventoryComponent implements OnInit {
         this.deleteTarget.set(null);
         this.load();
       },
-      error: e => { this.saving.set(false); this.notify.error(e?.error?.message ?? 'Error al eliminar'); }
+      error: e => { this.saving.set(false); this.notify.error(e?.error?.message ?? 'Error al eliminar'); },
     });
   }
 
@@ -899,6 +957,12 @@ export class InventoryComponent implements OnInit {
   min(a: number, b: number) { return Math.min(a, b); }
 
   private emptyForm(): ProductForm {
-    return { categoryId: '', sku: '', name: '', description: '', price: null, cost: null, stock: 0, minStock: 5, unit: 'UND', taxRate: 19, taxType: 'IVA', barcode: '', status: 'ACTIVE' };
+    // La unidad por defecto es EA (la primera del catálogo) si ya cargaron,
+    // o EA como código DIAN estándar en cualquier caso
+    return {
+      categoryId: '', sku: '', name: '', description: '',
+      price: null, cost: null, stock: 0, minStock: 5,
+      unit: 'EA', taxRate: 19, taxType: 'IVA', barcode: '', status: 'ACTIVE',
+    };
   }
 }

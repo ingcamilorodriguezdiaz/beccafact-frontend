@@ -1,13 +1,13 @@
-import { Component, signal, computed, OnInit } from '@angular/core';
+import { Component, HostListener, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
 import { NotificationService } from '../../core/services/notification.service';
 import { environment } from '../../../environments/environment';
-import { ApiResponse } from '../../model/api-response.model';
 import { PaginatedResponse } from '../../model/paginate-response.model';
+import { debounceTime, distinctUntilChanged, Subject, switchMap, of } from 'rxjs';
 
+// ── Interfaces de dominio ─────────────────────────────────────────────────────
 interface Customer {
   id: string;
   documentType: 'NIT' | 'CC' | 'CE' | 'PASSPORT' | 'TI';
@@ -17,6 +17,10 @@ interface Customer {
   phone?: string;
   address?: string;
   city?: string;
+  department?: string;
+  cityCode?: string;
+  departmentCode?: string;
+  country?: string;
   creditLimit?: number;
   creditDays?: number;
   isActive: boolean;
@@ -31,10 +35,18 @@ interface CustomerForm {
   email: string;
   phone: string;
   address: string;
-  city: string;
+  // Ubicación — se envían al backend; el backend los valida/resuelve desde el catálogo
+  cityCode: string;       // DIVIPOLA 5 dígitos — campo principal de ubicación
+  departmentCode: string; // DIVIPOLA 2 dígitos — se preselecciona para filtrar municipios
+  country: string;        // ISO alpha-2, default 'CO'
   creditLimit: number | null;
   creditDays: number | null;
 }
+
+// ── Interfaces de catálogo geográfico ─────────────────────────────────────────
+interface Department { code: string; name: string; countryCode: string; }
+interface Municipality { code: string; name: string; departmentCode: string; department?: { name: string }; }
+interface Country { code: string; name: string; }
 
 @Component({
   selector: 'app-customers',
@@ -67,8 +79,6 @@ interface CustomerForm {
           <option value="true">Activos</option>
           <option value="false">Inactivos</option>
         </select>
-
-        <!-- View Toggle -->
         <div class="view-toggle">
           <button [class.active]="viewMode() === 'table'" (click)="viewMode.set('table')" title="Vista tabla">
             <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z"/></svg>
@@ -101,21 +111,14 @@ interface CustomerForm {
                 <path stroke-linecap="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>
               </svg>
               <p>{{ search ? 'Sin resultados para "' + search + '"' : 'No hay clientes registrados aún' }}</p>
-              @if (!search) {
-                <button class="btn btn-primary btn-sm" (click)="openModal()">Crear primer cliente</button>
-              }
+              @if (!search) { <button class="btn btn-primary btn-sm" (click)="openModal()">Crear primer cliente</button> }
             </div>
           } @else {
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Cliente</th>
-                  <th>Documento</th>
-                  <th>Contacto</th>
-                  <th>Ciudad</th>
-                  <th>Crédito</th>
-                  <th>Estado</th>
-                  <th></th>
+                  <th>Cliente</th><th>Documento</th><th>Contacto</th>
+                  <th>Ubicación</th><th>Crédito</th><th>Estado</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -130,18 +133,15 @@ interface CustomerForm {
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <span class="doc-badge">{{ c.documentType }}</span>
-                      <span class="doc-number">{{ c.documentNumber }}</span>
-                    </td>
+                    <td><span class="doc-badge">{{ c.documentType }}</span><span class="doc-number">{{ c.documentNumber }}</span></td>
                     <td class="text-muted">{{ c.phone || '—' }}</td>
-                    <td class="text-muted">{{ c.city || '—' }}</td>
+                    <td class="text-muted">
+                      @if (c.city) { {{ c.city }}@if (c.department) {, {{ c.department }}} }
+                      @else { — }
+                    </td>
                     <td>
-                      @if (c.creditDays) {
-                        <span class="credit-badge">{{ c.creditDays }}d / {{ formatCurrency(c.creditLimit) }}</span>
-                      } @else {
-                        <span class="text-muted">Contado</span>
-                      }
+                      @if (c.creditDays) { <span class="credit-badge">{{ c.creditDays }}d / {{ formatCurrency(c.creditLimit) }}</span> }
+                      @else { <span class="text-muted">Contado</span> }
                     </td>
                     <td>
                       <span class="status-badge" [class.active]="c.isActive" [class.inactive]="!c.isActive">
@@ -204,31 +204,20 @@ interface CustomerForm {
               <path stroke-linecap="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>
             </svg>
             <p>{{ search ? 'Sin resultados para "' + search + '"' : 'No hay clientes registrados aún' }}</p>
-            @if (!search) {
-              <button class="btn btn-primary btn-sm" (click)="openModal()">Crear primer cliente</button>
-            }
+            @if (!search) { <button class="btn btn-primary btn-sm" (click)="openModal()">Crear primer cliente</button> }
           </div>
         } @else {
           <div class="customer-grid">
             @for (c of customers(); track c.id) {
               <div class="customer-card" [class.customer-card--inactive]="!c.isActive">
-
-                <!-- Status badge top-right -->
                 <span class="cc-status status-badge" [class.active]="c.isActive" [class.inactive]="!c.isActive">
                   {{ c.isActive ? 'Activo' : 'Inactivo' }}
                 </span>
-
-                <!-- Avatar + nombre -->
                 <div class="cc-top">
                   <div class="cc-avatar">{{ initials(c.name) }}</div>
                   <div class="cc-name">{{ c.name }}</div>
-                  <div class="cc-doc">
-                    <span class="doc-badge">{{ c.documentType }}</span>
-                    {{ c.documentNumber }}
-                  </div>
+                  <div class="cc-doc"><span class="doc-badge">{{ c.documentType }}</span>{{ c.documentNumber }}</div>
                 </div>
-
-                <!-- Info rows -->
                 <div class="cc-info">
                   @if (c.email) {
                     <div class="cc-info-row">
@@ -245,7 +234,7 @@ interface CustomerForm {
                   @if (c.city) {
                     <div class="cc-info-row">
                       <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/></svg>
-                      <span>{{ c.city }}</span>
+                      <span>{{ c.city }}@if (c.department) {, {{ c.department }}}</span>
                     </div>
                   }
                   @if (c.creditDays) {
@@ -255,8 +244,6 @@ interface CustomerForm {
                     </div>
                   }
                 </div>
-
-                <!-- Actions -->
                 <div class="cc-actions">
                   <button class="btn btn-sm btn-secondary" (click)="viewDetail(c)">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
@@ -314,6 +301,9 @@ interface CustomerForm {
               <div class="detail-item"><span>Email</span><strong>{{ detailCustomer()!.email || '—' }}</strong></div>
               <div class="detail-item"><span>Teléfono</span><strong>{{ detailCustomer()!.phone || '—' }}</strong></div>
               <div class="detail-item"><span>Ciudad</span><strong>{{ detailCustomer()!.city || '—' }}</strong></div>
+              <div class="detail-item"><span>Departamento</span><strong>{{ detailCustomer()!.department || '—' }}</strong></div>
+              <div class="detail-item"><span>Cód. municipio</span><strong>{{ detailCustomer()!.cityCode || '—' }}</strong></div>
+              <div class="detail-item"><span>País</span><strong>{{ detailCustomer()!.country || '—' }}</strong></div>
               <div class="detail-item"><span>Dirección</span><strong>{{ detailCustomer()!.address || '—' }}</strong></div>
               <div class="detail-item"><span>Crédito límite</span><strong>{{ formatCurrency(detailCustomer()!.creditLimit) }}</strong></div>
               <div class="detail-item"><span>Días crédito</span><strong>{{ detailCustomer()!.creditDays ?? '—' }}</strong></div>
@@ -340,7 +330,7 @@ interface CustomerForm {
 
     <!-- ── Create / Edit Modal ─────────────────────────────── -->
     @if (showModal()) {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay" >
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>{{ editingId() ? 'Editar cliente' : 'Nuevo cliente' }}</h3>
@@ -349,6 +339,8 @@ interface CustomerForm {
             </button>
           </div>
           <div class="modal-body">
+
+            <!-- Documento -->
             <div class="form-row">
               <div class="form-group">
                 <label>Tipo documento *</label>
@@ -362,13 +354,16 @@ interface CustomerForm {
               </div>
               <div class="form-group">
                 <label>Número de documento *</label>
-                <input type="text" [(ngModel)]="form.documentNumber" class="form-control" placeholder="900123456-1"/>
+                <input type="text" [(ngModel)]="form.documentNumber" class="form-control" placeholder="900123456"/>
               </div>
             </div>
+
             <div class="form-group">
               <label>Nombre / Razón social *</label>
               <input type="text" [(ngModel)]="form.name" class="form-control" placeholder="Empresa S.A.S."/>
             </div>
+
+            <!-- Contacto -->
             <div class="form-row">
               <div class="form-group">
                 <label>Email</label>
@@ -379,16 +374,91 @@ interface CustomerForm {
                 <input type="text" [(ngModel)]="form.phone" class="form-control" placeholder="+57 300 000 0000"/>
               </div>
             </div>
+
+            <!-- ── Ubicación geográfica ──────────────────────────────── -->
+            <div class="form-section-title">Ubicación</div>
+
+            <!-- País -->
             <div class="form-row">
               <div class="form-group">
-                <label>Ciudad</label>
-                <input type="text" [(ngModel)]="form.city" class="form-control" placeholder="Bogotá"/>
+                <label>País</label>
+                <select [(ngModel)]="form.country" (ngModelChange)="onCountryChange($event)" class="form-control">
+                  <option value="">— Seleccionar país —</option>
+                  @for (c of countries(); track c.code) {
+                    <option [value]="c.code">{{ c.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Departamento</label>
+                @if (form.country === 'CO') {
+                  <select [(ngModel)]="form.departmentCode" (ngModelChange)="onDepartmentChange($event)" class="form-control"
+                          [disabled]="!form.country">
+                    <option value="">— Seleccionar departamento —</option>
+                    @for (d of departments(); track d.code) {
+                      <option [value]="d.code">{{ d.name }}</option>
+                    }
+                  </select>
+                } @else {
+                  <!-- Para países no-CO: texto libre -->
+                  <input type="text" [(ngModel)]="form.departmentCode" class="form-control" placeholder="Estado / Provincia"/>
+                }
+              </div>
+            </div>
+
+            <!-- Municipio con buscador (solo para CO) / texto libre para otros países -->
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  @if (form.country === 'CO') { Municipio (DIVIPOLA) }
+                  @else { Ciudad }
+                </label>
+                @if (form.country === 'CO') {
+                  <!-- Campo de búsqueda de municipios -->
+                  <div class="muni-search-wrap">
+                    <input type="text"
+                           [value]="muniSearchText()"
+                           (input)="onMuniSearchInput($event)"
+                           (focus)="muniDropdownOpen.set(true)"
+                           class="form-control"
+                           [placeholder]="form.departmentCode ? 'Buscar municipio...' : 'Selecciona primero el departamento'"
+                           [disabled]="!form.departmentCode"
+                           autocomplete="off"/>
+
+                    @if (muniDropdownOpen() && filteredMunicipalities().length > 0) {
+                      <div class="muni-dropdown">
+                        @for (m of filteredMunicipalities(); track m.code) {
+                          <button type="button" class="muni-option" (click)="selectMunicipality(m)">
+                            <span class="muni-name">{{ m.name }}</span>
+                            <span class="muni-code">{{ m.code }}</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                    @if (muniDropdownOpen() && muniSearchText().length >= 2 && filteredMunicipalities().length === 0 && !loadingMunis()) {
+                      <div class="muni-dropdown muni-dropdown--empty">Sin resultados</div>
+                    }
+                    @if (loadingMunis()) {
+                      <div class="muni-dropdown muni-dropdown--empty">Buscando...</div>
+                    }
+                  </div>
+                  @if (form.cityCode) {
+                    <div class="muni-selected">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/></svg>
+                      Cód. DIVIPOLA: <strong>{{ form.cityCode }}</strong>
+                    </div>
+                  }
+                } @else {
+                  <input type="text" [(ngModel)]="form.cityCode" class="form-control" placeholder="Nombre de la ciudad"/>
+                }
               </div>
               <div class="form-group">
                 <label>Dirección</label>
                 <input type="text" [(ngModel)]="form.address" class="form-control" placeholder="Calle 123 #45-67"/>
               </div>
             </div>
+
+            <!-- Crédito -->
             <div class="form-row">
               <div class="form-group">
                 <label>Límite de crédito (COP)</label>
@@ -399,6 +469,7 @@ interface CustomerForm {
                 <input type="number" [(ngModel)]="form.creditDays" class="form-control" placeholder="30"/>
               </div>
             </div>
+
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
@@ -412,11 +483,9 @@ interface CustomerForm {
 
     <!-- ── Delete Confirm ─────────────────────────────────── -->
     @if (deleteTarget()) {
-      <div class="modal-overlay" (click)="deleteTarget.set(null)">
+      <div class="modal-overlay" >
         <div class="modal modal-sm" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h3>Eliminar cliente</h3>
-          </div>
+          <div class="modal-header"><h3>Eliminar cliente</h3></div>
           <div class="modal-body">
             <p>¿Estás seguro de eliminar a <strong>{{ deleteTarget()!.name }}</strong>? Esta acción no se puede deshacer.</p>
           </div>
@@ -444,13 +513,13 @@ interface CustomerForm {
     .search-input:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,0.08); }
     .filter-select { padding:8px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; background:#fff; color:#374151; }
 
-    /* View toggle — idéntico a inventario */
+    /* View toggle */
     .view-toggle { display:flex; gap:2px; border:1px solid #dce6f0; border-radius:8px; overflow:hidden; margin-left:auto; flex-shrink:0; }
     .view-toggle button { padding:7px 10px; background:#fff; border:none; cursor:pointer; color:#9ca3af; transition:all .15s; }
     .view-toggle button:hover { background:#f0f4f9; color:#1a407e; }
     .view-toggle button.active { background:#1a407e; color:#fff; }
 
-    /* ── TABLE VIEW ─────────────────────────────────────────── */
+    /* ── TABLE VIEW */
     .table-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; }
     .data-table { width:100%; border-collapse:collapse; }
     .data-table th { padding:11px 16px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; background:#f8fafc; border-bottom:1px solid #dce6f0; text-align:left; }
@@ -462,69 +531,30 @@ interface CustomerForm {
     .cust-name { font-weight:600; color:#0c1c35; font-size:14px; }
     .cust-email { font-size:12px; color:#9ca3af; margin-top:1px; }
 
-    /* ── GRID VIEW ──────────────────────────────────────────── */
-    .customer-grid {
-      display:grid;
-      grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
-      gap:14px;
-    }
-    .customer-card {
-      background:#fff; border:1px solid #dce6f0; border-radius:12px;
-      padding:18px 16px 14px; position:relative;
-      transition:box-shadow .18s, transform .18s;
-      display:flex; flex-direction:column; gap:0;
-    }
+    /* ── GRID VIEW */
+    .customer-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px; }
+    .customer-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; padding:18px 16px 14px; position:relative; transition:box-shadow .18s, transform .18s; display:flex; flex-direction:column; gap:0; }
     .customer-card:hover { box-shadow:0 4px 20px rgba(26,64,126,.1); transform:translateY(-2px); }
     .customer-card--inactive { opacity:.7; border-color:#f0d4d4; background:#fdfafa; }
     .customer-card--skeleton { pointer-events:none; padding:18px 16px; }
-
-    /* Status top-right */
     .cc-status { position:absolute; top:12px; right:12px; }
-
-    /* Avatar + nombre centrado */
     .cc-top { display:flex; flex-direction:column; align-items:center; text-align:center; padding:6px 0 12px; }
-    .cc-avatar {
-      width:52px; height:52px; border-radius:12px;
-      background:linear-gradient(135deg,#1a407e,#00c6a0);
-      color:#fff; font-size:16px; font-weight:700;
-      display:flex; align-items:center; justify-content:center;
-      font-family:'Sora',sans-serif; margin-bottom:10px;
-    }
+    .cc-avatar { width:52px; height:52px; border-radius:12px; background:linear-gradient(135deg,#1a407e,#00c6a0); color:#fff; font-size:16px; font-weight:700; display:flex; align-items:center; justify-content:center; font-family:'Sora',sans-serif; margin-bottom:10px; }
     .cc-name { font-size:14px; font-weight:700; color:#0c1c35; line-height:1.3; margin-bottom:4px; }
     .cc-doc { font-size:11.5px; color:#9ca3af; display:flex; align-items:center; gap:5px; justify-content:center; }
-
-    /* Info rows */
-    .cc-info {
-      border-top:1px solid #f0f4f8; padding-top:10px; margin-bottom:12px;
-      display:flex; flex-direction:column; gap:5px; flex:1;
-    }
-    .cc-info-row {
-      display:flex; align-items:center; gap:6px;
-      font-size:12px; color:#64748b;
-    }
+    .cc-info { border-top:1px solid #f0f4f8; padding-top:10px; margin-bottom:12px; display:flex; flex-direction:column; gap:5px; flex:1; }
+    .cc-info-row { display:flex; align-items:center; gap:6px; font-size:12px; color:#64748b; }
     .cc-info-row svg { color:#94a3b8; flex-shrink:0; }
     .cc-info-row span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .cc-credit { color:#065f46; font-weight:600; }
     .cc-credit svg { color:#059669; }
-
-    /* Card actions */
     .cc-actions { display:flex; gap:6px; align-items:center; border-top:1px solid #f0f4f8; padding-top:10px; }
     .cc-actions .btn { flex:1; justify-content:center; }
-
-    /* Standalone pagination (grid view) */
-    .pagination--standalone {
-      background:#fff; border:1px solid #dce6f0; border-radius:12px;
-      margin-top:4px;
-    }
-
-    /* Empty state grid */
-    .empty-state-grid {
-      grid-column:1/-1; padding:64px 24px; text-align:center; color:#9ca3af;
-      background:#fff; border:1px solid #dce6f0; border-radius:12px;
-    }
+    .pagination--standalone { background:#fff; border:1px solid #dce6f0; border-radius:12px; margin-top:4px; }
+    .empty-state-grid { grid-column:1/-1; padding:64px 24px; text-align:center; color:#9ca3af; background:#fff; border:1px solid #dce6f0; border-radius:12px; }
     .empty-state-grid p { margin:16px 0; font-size:14px; }
 
-    /* ── Shared badges ─────────────────────────────────────── */
+    /* Badges */
     .doc-badge { background:#e8eef8; color:#1a407e; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; margin-right:4px; }
     .doc-number { font-family:monospace; font-size:13px; color:#374151; }
     .text-muted { color:#9ca3af; }
@@ -555,8 +585,6 @@ interface CustomerForm {
     .sk-avatar { width:34px; height:34px; border-radius:8px; flex-shrink:0; }
     .cc-sk-avatar { width:52px; height:52px; border-radius:12px; display:block; margin:0 auto 10px; }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-
-    /* Empty state table */
     .empty-state { padding:64px 24px; text-align:center; color:#9ca3af; }
     .empty-state p { margin:16px 0; font-size:14px; }
 
@@ -587,18 +615,35 @@ interface CustomerForm {
 
     /* Modal */
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; display:flex; align-items:center; justify-content:center; padding:16px; }
-    .modal { background:#fff; border-radius:16px; width:100%; max-width:560px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .modal { background:#fff; border-radius:16px; width:100%; max-width:580px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.2); }
     .modal-sm { max-width:400px; }
     .modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid #f0f4f8; }
     .modal-header h3 { font-family:'Sora',sans-serif; font-size:17px; font-weight:700; color:#0c1c35; margin:0; }
     .modal-body { flex:1; overflow-y:auto; padding:20px 24px; }
     .modal-body p { font-size:14px; color:#374151; line-height:1.6; }
     .modal-footer { display:flex; justify-content:flex-end; gap:10px; padding:16px 24px; border-top:1px solid #f0f4f8; }
+
+    /* Sección de ubicación */
+    .form-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#1a407e; margin:16px 0 10px; padding-bottom:6px; border-bottom:1px solid #e8eef8; }
+
+    /* Buscador de municipios */
+    .muni-search-wrap { position:relative; }
+    .muni-dropdown { position:absolute; top:calc(100% + 4px); left:0; right:0; background:#fff; border:1px solid #dce6f0; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.12); z-index:300; max-height:220px; overflow-y:auto; }
+    .muni-option { display:flex; align-items:center; justify-content:space-between; width:100%; padding:9px 14px; background:none; border:none; cursor:pointer; font-size:13.5px; color:#374151; text-align:left; transition:background .1s; }
+    .muni-option:hover { background:#f0f4f9; }
+    .muni-name { font-weight:500; }
+    .muni-code { font-size:11px; color:#9ca3af; font-family:monospace; }
+    .muni-dropdown--empty { padding:12px 14px; font-size:13px; color:#9ca3af; }
+    .muni-selected { display:flex; align-items:center; gap:5px; margin-top:5px; font-size:12px; color:#065f46; }
+    .muni-selected svg { color:#059669; }
+
+    /* Form */
     .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     .form-group { margin-bottom:14px; }
     .form-group label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:6px; }
     .form-control { width:100%; padding:9px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; background:#fff; color:#0c1c35; box-sizing:border-box; }
     .form-control:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,0.08); }
+    .form-control:disabled { background:#f8fafc; color:#9ca3af; cursor:not-allowed; }
     .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; white-space:nowrap; }
     .btn-primary { background:#1a407e; color:#fff; }
     .btn-primary:hover:not(:disabled) { background:#15336a; }
@@ -609,7 +654,7 @@ interface CustomerForm {
     .btn-danger:hover:not(:disabled) { background:#b91c1c; }
     .btn-sm { padding:7px 14px; font-size:13px; }
 
-    /* ── Responsive ──────────────────────────────────────────── */
+    /* Responsive */
     @media (max-width: 768px) {
       .page-header { flex-direction:column; align-items:stretch; gap:10px; }
       .page-header .btn { width:100%; justify-content:center; }
@@ -632,53 +677,160 @@ interface CustomerForm {
       .pagination { flex-direction:column; gap:8px; align-items:center; }
       .customer-grid { grid-template-columns:repeat(2, 1fr); gap:8px; }
     }
-    @media (max-width: 400px) {
-      .customer-grid { grid-template-columns:1fr; }
-    }
+    @media (max-width: 400px) { .customer-grid { grid-template-columns:1fr; } }
   `]
 })
 export class CustomersComponent implements OnInit {
-  private readonly API = `${environment.apiUrl}/customers`;
+  private readonly API     = `${environment.apiUrl}/customers`;
+  private readonly GEO_API = `${environment.apiUrl}/location`;
 
-  customers = signal<Customer[]>([]);
-  loading = signal(true);
-  saving = signal(false);
-  total = signal(0);
-  page = signal(1);
+  // ── Lista principal ────────────────────────────────────────────────────────
+  customers  = signal<Customer[]>([]);
+  loading    = signal(true);
+  saving     = signal(false);
+  total      = signal(0);
+  page       = signal(1);
   totalPages = signal(1);
   readonly limit = 20;
 
   viewMode = signal<'table' | 'grid'>('table');
-
   search = '';
   filterActive = '';
   private searchTimer: any;
 
-  showModal = signal(false);
-  editingId = signal<string | null>(null);
+  // ── Modal / drawer ─────────────────────────────────────────────────────────
+  showModal      = signal(false);
+  editingId      = signal<string | null>(null);
   detailCustomer = signal<Customer | null>(null);
-  deleteTarget = signal<Customer | null>(null);
+  deleteTarget   = signal<Customer | null>(null);
 
+  // ── Catálogos geográficos ──────────────────────────────────────────────────
+  countries    = signal<Country[]>([]);
+  departments  = signal<Department[]>([]);
+  municipalities = signal<Municipality[]>([]);
+
+  // ── Estado del buscador de municipios ─────────────────────────────────────
+  muniSearchText   = signal('');
+  muniDropdownOpen = signal(false);
+  loadingMunis     = signal(false);
+
+  /** Municipios filtrados: primero los del departamento seleccionado, luego por texto */
+  filteredMunicipalities = computed(() => {
+    const text = this.muniSearchText().toLowerCase().trim();
+    const deptCode = this.form.departmentCode;
+    return this.municipalities().filter(m =>
+      (!deptCode || m.departmentCode === deptCode) &&
+      (text.length < 2 || m.name.toLowerCase().includes(text))
+    ).slice(0, 40); // max 40 opciones en dropdown
+  });
+
+  private muniSearch$ = new Subject<{ q: string; dept: string }>();
+
+  // ── Formulario ─────────────────────────────────────────────────────────────
   form: CustomerForm = this.emptyForm();
 
   constructor(private http: HttpClient, private notify: NotificationService) {}
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.load();
+    this.loadCountries();
+    this.loadDepartments();
+    // Búsqueda debounced de municipios
+    this.muniSearch$.pipe(
+      debounceTime(300),
+      distinctUntilChanged((a, b) => a.q === b.q && a.dept === b.dept),
+      switchMap(({ q, dept }) => {
+        if (q.length < 2 && !dept) return of([]);
+        this.loadingMunis.set(true);
+        const params: any = {};
+        if (q.length >= 2) params.q = q;
+        if (dept) params.departmentCode = dept;
+        return this.http.get<Municipality[]>(`${this.GEO_API}/municipalities/search`, { params });
+      }),
+    ).subscribe({
+      next: (munis) => { this.municipalities.set(munis); this.loadingMunis.set(false); },
+      error: () => { this.loadingMunis.set(false); },
+    });
+  }
+
+  // ── Carga de catálogos ─────────────────────────────────────────────────────
+
+  private loadCountries() {
+    this.http.get<Country[]>(`${this.GEO_API}/countries`).subscribe({
+      next: (data) => this.countries.set(data),
+      error: () => { /* no bloqueante */ },
+    });
+  }
+
+  private loadDepartments(countryCode = 'CO') {
+    this.http.get<Department[]>(`${this.GEO_API}/departments`, { params: { countryCode } }).subscribe({
+      next: (data) => this.departments.set(data),
+      error: () => { /* no bloqueante */ },
+    });
+  }
+
+  private loadMunicipalitiesByDept(departmentCode: string) {
+    this.loadingMunis.set(true);
+    this.http.get<Municipality[]>(`${this.GEO_API}/departments/${departmentCode}/municipalities`).subscribe({
+      next: (data) => { this.municipalities.set(data); this.loadingMunis.set(false); },
+      error: () => { this.loadingMunis.set(false); },
+    });
+  }
+
+  // ── Handlers de cambio en selectores geográficos ───────────────────────────
+
+  onCountryChange(code: string) {
+    // Al cambiar país resetear la ubicación específica
+    this.form.departmentCode = '';
+    this.form.cityCode       = '';
+    this.muniSearchText.set('');
+    this.municipalities.set([]);
+    if (code === 'CO') {
+      this.loadDepartments('CO');
+    }
+  }
+
+  onDepartmentChange(deptCode: string) {
+    // Al cambiar departamento, resetear el municipio seleccionado
+    this.form.cityCode = '';
+    this.muniSearchText.set('');
+    if (deptCode) {
+      this.loadMunicipalitiesByDept(deptCode);
+    } else {
+      this.municipalities.set([]);
+    }
+  }
+
+  onMuniSearchInput(event: Event) {
+    const q = (event.target as HTMLInputElement).value;
+    this.muniSearchText.set(q);
+    this.muniDropdownOpen.set(true);
+    this.muniSearch$.next({ q, dept: this.form.departmentCode });
+  }
+
+  selectMunicipality(m: Municipality) {
+    this.form.cityCode       = m.code;
+    this.form.departmentCode = m.departmentCode;
+    this.muniSearchText.set(m.name);
+    this.muniDropdownOpen.set(false);
+  }
+
+  // ── CRUD principal ─────────────────────────────────────────────────────────
 
   load() {
     this.loading.set(true);
     const params: any = { page: this.page(), limit: this.limit };
-    if (this.search) params.search = this.search;
-    if (this.filterActive !== '') params.isActive = this.filterActive;
+    if (this.search)         params.search   = this.search;
+    if (this.filterActive)   params.isActive = this.filterActive;
 
-    this.http.get<PaginatedResponse<Customer>>(`${this.API}`, { params }).subscribe({
-      next: ({data: customers, total, totalPages}) => {
-        this.customers.set(customers ?? []);
+    this.http.get<PaginatedResponse<Customer>>(this.API, { params }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.customers.set(data ?? []);
         this.total.set(total ?? 0);
         this.totalPages.set(totalPages ?? 1);
         this.loading.set(false);
       },
-      error: () => { this.loading.set(false); this.notify.error('Error al cargar clientes'); }
+      error: () => { this.loading.set(false); this.notify.error('Error al cargar clientes'); },
     });
   }
 
@@ -700,32 +852,79 @@ export class CustomersComponent implements OnInit {
     if (customer) {
       this.editingId.set(customer.id);
       this.form = {
-        documentType: customer.documentType,
+        documentType:   customer.documentType,
         documentNumber: customer.documentNumber,
-        name: customer.name,
-        email: customer.email ?? '',
-        phone: customer.phone ?? '',
-        address: customer.address ?? '',
-        city: customer.city ?? '',
-        creditLimit: customer.creditLimit ?? null,
-        creditDays: customer.creditDays ?? null,
+        name:           customer.name,
+        email:          customer.email          ?? '',
+        phone:          customer.phone          ?? '',
+        address:        customer.address        ?? '',
+        cityCode:       customer.cityCode        ?? '',
+        departmentCode: customer.departmentCode  ?? '',
+        country:        customer.country         ?? 'CO',
+        creditLimit:    customer.creditLimit      ?? null,
+        creditDays:     customer.creditDays       ?? null,
       };
+      // Cargar municipios del departamento si el cliente tiene uno
+      if (customer.departmentCode) {
+        this.loadMunicipalitiesByDept(customer.departmentCode);
+      }
+      // Mostrar el nombre del municipio en el buscador
+      this.muniSearchText.set(customer.city ?? '');
     } else {
       this.editingId.set(null);
       this.form = this.emptyForm();
+      this.municipalities.set([]);
+      this.muniSearchText.set('');
     }
+    this.muniDropdownOpen.set(false);
     this.detailCustomer.set(null);
     this.showModal.set(true);
   }
 
-  closeModal() { this.showModal.set(false); }
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    // Escape no cierra los modales — solo el botón X
+  }
+
+    closeModal() {
+    this.showModal.set(false);
+    this.muniDropdownOpen.set(false);
+  }
 
   save() {
-    if (!this.form.documentNumber || !this.form.name) {
-      this.notify.warning('Documento y nombre son obligatorios'); return;
+    if (!this.form.documentNumber?.trim() || !this.form.name?.trim()) {
+      this.notify.warning('Documento y nombre son obligatorios');
+      return;
     }
+
     this.saving.set(true);
-    const body = { ...this.form };
+
+    // Construir el payload: incluir cityCode para que el backend resuelva los campos derivados
+    const body: Record<string, any> = {
+      documentType:   this.form.documentType,
+      documentNumber: this.form.documentNumber,
+      name:           this.form.name,
+      email:          this.form.email   || undefined,
+      phone:          this.form.phone   || undefined,
+      address:        this.form.address || undefined,
+      country:        this.form.country || 'CO',
+      creditLimit:    this.form.creditLimit  ?? undefined,
+      creditDays:     this.form.creditDays   ?? undefined,
+    };
+
+    // Ubicación: enviar cityCode si se seleccionó municipio del catálogo (CO),
+    // o departmentCode + cityCode como texto libre para otros países
+    if (this.form.country === 'CO' && this.form.cityCode) {
+      body['cityCode'] = this.form.cityCode; // el backend derivará city, department, departmentCode
+    } else if (this.form.country !== 'CO') {
+      // Para países extranjeros enviamos texto libre
+      if (this.form.departmentCode) body['department']     = this.form.departmentCode;
+      if (this.form.cityCode)       body['city']           = this.form.cityCode;
+    }
+    if (this.form.departmentCode && this.form.country !== 'CO') {
+      body['departmentCode'] = this.form.departmentCode;
+    }
+
     const req = this.editingId()
       ? this.http.patch(`${this.API}/${this.editingId()}`, body)
       : this.http.post(this.API, body);
@@ -740,14 +939,14 @@ export class CustomersComponent implements OnInit {
       error: (e) => {
         this.saving.set(false);
         this.notify.error(e?.error?.message ?? 'Error al guardar');
-      }
+      },
     });
   }
 
   viewDetail(c: Customer) {
     this.http.get<Customer>(`${this.API}/${c.id}`).subscribe({
-      next: r => this.detailCustomer.set(r),
-      error: () => this.detailCustomer.set(c)
+      next: r  => this.detailCustomer.set(r),
+      error: () => this.detailCustomer.set(c),
     });
   }
 
@@ -769,9 +968,11 @@ export class CustomersComponent implements OnInit {
       error: (e) => {
         this.saving.set(false);
         this.notify.error(e?.error?.message ?? 'Error al eliminar');
-      }
+      },
     });
   }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
   initials(name: string): string {
     return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
@@ -785,7 +986,7 @@ export class CustomersComponent implements OnInit {
   statusLabel(s: string): string {
     const map: Record<string, string> = {
       DRAFT: 'Borrador', SENT_DIAN: 'Enviada', ACCEPTED_DIAN: 'Aceptada',
-      REJECTED_DIAN: 'Rechazada', PAID: 'Pagada', CANCELLED: 'Anulada', OVERDUE: 'Vencida'
+      REJECTED_DIAN: 'Rechazada', PAID: 'Pagada', CANCELLED: 'Anulada', OVERDUE: 'Vencida',
     };
     return map[s] ?? s;
   }
@@ -793,6 +994,11 @@ export class CustomersComponent implements OnInit {
   min(a: number, b: number) { return Math.min(a, b); }
 
   private emptyForm(): CustomerForm {
-    return { documentType: 'NIT', documentNumber: '', name: '', email: '', phone: '', address: '', city: '', creditLimit: null, creditDays: null };
+    return {
+      documentType: 'NIT', documentNumber: '', name: '',
+      email: '', phone: '', address: '',
+      cityCode: '', departmentCode: '', country: 'CO',
+      creditLimit: null, creditDays: null,
+    };
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, HostListener, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -234,7 +234,7 @@ interface PagoForm {
          MODAL CLIENTE (detalle de cartera por cliente)
          ══════════════════════════════════════════════════════════════ -->
     @if (showClienteModal()) {
-      <div class="modal-overlay" (click)="showClienteModal.set(false)">
+      <div class="modal-overlay" >
         <div class="modal modal--lg" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Cartera del cliente</h3>
@@ -303,7 +303,7 @@ interface PagoForm {
          MODAL REGISTRAR PAGO
          ══════════════════════════════════════════════════════════════ -->
     @if (showPagoModal()) {
-      <div class="modal-overlay" (click)="closePago()">
+      <div class="modal-overlay" >
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Registrar pago — {{ pagoFactura()?.invoiceNumber }}</h3>
@@ -590,7 +590,12 @@ export class CarteraComponent implements OnInit {
     this.pagoForm = { monto: f.saldo, fecha: new Date().toISOString().split('T')[0], medioPago: '', referencia: '', notas: '' };
     this.showPagoModal.set(true);
   }
-  closePago() { this.showPagoModal.set(false); this.pagoFactura.set(null); }
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    // Escape no cierra los modales — solo el botón X
+  }
+
+    closePago() { this.showPagoModal.set(false); this.pagoFactura.set(null); }
 
   submitPago() {
     if (!this.pagoForm.medioPago) { this.notify.error('Selecciona el medio de pago'); return; }

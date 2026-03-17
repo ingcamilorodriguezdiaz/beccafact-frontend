@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, HostListener, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -142,7 +142,7 @@ const CARD_PRIORITY = [
          MODAL CREAR / EDITAR PLAN
          ════════════════════════════════════ -->
     @if (showModal()) {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay" >
         <div class="modal" (click)="$event.stopPropagation()">
 
           <div class="modal-header">
@@ -494,7 +494,12 @@ export class SaPlansComponent implements OnInit {
     this.showModal.set(true);
   }
 
-  closeModal() { this.showModal.set(false); }
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    // Escape no cierra los modales — solo el botón X
+  }
+
+    closeModal() { this.showModal.set(false); }
 
   save() {
     if (!this.form.name || !this.form.displayName || this.form.price == null) {

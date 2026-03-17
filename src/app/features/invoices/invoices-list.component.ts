@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, HostListener, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -503,7 +503,7 @@ interface InvoiceLine {
 
     <!-- PDF Preview Modal -->
     @if (showPdfModal()) {
-      <div class="modal-overlay" (click)="closePdfModal()">
+      <div class="modal-overlay" >
         <div class="modal modal-pdf" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>
@@ -531,7 +531,7 @@ interface InvoiceLine {
 
     <!-- Edit Draft Modal -->
     @if (showEditModal()) {
-      <div class="modal-overlay modal-invoice-overlay" (click)="closeEditModal()">
+      <div class="modal-overlay modal-invoice-overlay" >
         <div class="modal modal-xl modal-invoice" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>
@@ -618,7 +618,7 @@ interface InvoiceLine {
 
     <!-- New Invoice Modal -->
     @if (showModal()) {
-      <div class="modal-overlay modal-invoice-overlay" (click)="closeModal()">
+      <div class="modal-overlay modal-invoice-overlay" >
         <div class="modal modal-xl modal-invoice" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Nueva factura electrónica</h3>
@@ -1052,7 +1052,12 @@ export class InvoicesListComponent implements OnInit {
     this.newInvoice = { type:'VENTA', prefix:'FV', issueDate:new Date().toISOString().slice(0,10), dueDate:'', customerId:'', notes:'' };
     this.showModal.set(true);
   }
-  closeModal()  { this.showModal.set(false); }
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    // Escape no cierra los modales — solo el botón X
+  }
+
+    closeModal()  { this.showModal.set(false); }
   addLine()     { this.lines.push(this.newLine()); }
   removeLine(i: number) { this.lines.splice(i, 1); }
 

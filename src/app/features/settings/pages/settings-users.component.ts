@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, inject, computed } from '@angular/core';
+import { Component, HostListener, signal, OnInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -140,7 +140,7 @@ interface RoleEntry {
 
     <!-- ── Modal invitar / editar usuario ────────────────── -->
     @if (showModal() && canManage()) {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay" >
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>{{ editingId() ? 'Editar usuario' : 'Invitar usuario' }}</h3>
@@ -411,7 +411,12 @@ export class SettingsUsersComponent implements OnInit {
     this.showModal.set(true);
   }
 
-  closeModal() { this.showModal.set(false); }
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    // Escape no cierra los modales — solo el botón X
+  }
+
+    closeModal() { this.showModal.set(false); }
 
   // ── Guardar ───────────────────────────────────────────────
 
