@@ -43,7 +43,10 @@ interface PayrollRecord {
   cuneRef?:        string;   // CUNE del doc original (para NIAE)
   payrollNumberRef?: string; // Número del doc original (para NIAE)
   fechaGenRef?:    string;   // Fecha emisión del doc original (para NIAE)
-  tipoAjuste?:     string;   // Reemplazar | Eliminar
+  tipoAjuste?:      string;   // Reemplazar | Eliminar
+  originalNieId?:   string;   // FK al NIE raíz de la cadena
+  predecessorId?:   string;   // FK al predecesor directo
+  isAnulado?:       boolean;  // true = período anulado por NIAE-Eliminar ACCEPTED
   baseSalary: number;
   daysWorked: number;
   overtimeHours: number;
@@ -270,15 +273,22 @@ type ViewMode  = 'table' | 'grid';
                               <span class="material-symbols-outlined">cancel</span>
                             </button>
                           }
-                          @if (canSubmit() && r.status === 'ACCEPTED') {
-                            <button class="btn-icon btn-icon--ajuste" title="Crear Nota de Ajuste (Reemplazar)"
+                          @if (canSubmit() && r.status === 'ACCEPTED' && !r.isAnulado
+                               && (r.payrollType === 'NOMINA_ELECTRONICA' || r.tipoAjuste === 'Reemplazar')) {
+                            <button class="btn-icon btn-icon--ajuste" title="Nota de Ajuste — Reemplazar"
                                     (click)="openAjusteModal(r, 'Reemplazar')">
                               <span class="material-symbols-outlined">edit_document</span>
                             </button>
-                            <button class="btn-icon btn-icon--void" title="Crear Nota de Ajuste (Eliminar)"
+                          }
+                          @if (canSubmit() && r.status === 'ACCEPTED' && !r.isAnulado
+                               && (r.payrollType === 'NOMINA_ELECTRONICA' || r.tipoAjuste === 'Reemplazar')) {
+                            <button class="btn-icon btn-icon--void" title="Nota de Ajuste — Eliminar"
                                     (click)="openAjusteModal(r, 'Eliminar')">
                               <span class="material-symbols-outlined">remove_circle</span>
                             </button>
+                          }
+                          @if (r.isAnulado) {
+                            <span class="badge badge--anulado" title="Período anulado por NIAE-Eliminar">Anulado</span>
                           }
                         </div>
                       </td>
@@ -315,7 +325,7 @@ type ViewMode  = 'table' | 'grid';
           } @else {
             <div class="record-grid">
               @for (r of records(); track r.id) {
-                <div class="record-card" [class.record-card--voided]="r.status==='VOIDED'">
+                <div class="record-card" [class.record-card--voided]="r.status==='VOIDED'" [class.record-card--anulado]="r.isAnulado">
                   <span class="rc-status badge" [ngClass]="statusClass(r.status)">{{ statusLabel(r.status) }}</span>
                   <div class="rc-top">
                     <div class="rc-av">{{ r?.employees?.firstName?.[0] }}{{ r?.employees?.lastName?.[0] }}</div>
@@ -369,7 +379,8 @@ type ViewMode  = 'table' | 'grid';
                         <span class="material-symbols-outlined">cancel</span>
                       </button>
                     }
-                    @if (canSubmit() && r.status === 'ACCEPTED') {
+                    @if (canSubmit() && r.status === 'ACCEPTED' && !r.isAnulado
+                         && (r.payrollType === 'NOMINA_ELECTRONICA' || r.tipoAjuste === 'Reemplazar')) {
                       <button class="btn-icon btn-icon--ajuste" title="Nota de Ajuste — Reemplazar"
                               (click)="openAjusteModal(r, 'Reemplazar')">
                         <span class="material-symbols-outlined">edit_document</span>
@@ -378,6 +389,9 @@ type ViewMode  = 'table' | 'grid';
                               (click)="openAjusteModal(r, 'Eliminar')">
                         <span class="material-symbols-outlined">remove_circle</span>
                       </button>
+                    }
+                    @if (r.isAnulado) {
+                      <span class="badge badge--anulado" style="font-size:10px">Anulado</span>
                     }
                   </div>
                 </div>
@@ -686,6 +700,19 @@ type ViewMode  = 'table' | 'grid';
                 <div class="det-dian">
                   <div class="det-dian__title"><span class="material-symbols-outlined">verified</span>Información DIAN</div>
                   @if (r.payrollNumber) { <div><strong>N° Nómina:</strong> <code>{{ r.payrollNumber }}</code></div> }
+                  @if (r.payrollType === 'NOMINA_AJUSTE') {
+                    <div class="det-dian__chain">
+                      <span class="material-symbols-outlined" style="font-size:14px">account_tree</span>
+                      <strong>{{ r.tipoAjuste === 'Eliminar' ? 'Nota Eliminar' : 'Nota Reemplazar' }}</strong>
+                      — Predecesor: <code>{{ r.payrollNumberRef ?? '—' }}</code>
+                    </div>
+                  }
+                  @if (r.isAnulado) {
+                    <div class="det-dian__anulado">
+                      <span class="material-symbols-outlined" style="font-size:16px">cancel</span>
+                      Período anulado — existe una Nota de Eliminar ACCEPTED sobre este período
+                    </div>
+                  }
                   @if (r.cuneHash)      { <div style="word-break:break-all"><strong>CUNE:</strong> <code style="font-size:10px">{{ r.cuneHash }}</code></div> }
                   @if (r.dianZipKey)    { <div><strong>ZipKey:</strong> <code>{{ r.dianZipKey }}</code></div> }
                   @if (r.dianStatusCode) {
@@ -728,7 +755,9 @@ type ViewMode  = 'table' | 'grid';
             </div>
           }
           <div class="modal-footer">
-            @if (selectedRecord()?.status === 'ACCEPTED' && canSubmit()) {
+            @if (selectedRecord()?.status === 'ACCEPTED' && canSubmit()
+                 && !selectedRecord()?.isAnulado
+                 && (selectedRecord()?.payrollType === 'NOMINA_ELECTRONICA' || selectedRecord()?.tipoAjuste === 'Reemplazar')) {
               <button class="btn btn--sm btn--ajuste-reemplazar"
                       (click)="openAjusteModal(selectedRecord()!, 'Reemplazar')">
                 <span class="material-symbols-outlined" style="font-size:15px">edit_document</span>
@@ -739,6 +768,9 @@ type ViewMode  = 'table' | 'grid';
                 <span class="material-symbols-outlined" style="font-size:15px">remove_circle</span>
                 Nota de Ajuste — Eliminar
               </button>
+            }
+            @if (selectedRecord()?.isAnulado) {
+              <span class="badge badge--anulado" style="padding:6px 12px">Período anulado</span>
             }
             <button class="btn btn--secondary" (click)="showRecordDetail.set(false)">Cerrar</button>
           </div>
@@ -1178,6 +1210,7 @@ type ViewMode  = 'table' | 'grid';
     .badge--void    { background:#fef3c7; color:#92400e; }
     .badge--neutral { background:#f1f5f9; color:#475569; }
     .badge--niae    { background:#f0f6ff; color:#1a407e; border:1px solid #c7dbf7; }
+    .badge--anulado { background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:700; }
     .status-badge       { padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
     .status-badge--on   { background:#d1fae5; color:#065f46; }
     .status-badge--off  { background:#fee2e2; color:#991b1b; }
@@ -1224,6 +1257,7 @@ type ViewMode  = 'table' | 'grid';
                    transition:box-shadow .18s, transform .18s; }
     .record-card:hover     { box-shadow:0 4px 20px rgba(26,64,126,.1); transform:translateY(-2px); }
     .record-card--voided   { opacity:.65; border-color:#fde8c7; background:#fffbf5; }
+    .record-card--anulado  { border-color:#fde68a; background:#fffbeb; }
     .record-card--sk       { pointer-events:none; }
     .rc-status { position:absolute; top:12px; right:12px; }
     .rc-top    { display:flex; flex-direction:column; align-items:center; text-align:center; padding:4px 0 14px; }
@@ -1330,7 +1364,9 @@ type ViewMode  = 'table' | 'grid';
     .det-costo strong { font-family:'Sora',sans-serif; font-size:15px; font-weight:700; color:#64748b; }
     .det-dian { background:#f0f6ff; border:1px solid #c7dbf7; border-radius:10px; padding:14px;
                 margin-top:16px; font-size:12.5px; color:#374151; display:flex; flex-direction:column; gap:6px; }
-    .det-dian__title { display:flex; align-items:center; gap:6px; font-weight:700; color:#1a407e; font-size:13px; }
+    .det-dian__title   { display:flex; align-items:center; gap:6px; font-weight:700; color:#1a407e; font-size:13px; }
+    .det-dian__chain   { display:flex; align-items:center; gap:5px; font-size:12px; color:#374151; padding:4px 8px; background:#f0f6ff; border-radius:6px; }
+    .det-dian__anulado { display:flex; align-items:center; gap:5px; font-size:12px; color:#92400e; padding:4px 8px; background:#fef3c7; border-radius:6px; font-weight:700; }
     .det-dian__title .material-symbols-outlined { font-size:18px; }
     /* Descarga */
     .det-dian__downloads { margin-top:10px; padding-top:10px; border-top:1px solid #c7dbf7; }
@@ -1744,25 +1780,30 @@ export class PayrollComponent implements OnInit {
   // ── Nota de Ajuste ───────────────────────────────────────────────────────
 
   openAjusteModal(r: PayrollRecord, tipo: 'Reemplazar' | 'Eliminar') {
+    // Bloqueamos la apertura si el período está anulado
+    if (r.isAnulado) {
+      this.notify.error('Este período ya fue anulado. No se pueden crear más ajustes.');
+      return;
+    }
     this.ajusteSource.set(r);
     this.ajusteType.set(tipo);
-    // Pre-rellenar el form con los valores del original (el usuario puede editarlos)
+    // Pre-rellenar con los datos del documento (el backend resolverá el predecesor real)
     this.ajusteForm = {
-      tipoAjuste:       tipo,
-      payDate:          r.payDate ? String(r.payDate).slice(0, 10) : new Date().toISOString().split('T')[0],
-      baseSalary:       r.baseSalary,
-      daysWorked:       r.daysWorked,
-      overtimeHours:    r.overtimeHours    ?? 0,
-      bonuses:          r.bonuses          ?? 0,
-      commissions:      r.commissions      ?? 0,
-      transportAllowance: r.transportAllowance ?? null,
-      vacationPay:      r.vacationPay      ?? 0,
-      sickLeave:        r.sickLeave        ?? 0,
-      loans:            r.loans            ?? 0,
-      otherDeductions:  r.otherDeductions  ?? 0,
+      tipoAjuste:         tipo,
+      payDate:            r.payDate ? String(r.payDate).slice(0, 10) : new Date().toISOString().split('T')[0],
+      baseSalary:         r.baseSalary,
+      daysWorked:         r.daysWorked,
+      overtimeHours:      r.overtimeHours       ?? 0,
+      bonuses:            r.bonuses             ?? 0,
+      commissions:        r.commissions         ?? 0,
+      transportAllowance: r.transportAllowance  ?? null,
+      vacationPay:        r.vacationPay         ?? 0,
+      sickLeave:          r.sickLeave           ?? 0,
+      loans:              r.loans               ?? 0,
+      otherDeductions:    r.otherDeductions     ?? 0,
       notes: tipo === 'Eliminar'
         ? `Eliminación por error del documento ${r.payrollNumber}`
-        : `Corrección del documento ${r.payrollNumber}`,
+        : `Corrección del documento ${r.payrollNumber ?? r.payrollNumberRef ?? ''}`,
     };
     this.showAjusteModal.set(true);
   }
