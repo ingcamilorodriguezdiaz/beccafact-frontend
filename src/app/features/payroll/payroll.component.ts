@@ -32,7 +32,6 @@ interface PayrollRecord {
   status: string;
   cune?: string;
   payrollNumber?: string;
-  payrollType?:   string;
   cuneHash?:      string;
   dianZipKey?:    string;
   dianStatusCode?: string;
@@ -40,6 +39,11 @@ interface PayrollRecord {
   dianErrors?:     string;
   dianAttempts?:   number;
   xmlSigned?:      string;   // XML firmado guardado tras transmisión DIAN
+  payrollType?:    string;   // NOMINA_ELECTRONICA | NOMINA_AJUSTE
+  cuneRef?:        string;   // CUNE del doc original (para NIAE)
+  payrollNumberRef?: string; // Número del doc original (para NIAE)
+  fechaGenRef?:    string;   // Fecha emisión del doc original (para NIAE)
+  tipoAjuste?:     string;   // Reemplazar | Eliminar
   baseSalary: number;
   daysWorked: number;
   overtimeHours: number;
@@ -232,7 +236,12 @@ type ViewMode  = 'table' | 'grid';
                       <td class="td-cur td-net">{{ r.netPay | currency:'COP':'symbol':'1.0-0' }}</td>
                       <td><span class="badge" [ngClass]="statusClass(r.status)">{{ statusLabel(r.status) }}</span></td>
                       <td>
-                        @if (r.payrollNumber) { <div class="dian-num">{{ r.payrollNumber }}</div> }
+                        @if (r.payrollNumber) {
+                          <div class="dian-num">{{ r.payrollNumber }}</div>
+                        }
+                        @if (r.payrollType === 'NOMINA_AJUSTE') {
+                          <span class="badge badge--niae">{{ r.tipoAjuste === 'Eliminar' ? 'NIAE Elim.' : 'NIAE Reempl.' }}</span>
+                        }
                         @if (r.dianStatusCode) {
                           <span class="dian-st" [class.dian-ok]="r.dianStatusCode==='00'" [class.dian-err]="r.dianStatusCode==='99'">
                             {{ r.dianStatusCode === '00' ? '✓ Aceptada' : r.dianStatusCode === '99' ? '✗ Rechazada' : 'Cód ' + r.dianStatusCode }}
@@ -259,6 +268,16 @@ type ViewMode  = 'table' | 'grid';
                           @if (canVoid() && r.status !== 'VOIDED' && r.status !== 'ACCEPTED') {
                             <button class="btn-icon btn-icon--danger" title="Anular" (click)="confirmVoid(r)">
                               <span class="material-symbols-outlined">cancel</span>
+                            </button>
+                          }
+                          @if (canSubmit() && r.status === 'ACCEPTED') {
+                            <button class="btn-icon btn-icon--ajuste" title="Crear Nota de Ajuste (Reemplazar)"
+                                    (click)="openAjusteModal(r, 'Reemplazar')">
+                              <span class="material-symbols-outlined">edit_document</span>
+                            </button>
+                            <button class="btn-icon btn-icon--void" title="Crear Nota de Ajuste (Eliminar)"
+                                    (click)="openAjusteModal(r, 'Eliminar')">
+                              <span class="material-symbols-outlined">remove_circle</span>
                             </button>
                           }
                         </div>
@@ -318,9 +337,12 @@ type ViewMode  = 'table' | 'grid';
                       <strong class="td-cur rc-neto">{{ r.netPay | currency:'COP':'symbol':'1.0-0' }}</strong>
                     </div>
                   </div>
-                  @if (r.payrollNumber || r.dianStatusCode) {
+                  @if (r.payrollNumber || r.dianStatusCode || r.payrollType === 'NOMINA_AJUSTE') {
                     <div class="rc-dian">
                       @if (r.payrollNumber) { <span class="dian-num">{{ r.payrollNumber }}</span> }
+                      @if (r.payrollType === 'NOMINA_AJUSTE') {
+                        <span class="badge badge--niae" style="font-size:10px">{{ r.tipoAjuste === 'Eliminar' ? 'NIAE Elim.' : 'NIAE Reempl.' }}</span>
+                      }
                       @if (r.dianStatusCode) {
                         <span class="dian-st" [class.dian-ok]="r.dianStatusCode==='00'" [class.dian-err]="r.dianStatusCode==='99'">
                           {{ r.dianStatusCode === '00' ? '✓ Aceptada' : r.dianStatusCode === '99' ? '✗ Rechazada' : 'Cód ' + r.dianStatusCode }}
@@ -345,6 +367,16 @@ type ViewMode  = 'table' | 'grid';
                     @if (canVoid() && r.status !== 'VOIDED' && r.status !== 'ACCEPTED') {
                       <button class="btn-icon btn-icon--danger" title="Anular" (click)="confirmVoid(r)">
                         <span class="material-symbols-outlined">cancel</span>
+                      </button>
+                    }
+                    @if (canSubmit() && r.status === 'ACCEPTED') {
+                      <button class="btn-icon btn-icon--ajuste" title="Nota de Ajuste — Reemplazar"
+                              (click)="openAjusteModal(r, 'Reemplazar')">
+                        <span class="material-symbols-outlined">edit_document</span>
+                      </button>
+                      <button class="btn-icon btn-icon--void" title="Nota de Ajuste — Eliminar"
+                              (click)="openAjusteModal(r, 'Eliminar')">
+                        <span class="material-symbols-outlined">remove_circle</span>
                       </button>
                     }
                   </div>
@@ -696,6 +728,18 @@ type ViewMode  = 'table' | 'grid';
             </div>
           }
           <div class="modal-footer">
+            @if (selectedRecord()?.status === 'ACCEPTED' && canSubmit()) {
+              <button class="btn btn--sm btn--ajuste-reemplazar"
+                      (click)="openAjusteModal(selectedRecord()!, 'Reemplazar')">
+                <span class="material-symbols-outlined" style="font-size:15px">edit_document</span>
+                Nota de Ajuste — Reemplazar
+              </button>
+              <button class="btn btn--sm btn--ajuste-eliminar"
+                      (click)="openAjusteModal(selectedRecord()!, 'Eliminar')">
+                <span class="material-symbols-outlined" style="font-size:15px">remove_circle</span>
+                Nota de Ajuste — Eliminar
+              </button>
+            }
             <button class="btn btn--secondary" (click)="showRecordDetail.set(false)">Cerrar</button>
           </div>
         </div>
@@ -813,6 +857,162 @@ type ViewMode  = 'table' | 'grid';
             <button class="btn btn--secondary" (click)="closePayrollModal()">Cancelar</button>
             <button class="btn btn--primary" (click)="savePayroll()" [disabled]="saving()">
               {{ saving() ? 'Guardando…' : 'Guardar borrador' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ══ MODAL: NOTA DE AJUSTE (NominaIndividualDeAjuste) ═══════════════ -->
+    @if (showAjusteModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal--lg" (click)="$event.stopPropagation()">
+          <div class="modal-header" [class.modal-header--eliminar]="ajusteType() === 'Eliminar'">
+            <span class="material-symbols-outlined nae-header-icon">
+              {{ ajusteType() === 'Eliminar' ? 'remove_circle' : 'edit_document' }}
+            </span>
+            <div style="flex:1">
+              <h3>Nota de Ajuste — {{ ajusteType() }}</h3>
+              <div class="nae-sub">
+                {{ ajusteType() === 'Eliminar'
+                   ? 'Anula el documento original sin reemplazo (Art. 17 último párrafo)'
+                   : 'Corrige errores aritméticos o de contenido (Art. 17 párrafos 4-6, 11)' }}
+              </div>
+            </div>
+            <button class="modal-close" (click)="closeAjusteModal()">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="modal-body">
+
+            <!-- Referencia al documento original -->
+            @if (ajusteSource(); as src) {
+              <div class="nae-ref-box">
+                <div class="nae-ref-title">
+                  <span class="material-symbols-outlined">link</span>
+                  Documento original referenciado
+                </div>
+                <div class="nae-ref-grid">
+                  <div><span class="nae-ref-lbl">N° Nómina</span><code>{{ src.payrollNumber }}</code></div>
+                  <div><span class="nae-ref-lbl">Período</span><code>{{ src.period }}</code></div>
+                  <div><span class="nae-ref-lbl">Empleado</span><span>{{ src.employees?.firstName }} {{ src.employees?.lastName }}</span></div>
+                  <div><span class="nae-ref-lbl">Neto original</span><span>{{ src.netPay | currency:'COP':'symbol':'1.0-0' }}</span></div>
+                </div>
+                @if (src.cuneHash) {
+                  <div class="nae-ref-cune"><span class="nae-ref-lbl">CUNE referenciado:</span> <code>{{ src.cuneHash }}</code></div>
+                }
+              </div>
+            }
+
+            <!-- Tipo de ajuste -->
+            <div class="nae-tipo-bar">
+              <button class="nae-tipo-btn" [class.nae-tipo-btn--active]="ajusteType()==='Reemplazar'"
+                      (click)="ajusteType.set('Reemplazar'); ajusteForm.tipoAjuste='Reemplazar'">
+                <span class="material-symbols-outlined">edit_document</span>
+                Reemplazar
+                <span class="nae-tipo-hint">Corrige el contenido</span>
+              </button>
+              <button class="nae-tipo-btn nae-tipo-btn--eliminar" [class.nae-tipo-btn--active]="ajusteType()==='Eliminar'"
+                      (click)="ajusteType.set('Eliminar'); ajusteForm.tipoAjuste='Eliminar'">
+                <span class="material-symbols-outlined">remove_circle</span>
+                Eliminar
+                <span class="nae-tipo-hint">Anula sin reemplazo</span>
+              </button>
+            </div>
+
+            <!-- Campos de nómina corregida (solo Reemplazar) -->
+            @if (ajusteType() === 'Reemplazar') {
+              <div class="form-section-title">Datos corregidos de la liquidación</div>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="form-label">Fecha de pago *</label>
+                  <input type="date" class="form-control" [(ngModel)]="ajusteForm.payDate" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Días trabajados</label>
+                  <input type="number" class="form-control" [(ngModel)]="ajusteForm.daysWorked" min="0" max="30" />
+                </div>
+              </div>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="form-label">Salario base</label>
+                  <input type="number" class="form-control" [(ngModel)]="ajusteForm.baseSalary" min="0" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Aux. transporte</label>
+                  <input type="number" class="form-control" [(ngModel)]="ajusteForm.transportAllowance" min="0" placeholder="Auto-calculado" />
+                </div>
+              </div>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="form-label">Horas extra</label>
+                  <input type="number" class="form-control" [(ngModel)]="ajusteForm.overtimeHours" min="0" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Bonificaciones</label>
+                  <input type="number" class="form-control" [(ngModel)]="ajusteForm.bonuses" min="0" />
+                </div>
+              </div>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="form-label">Comisiones</label>
+                  <input type="number" class="form-control" [(ngModel)]="ajusteForm.commissions" min="0" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Vacaciones</label>
+                  <input type="number" class="form-control" [(ngModel)]="ajusteForm.vacationPay" min="0" />
+                </div>
+              </div>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="form-label">Incapacidades</label>
+                  <input type="number" class="form-control" [(ngModel)]="ajusteForm.sickLeave" min="0" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Préstamos / Embargos</label>
+                  <input type="number" class="form-control" [(ngModel)]="ajusteForm.loans" min="0" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Otros descuentos</label>
+                <input type="number" class="form-control" [(ngModel)]="ajusteForm.otherDeductions" min="0" />
+              </div>
+            }
+
+            @if (ajusteType() === 'Eliminar') {
+              <div class="nae-eliminar-info">
+                <span class="material-symbols-outlined">info</span>
+                <div>
+                  <strong>Nota de Eliminación</strong>
+                  <p>Este tipo de nota no incluye datos de nómina (Art. 17 último párrafo). Solo se referencia el documento original. Una vez transmitida y aceptada por la DIAN, el documento original quedará anulado.</p>
+                </div>
+              </div>
+            }
+
+            <!-- Notas / Motivo -->
+            <div class="form-group">
+              <label class="form-label">Motivo / Notas</label>
+              <textarea class="form-control" [(ngModel)]="ajusteForm.notes" rows="2"
+                        [placeholder]="ajusteType()==='Eliminar' ? 'Motivo de la eliminación…' : 'Describe la corrección realizada…'"></textarea>
+            </div>
+
+            <!-- Advertencia -->
+            <div class="nae-warning">
+              <span class="material-symbols-outlined">warning</span>
+              <span>Se creará un borrador NIAE. Verifica todos los datos antes de transmitir a la DIAN. El número correlativo NIAE se asigna automáticamente.</span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn--secondary" (click)="closeAjusteModal()">Cancelar</button>
+            <button class="btn"
+                    [class.btn--ajuste-reemplazar]="ajusteType()==='Reemplazar'"
+                    [class.btn--ajuste-eliminar]="ajusteType()==='Eliminar'"
+                    [disabled]="submittingAjuste()"
+                    (click)="submitAjuste()">
+              <span class="material-symbols-outlined" style="font-size:16px">
+                {{ ajusteType() === 'Eliminar' ? 'remove_circle' : 'edit_document' }}
+              </span>
+              {{ submittingAjuste() ? 'Creando…' : 'Crear borrador NIAE — ' + ajusteType() }}
             </button>
           </div>
         </div>
@@ -977,6 +1177,7 @@ type ViewMode  = 'table' | 'grid';
     .badge--reject  { background:#fee2e2; color:#991b1b; }
     .badge--void    { background:#fef3c7; color:#92400e; }
     .badge--neutral { background:#f1f5f9; color:#475569; }
+    .badge--niae    { background:#f0f6ff; color:#1a407e; border:1px solid #c7dbf7; }
     .status-badge       { padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
     .status-badge--on   { background:#d1fae5; color:#065f46; }
     .status-badge--off  { background:#fee2e2; color:#991b1b; }
@@ -1164,6 +1365,51 @@ type ViewMode  = 'table' | 'grid';
                   padding:10px 12px; font-size:12.5px; color:#1e40af; }
     .dian-hint .material-symbols-outlined { font-size:18px; flex-shrink:0; margin-top:1px; }
 
+    /* ══ NOTA DE AJUSTE ════════════════════════════════════════════════════ */
+    .modal-header--eliminar { background:#fff8f8; border-bottom-color:#fee2e2; }
+    .nae-header-icon { font-size:22px; flex-shrink:0; color:#dc2626; }
+    .modal-header:not(.modal-header--eliminar) .nae-header-icon { color:#1a407e; }
+    .nae-sub { font-size:11.5px; color:#94a3b8; margin-top:2px; }
+
+    /* Ref box */
+    .nae-ref-box { background:#f0f6ff; border:1px solid #c7dbf7; border-radius:10px; padding:14px; margin-bottom:16px; }
+    .nae-ref-title { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#1a407e; text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px; }
+    .nae-ref-title .material-symbols-outlined { font-size:15px; }
+    .nae-ref-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; font-size:12.5px; }
+    .nae-ref-lbl  { display:block; font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px; }
+    .nae-ref-cune { font-size:11px; color:#374151; word-break:break-all; margin-top:6px; border-top:1px solid #dce6f0; padding-top:8px; }
+
+    /* Tipo bar */
+    .nae-tipo-bar { display:flex; gap:8px; margin-bottom:18px; }
+    .nae-tipo-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 10px; border:2px solid #dce6f0; border-radius:10px; background:#fff; cursor:pointer; transition:all .15s; }
+    .nae-tipo-btn .material-symbols-outlined { font-size:22px; color:#94a3b8; }
+    .nae-tipo-btn { font-size:13.5px; font-weight:700; color:#374151; }
+    .nae-tipo-hint { font-size:11px; color:#94a3b8; font-weight:400; }
+    .nae-tipo-btn:hover { border-color:#1a407e; background:#f0f6ff; }
+    .nae-tipo-btn:hover .material-symbols-outlined { color:#1a407e; }
+    .nae-tipo-btn--active { border-color:#1a407e; background:#f0f6ff; }
+    .nae-tipo-btn--active .material-symbols-outlined { color:#1a407e; }
+    .nae-tipo-btn--eliminar:hover, .nae-tipo-btn--eliminar.nae-tipo-btn--active { border-color:#dc2626; background:#fff8f8; }
+    .nae-tipo-btn--eliminar:hover .material-symbols-outlined, .nae-tipo-btn--eliminar.nae-tipo-btn--active .material-symbols-outlined { color:#dc2626; }
+
+    /* Info eliminar */
+    .nae-eliminar-info { display:flex; gap:10px; background:#fff8f8; border:1px solid #fecaca; border-radius:10px; padding:14px; margin-bottom:14px; color:#991b1b; font-size:13px; }
+    .nae-eliminar-info .material-symbols-outlined { font-size:22px; flex-shrink:0; margin-top:1px; }
+    .nae-eliminar-info strong { display:block; margin-bottom:4px; font-size:13.5px; }
+    .nae-eliminar-info p { margin:0; font-size:12.5px; line-height:1.5; }
+
+    /* Warning */
+    .nae-warning { display:flex; align-items:flex-start; gap:8px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; font-size:12px; color:#92400e; margin-top:12px; }
+    .nae-warning .material-symbols-outlined { font-size:18px; flex-shrink:0; }
+
+    /* Botones ajuste */
+    .btn--ajuste-reemplazar { background:#1a407e; color:#fff; }
+    .btn--ajuste-reemplazar:hover:not(:disabled) { background:#133265; }
+    .btn--ajuste-eliminar   { background:#dc2626; color:#fff; }
+    .btn--ajuste-eliminar:hover:not(:disabled)   { background:#b91c1c; }
+    .btn-icon--ajuste:hover { background:#e0f0ff; color:#1a407e; }
+    .btn-icon--void:hover   { background:#fff0f0; color:#dc2626; }
+
     /* ══ RESPONSIVE ═══════════════════════════════════════════════════════ */
     @media (max-width: 900px) {
       .py__resumen { flex-wrap:wrap; }
@@ -1234,6 +1480,10 @@ export class PayrollComponent implements OnInit {
   summary           = signal<PeriodSummary | null>(null);
   transmitting      = signal(false);
   downloading       = signal(false);   // descarga XML/ZIP en curso
+  showAjusteModal   = signal(false);
+  ajusteSource      = signal<PayrollRecord | null>(null);  // NIE original
+  ajusteType        = signal<'Reemplazar' | 'Eliminar'>('Reemplazar');
+  submittingAjuste  = signal(false);
   showDianResult    = signal(false);
   dianResult        = signal<any | null>(null);
   preview           = signal<any | null>(null);
@@ -1252,6 +1502,7 @@ export class PayrollComponent implements OnInit {
 
   payrollForm: any = this.emptyPayrollForm();
   empForm: any     = this.emptyEmpForm();
+  ajusteForm: any  = this.emptyAjusteForm();
 
   ngOnInit() { this.loadRecords(); this.loadEmployees(); }
 
@@ -1490,6 +1741,58 @@ export class PayrollComponent implements OnInit {
     });
   }
 
+  // ── Nota de Ajuste ───────────────────────────────────────────────────────
+
+  openAjusteModal(r: PayrollRecord, tipo: 'Reemplazar' | 'Eliminar') {
+    this.ajusteSource.set(r);
+    this.ajusteType.set(tipo);
+    // Pre-rellenar el form con los valores del original (el usuario puede editarlos)
+    this.ajusteForm = {
+      tipoAjuste:       tipo,
+      payDate:          r.payDate ? String(r.payDate).slice(0, 10) : new Date().toISOString().split('T')[0],
+      baseSalary:       r.baseSalary,
+      daysWorked:       r.daysWorked,
+      overtimeHours:    r.overtimeHours    ?? 0,
+      bonuses:          r.bonuses          ?? 0,
+      commissions:      r.commissions      ?? 0,
+      transportAllowance: r.transportAllowance ?? null,
+      vacationPay:      r.vacationPay      ?? 0,
+      sickLeave:        r.sickLeave        ?? 0,
+      loans:            r.loans            ?? 0,
+      otherDeductions:  r.otherDeductions  ?? 0,
+      notes: tipo === 'Eliminar'
+        ? `Eliminación por error del documento ${r.payrollNumber}`
+        : `Corrección del documento ${r.payrollNumber}`,
+    };
+    this.showAjusteModal.set(true);
+  }
+
+  closeAjusteModal() {
+    this.showAjusteModal.set(false);
+    this.ajusteSource.set(null);
+  }
+
+  submitAjuste() {
+    const original = this.ajusteSource();
+    if (!original) return;
+    this.submittingAjuste.set(true);
+    this.http.post<any>(`${this.api}/records/${original.id}/nota-ajuste`, this.ajusteForm).subscribe({
+      next: (res) => {
+        this.submittingAjuste.set(false);
+        this.closeAjusteModal();
+        this.showRecordDetail.set(false);
+        const tipo = this.ajusteForm.tipoAjuste;
+        const num  = res?.nota?.payrollNumber ?? '';
+        this.notify.success(`Nota de Ajuste ${tipo} creada: ${num}. Revisa y transmite a la DIAN.`);
+        this.loadRecords();
+      },
+      error: (e) => {
+        this.submittingAjuste.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al crear la Nota de Ajuste');
+      },
+    });
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   statusClass(s: string) {
@@ -1499,6 +1802,13 @@ export class PayrollComponent implements OnInit {
   statusLabel(s: string) {
     const m: Record<string,string> = { DRAFT:'Borrador', SUBMITTED:'Transmitida', ACCEPTED:'Aceptada', REJECTED:'Rechazada', VOIDED:'Anulada' };
     return m[s] ?? s;
+  }
+
+  payrollTypeLabel(r: PayrollRecord): string {
+    if (r.payrollType === 'NOMINA_AJUSTE') {
+      return r.tipoAjuste === 'Eliminar' ? 'NIAE — Eliminar' : 'NIAE — Reemplazar';
+    }
+    return 'NIE';
   }
   contractLabel(t: string) {
     const m: Record<string,string> = { INDEFINITE:'Indefinido', FIXED:'Término fijo', PROJECT:'Obra/labor', APPRENTICE:'Aprendizaje' };
@@ -1519,6 +1829,17 @@ export class PayrollComponent implements OnInit {
       firstName: '', lastName: '', documentType: 'CC', documentNumber: '',
       position: '', contractType: 'INDEFINITE', baseSalary: 1_300_000,
       hireDate: '', email: '', phone: '', city: '', bankName: '', bankAccount: '',
+    };
+  }
+
+  private emptyAjusteForm() {
+    return {
+      tipoAjuste: 'Reemplazar' as 'Reemplazar' | 'Eliminar',
+      payDate: new Date().toISOString().split('T')[0],
+      baseSalary: 0, daysWorked: 30, overtimeHours: 0,
+      bonuses: 0, commissions: 0, transportAllowance: null,
+      vacationPay: 0, sickLeave: 0, loans: 0, otherDeductions: 0,
+      notes: '',
     };
   }
 }
