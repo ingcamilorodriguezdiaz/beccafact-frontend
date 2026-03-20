@@ -1,13 +1,26 @@
-import { Component, OnInit, signal, computed, inject, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Subject } from 'rxjs';
+import { debounceTime, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { ConfirmDialogComponent, ConfirmDialogService } from '../../core/confirm-dialog/confirm-dialog.component';
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
+
+interface GeoCountry  { code: string; name: string; }
+interface Department  { code: string; name: string; countryCode: string; }
+interface Municipality { code: string; name: string; departmentCode: string; }
+
+interface Bank {
+  id: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+}
 
 interface Employee {
   id: string;
@@ -22,7 +35,13 @@ interface Employee {
   email?: string;
   phone?: string;
   city?: string;
+  cityCode?: string;
+  departmentCode?: string;
+  country?: string;
   isActive: boolean;
+  bankCode?: string;
+  bankName?: string;
+  bankAccount?: string;
 }
 
 interface PayrollRecord {
@@ -1236,9 +1255,71 @@ type ViewMode  = 'table' | 'grid';
               <div class="form-group"><label class="form-label">Correo electrónico</label><input type="email" class="form-control" [(ngModel)]="empForm.email" /></div>
               <div class="form-group"><label class="form-label">Teléfono</label><input type="text" class="form-control" [(ngModel)]="empForm.phone" /></div>
             </div>
+            <!-- País y Departamento -->
+            <div class="form-section-title">Ubicación</div>
             <div class="form-row-2">
-              <div class="form-group"><label class="form-label">Ciudad</label><input type="text" class="form-control" [(ngModel)]="empForm.city" /></div>
-              <div class="form-group"><label class="form-label">Banco</label><input type="text" class="form-control" [(ngModel)]="empForm.bankName" placeholder="Bancolombia, Davivienda…" /></div>
+              <div class="form-group">
+                <label class="form-label">País</label>
+                <select class="form-control" [(ngModel)]="empForm.country" (ngModelChange)="onCountryChange($event)">
+                  <option value="">— Seleccionar país —</option>
+                  @for (c of countries(); track c.code) {
+                    <option [value]="c.code">{{ c.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Departamento</label>
+                @if (empForm.country === 'CO') {
+                  <select class="form-control" [(ngModel)]="empForm.departmentCode" (ngModelChange)="onDepartmentChange($event)" [disabled]="!empForm.country">
+                    <option value="">— Seleccionar departamento —</option>
+                    @for (d of departments(); track d.code) {
+                      <option [value]="d.code">{{ d.name }}</option>
+                    }
+                  </select>
+                } @else {
+                  <input type="text" class="form-control" [(ngModel)]="empForm.departmentCode" placeholder="Estado / Provincia" />
+                }
+              </div>
+            </div>
+            <!-- Municipio / Ciudad -->
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">
+                  @if (empForm.country === 'CO') { Municipio (DIVIPOLA) } @else { Ciudad }
+                </label>
+                @if (empForm.country === 'CO') {
+                  <div class="muni-search-wrap">
+                    <input type="text"
+                           [value]="muniSearchText()"
+                           (input)="onMuniSearch($any($event.target).value)"
+                           (focus)="muniDropdownOpen.set(true)"
+                           class="form-control"
+                           [placeholder]="empForm.departmentCode ? 'Buscar municipio...' : 'Selecciona primero el departamento'"
+                           [disabled]="!empForm.departmentCode"
+                           autocomplete="off" />
+                    @if (muniDropdownOpen() && filteredMunicipalities().length > 0) {
+                      <div class="muni-dropdown">
+                        @for (m of filteredMunicipalities(); track m.code) {
+                          <div class="muni-option" (mousedown)="selectMunicipality(m)">
+                            {{ m.name }} <span class="muni-code">{{ m.code }}</span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <input type="text" class="form-control" [(ngModel)]="empForm.cityCode" placeholder="Ciudad" />
+                }
+              </div>
+              <div class="form-group">
+                <label class="form-label">Banco</label>
+                <select class="form-control" [(ngModel)]="empForm.bankCode" (change)="onBankChange()">
+                  <option value="">-- Selecciona banco --</option>
+                  @for (bank of banks(); track bank.code) {
+                    <option [value]="bank.code">{{ bank.code }} - {{ bank.name }}</option>
+                  }
+                </select>
+              </div>
             </div>
             <div class="form-group"><label class="form-label">N° Cuenta bancaria</label><input type="text" class="form-control" [(ngModel)]="empForm.bankAccount" /></div>
           </div>
@@ -1366,6 +1447,18 @@ type ViewMode  = 'table' | 'grid';
     .btn-icon:disabled       { opacity:.4; cursor:default; }
     .btn-icon--primary:hover { background:#e8eef8; color:#1a407e; }
     .btn-icon--danger:hover  { background:#fee2e2; color:#dc2626; }
+
+    /* ── Buscador de municipios ───────────────────────────────────────────── */
+    .muni-search-wrap { position:relative; }
+    .muni-dropdown    { position:absolute; top:calc(100% + 4px); left:0; right:0; background:#fff;
+                        border:1px solid #dce6f0; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.12);
+                        z-index:300; max-height:220px; overflow-y:auto; }
+    .muni-option      { padding:8px 12px; cursor:pointer; font-size:13px;
+                        display:flex; justify-content:space-between; align-items:center; }
+    .muni-option:hover { background:#f0f4f9; }
+    .muni-code        { color:#8fa3c0; font-size:11px; }
+    .form-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em;
+                          color:#1a407e; margin:16px 0 10px; padding-bottom:6px; border-bottom:1px solid #e8eef8; }
 
     /* ── Skeleton ────────────────────────────────────────────────────────── */
     .table-loading { padding:12px 16px; }
@@ -1697,6 +1790,24 @@ export class PayrollComponent implements OnInit {
   showPayrollModal  = signal(false);
   showEmployeeModal = signal(false);
   editEmployeeId    = signal<string | null>(null);
+  banks             = signal<Bank[]>([]);
+
+  private readonly GEO_API = `${environment.apiUrl}/location`;
+  countries      = signal<GeoCountry[]>([]);
+  departments    = signal<Department[]>([]);
+  municipalities = signal<Municipality[]>([]);
+  muniSearchText   = signal('');
+  muniDropdownOpen = signal(false);
+  loadingMunis     = signal(false);
+  private muniSearch$ = new Subject<{ q: string; dept: string }>();
+  filteredMunicipalities = computed(() => {
+    const text = this.muniSearchText().toLowerCase().trim();
+    const deptCode = this.empForm?.departmentCode;
+    return this.municipalities().filter(m =>
+      (!deptCode || m.departmentCode === deptCode) &&
+      (text.length < 2 || m.name.toLowerCase().includes(text))
+    ).slice(0, 40);
+  });
 
   canCreatePayroll      = computed(() => this.hasRole('ADMIN') || this.hasRole('MANAGER') || this.hasRole('OPERATOR'));
   canSubmit             = computed(() => this.hasRole('ADMIN') || this.hasRole('MANAGER'));
@@ -1709,7 +1820,21 @@ export class PayrollComponent implements OnInit {
   empForm: any     = this.emptyEmpForm();
   ajusteForm: any  = this.emptyAjusteForm();
 
-  ngOnInit() { this.loadRecords(); this.loadEmployees(); }
+  ngOnInit() {
+    this.loadRecords();
+    this.loadEmployees();
+    this.loadCountries();
+    this.loadDepartments();
+    this.muniSearch$.pipe(
+      debounceTime(300),
+      switchMap(({ q, dept }) => {
+        const params: any = {};
+        if (q.length >= 2) params.q = q;
+        if (dept) params.departmentCode = dept;
+        return this.http.get<Municipality[]>(`${this.GEO_API}/municipalities/search`, { params });
+      }),
+    ).subscribe({ next: data => this.municipalities.set(data), error: () => {} });
+  }
 
   // ── Payroll records ──────────────────────────────────────────────────────
 
@@ -1905,6 +2030,7 @@ export class PayrollComponent implements OnInit {
   onEmpSearch() { clearTimeout(this.empSearchTimer); this.empSearchTimer = setTimeout(() => this.loadEmployees(), 350); }
 
   openEmployeeModal(emp?: Employee) {
+    this.loadBanks();
     if (emp) {
       this.editEmployeeId.set(emp.id);
       this.empForm = {
@@ -1912,20 +2038,83 @@ export class PayrollComponent implements OnInit {
         documentType: emp.documentType, documentNumber: emp.documentNumber,
         position: emp.position, contractType: emp.contractType,
         baseSalary: emp.baseSalary, hireDate: emp.hireDate?.split('T')[0] ?? '',
-        email: emp.email ?? '', phone: emp.phone ?? '', city: emp.city ?? '',
-        bankName: '', bankAccount: '',
+        email: emp.email ?? '', phone: emp.phone ?? '',
+        cityCode: emp.cityCode ?? '', departmentCode: emp.departmentCode ?? '', country: emp.country ?? 'CO',
+        bankCode: emp.bankCode ?? '', bankName: emp.bankName ?? '', bankAccount: emp.bankAccount ?? '',
       };
+      if (emp.departmentCode) this.loadMunicipalitiesByDept(emp.departmentCode);
+      this.muniSearchText.set(emp.city ?? '');
     } else {
       this.editEmployeeId.set(null);
       this.empForm = this.emptyEmpForm();
     }
     this.showEmployeeModal.set(true);
   }
+
+  private loadCountries() {
+    this.http.get<GeoCountry[]>(`${this.GEO_API}/countries`).subscribe({
+      next: data => this.countries.set(data), error: () => {},
+    });
+  }
+
+  private loadDepartments(countryCode = 'CO') {
+    this.http.get<Department[]>(`${this.GEO_API}/departments`, { params: { countryCode } }).subscribe({
+      next: data => this.departments.set(data), error: () => {},
+    });
+  }
+
+  private loadMunicipalitiesByDept(departmentCode: string) {
+    this.loadingMunis.set(true);
+    this.http.get<Municipality[]>(`${this.GEO_API}/departments/${departmentCode}/municipalities`).subscribe({
+      next: data => { this.municipalities.set(data); this.loadingMunis.set(false); },
+      error: () => this.loadingMunis.set(false),
+    });
+  }
+
+  onCountryChange(code: string) {
+    this.empForm.departmentCode = '';
+    this.empForm.cityCode       = '';
+    this.muniSearchText.set('');
+    this.municipalities.set([]);
+    if (code) this.loadDepartments(code);
+  }
+
+  onDepartmentChange(deptCode: string) {
+    this.empForm.cityCode = '';
+    this.muniSearchText.set('');
+    if (deptCode) this.loadMunicipalitiesByDept(deptCode);
+  }
+
+  onMuniSearch(q: string) {
+    this.muniSearchText.set(q);
+    this.muniDropdownOpen.set(true);
+    this.muniSearch$.next({ q, dept: this.empForm.departmentCode });
+  }
+
+  selectMunicipality(m: Municipality) {
+    this.empForm.cityCode       = m.code;
+    this.empForm.departmentCode = m.departmentCode;
+    this.muniSearchText.set(m.name);
+    this.muniDropdownOpen.set(false);
+  }
+
+  loadBanks() {
+    if (this.banks().length > 0) return;
+    this.http.get<any>(`${environment.apiUrl}/banks`).subscribe({
+      next: res => this.banks.set(res.data ?? res),
+      error: () => this.notify.error('Error al cargar el catálogo de bancos'),
+    });
+  }
+
+  onBankChange() {
+    const bank = this.banks().find(b => b.code === this.empForm.bankCode);
+    this.empForm.bankName = bank ? bank.name : '';
+  }
   closeEmployeeModal() { this.showEmployeeModal.set(false); }
 
   saveEmployee() {
-    if (!this.empForm.firstName || !this.empForm.documentNumber || !this.empForm.position) {
-      this.notify.error('Completa los campos obligatorios'); return;
+    if (!this.empForm.firstName || !this.empForm.documentNumber || !this.empForm.position || !this.empForm.hireDate) {
+      this.notify.error('Completa los campos obligatorios (nombre, documento, cargo, fecha de ingreso)'); return;
     }
     this.saving.set(true);
     const req = this.editEmployeeId()
@@ -2050,7 +2239,9 @@ export class PayrollComponent implements OnInit {
     return {
       firstName: '', lastName: '', documentType: 'CC', documentNumber: '',
       position: '', contractType: 'INDEFINITE', baseSalary: 1_300_000,
-      hireDate: '', email: '', phone: '', city: '', bankName: '', bankAccount: '',
+      hireDate: '', email: '', phone: '',
+      cityCode: '', departmentCode: '', country: 'CO',
+      bankCode: '', bankName: '', bankAccount: '',
     };
   }
 
