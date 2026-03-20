@@ -262,7 +262,7 @@ type ViewMode  = 'table' | 'grid';
                               <span class="material-symbols-outlined">send</span>
                             </button>
                           }
-                          @if (canSubmit() && r.status === 'SUBMITTED' && r.dianZipKey) {
+                          @if (canSubmit() && (r.dianZipKey || r.cuneHash) && r.status !== 'DRAFT' && r.status !== 'VOIDED') {
                             <button class="btn-icon" title="Consultar estado DIAN"
                                     [disabled]="transmitting()" (click)="checkStatus(r)">
                               <span class="material-symbols-outlined">refresh</span>
@@ -369,7 +369,7 @@ type ViewMode  = 'table' | 'grid';
                         <span class="material-symbols-outlined" style="font-size:15px">send</span> Transmitir
                       </button>
                     }
-                    @if (canSubmit() && r.status === 'SUBMITTED' && r.dianZipKey) {
+                    @if (canSubmit() && (r.dianZipKey || r.cuneHash) && r.status !== 'DRAFT' && r.status !== 'VOIDED') {
                       <button class="btn-icon" title="Consultar DIAN" [disabled]="transmitting()" (click)="checkStatus(r)">
                         <span class="material-symbols-outlined">refresh</span>
                       </button>
@@ -654,128 +654,264 @@ type ViewMode  = 'table' | 'grid';
 
     <!-- ══ MODAL: DETALLE LIQUIDACIÓN ═════════════════════════════════════ -->
     @if (showRecordDetail()) {
-      <div class="modal-overlay">
-        <div class="modal modal--lg" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h3>Liquidación — {{ selectedRecord()?.employees?.firstName }} {{ selectedRecord()?.employees?.lastName }} · {{ selectedRecord()?.period }}</h3>
-            <button class="modal-close" (click)="showRecordDetail.set(false)">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          @if (selectedRecord(); as r) {
-            <div class="modal-body">
-              <div class="det-cols">
-                <div class="det-section">
-                  <div class="det-title">Devengados</div>
-                  <div class="det-row"><span>Salario base ({{ r.daysWorked }}d)</span><span>{{ r.baseSalary | currency:'COP':'symbol':'1.0-0' }}</span></div>
-                  @if (+r.transportAllowance > 0) { <div class="det-row"><span>Aux. transporte</span><span>{{ r.transportAllowance | currency:'COP':'symbol':'1.0-0' }}</span></div> }
-                  @if (+r.overtimeHours > 0)      { <div class="det-row"><span>Horas extra ({{ r.overtimeHours }}h)</span><span>—</span></div> }
-                  @if (+r.bonuses > 0)            { <div class="det-row"><span>Bonificaciones</span><span>{{ r.bonuses | currency:'COP':'symbol':'1.0-0' }}</span></div> }
-                  @if (+r.commissions > 0)        { <div class="det-row"><span>Comisiones</span><span>{{ r.commissions | currency:'COP':'symbol':'1.0-0' }}</span></div> }
-                  @if (+r.vacationPay > 0)        { <div class="det-row"><span>Vacaciones</span><span>{{ r.vacationPay | currency:'COP':'symbol':'1.0-0' }}</span></div> }
-                  <div class="det-row det-total"><span>Total devengado</span><span>{{ r.totalEarnings | currency:'COP':'symbol':'1.0-0' }}</span></div>
-                </div>
-                <div class="det-section">
-                  <div class="det-title">Deducciones empleado</div>
-                  <div class="det-row"><span>Salud (4%)</span><span>{{ r.healthEmployee | currency:'COP':'symbol':'1.0-0' }}</span></div>
-                  <div class="det-row"><span>Pensión (4%)</span><span>{{ r.pensionEmployee | currency:'COP':'symbol':'1.0-0' }}</span></div>
-                  @if (+r.sickLeave > 0)       { <div class="det-row"><span>Incapacidades</span><span>{{ r.sickLeave | currency:'COP':'symbol':'1.0-0' }}</span></div> }
-                  @if (+r.loans > 0)           { <div class="det-row"><span>Préstamos</span><span>{{ r.loans | currency:'COP':'symbol':'1.0-0' }}</span></div> }
-                  @if (+r.otherDeductions > 0) { <div class="det-row"><span>Otros descuentos</span><span>{{ r.otherDeductions | currency:'COP':'symbol':'1.0-0' }}</span></div> }
-                  <div class="det-row det-total text-danger"><span>Total deducciones</span><span>{{ r.totalDeductions | currency:'COP':'symbol':'1.0-0' }}</span></div>
-                </div>
-                <div class="det-section">
-                  <div class="det-title">Aportes empleador</div>
-                  <div class="det-row"><span>Salud (8.5%)</span><span>{{ r.healthEmployer | currency:'COP':'symbol':'1.0-0' }}</span></div>
-                  <div class="det-row"><span>Pensión (12%)</span><span>{{ r.pensionEmployer | currency:'COP':'symbol':'1.0-0' }}</span></div>
-                  <div class="det-row"><span>ARL (0.522%)</span><span>{{ r.arl | currency:'COP':'symbol':'1.0-0' }}</span></div>
-                  <div class="det-row"><span>Caja comp. (4%)</span><span>{{ r.compensationFund | currency:'COP':'symbol':'1.0-0' }}</span></div>
-                </div>
-              </div>
-              <div class="det-footer">
-                <div class="det-neto"><span>Neto a pagar</span><strong>{{ r.netPay | currency:'COP':'symbol':'1.0-0' }}</strong></div>
-                <div class="det-costo"><span>Costo empresa</span><strong>{{ r.totalEmployerCost | currency:'COP':'symbol':'1.0-0' }}</strong></div>
-              </div>
-              @if (r.payrollNumber || r.cuneHash || r.dianZipKey) {
-                <div class="det-dian">
-                  <div class="det-dian__title"><span class="material-symbols-outlined">verified</span>Información DIAN</div>
-                  @if (r.payrollNumber) { <div><strong>N° Nómina:</strong> <code>{{ r.payrollNumber }}</code></div> }
-                  @if (r.payrollType === 'NOMINA_AJUSTE') {
-                    <div class="det-dian__chain">
-                      <span class="material-symbols-outlined" style="font-size:14px">account_tree</span>
-                      <strong>{{ r.tipoAjuste === 'Eliminar' ? 'Nota Eliminar' : 'Nota Reemplazar' }}</strong>
-                      — Predecesor: <code>{{ r.payrollNumberRef ?? '—' }}</code>
-                    </div>
-                  }
-                  @if (r.isAnulado) {
-                    <div class="det-dian__anulado">
-                      <span class="material-symbols-outlined" style="font-size:16px">cancel</span>
-                      Período anulado — existe una Nota de Eliminar ACCEPTED sobre este período
-                    </div>
-                  }
-                  @if (r.cuneHash)      { <div style="word-break:break-all"><strong>CUNE:</strong> <code style="font-size:10px">{{ r.cuneHash }}</code></div> }
-                  @if (r.dianZipKey)    { <div><strong>ZipKey:</strong> <code>{{ r.dianZipKey }}</code></div> }
-                  @if (r.dianStatusCode) {
-                    <div><strong>Estado DIAN:</strong>
-                      <span class="dian-st" style="margin-left:6px"
-                            [class.dian-ok]="r.dianStatusCode==='00'" [class.dian-err]="r.dianStatusCode==='99'">
-                        {{ r.dianStatusCode === '00' ? '✓ Aceptada' : r.dianStatusCode === '99' ? '✗ Rechazada' : 'Cód ' + r.dianStatusCode }}
-                      </span>
-                    </div>
-                  }
-                  @if (r.dianAttempts) { <div style="font-size:11px;color:#94a3b8">Intentos de envío: {{ r.dianAttempts }}</div> }
+      <div class="drawer-overlay" (click)="showRecordDetail.set(false)">
+        <div class="drawer" (click)="$event.stopPropagation()">
 
-                  <!-- Descarga XML / ZIP — solo si la nómina fue transmitida -->
-                  @if (r.status === 'SUBMITTED' || r.status === 'ACCEPTED' || r.status === 'REJECTED') {
-                    <div class="det-dian__downloads">
-                      <div class="det-dian__dl-label">
-                        <span class="material-symbols-outlined">download</span>
-                        Archivos del documento
-                      </div>
-                      <div class="det-dian__dl-buttons">
-                        <button class="btn btn--sm btn--dl-xml"
-                                [disabled]="downloading()"
-                                (click)="downloadPayrollFile(r, 'xml')"
-                                title="Descargar XML firmado">
-                          <span class="material-symbols-outlined">code</span>
-                          {{ downloading() ? 'Descargando…' : 'Descargar XML' }}
-                        </button>
-                        <button class="btn btn--sm btn--dl-zip"
-                                [disabled]="downloading()"
-                                (click)="downloadPayrollFile(r, 'zip')"
-                                title="Descargar ZIP para DIAN">
-                          <span class="material-symbols-outlined">folder_zip</span>
-                          {{ downloading() ? 'Descargando…' : 'Descargar ZIP' }}
-                        </button>
-                      </div>
+          <!-- ── Drawer header ─────────────────────────────────────────────── -->
+          <div class="drawer-header">
+            <div class="drawer-header-left">
+              <div class="drawer-emp-name">
+                {{ selectedRecord()?.employees?.firstName }} {{ selectedRecord()?.employees?.lastName }}
+              </div>
+              <div class="drawer-inv-meta">
+                @if (selectedRecord()?.payrollType === 'NOMINA_AJUSTE') {
+                  <span class="badge badge--niae" style="font-size:10px">
+                    {{ selectedRecord()?.tipoAjuste === 'Eliminar' ? 'NIAE — Eliminar' : 'NIAE — Reemplazar' }}
+                  </span>
+                  <span class="drawer-dot">·</span>
+                }
+                <span class="drawer-date">Período {{ selectedRecord()?.period }}</span>
+                @if (selectedRecord()?.payDate) {
+                  <span class="drawer-dot">·</span>
+                  <span class="drawer-date">Pago: {{ selectedRecord()?.payDate | date:'dd/MM/yyyy' }}</span>
+                }
+              </div>
+            </div>
+            <div class="drawer-header-right">
+              <span class="badge" [ngClass]="statusClass(selectedRecord()?.status ?? '')">
+                {{ statusLabel(selectedRecord()?.status ?? '') }}
+              </span>
+              @if (selectedRecord()?.isAnulado) {
+                <span class="badge badge--anulado" style="font-size:10px;padding:3px 8px">Anulado</span>
+              }
+              <button class="drawer-close" (click)="showRecordDetail.set(false)" title="Cerrar">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="17"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          @if (selectedRecord(); as r) {
+
+            <!-- ── Drawer body ──────────────────────────────────────────────── -->
+            <div class="drawer-body">
+
+              <!-- Empleado -->
+              <div class="dw-section">
+                <div class="dw-section-title">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
+                  Empleado
+                </div>
+                <div class="dw-card">
+                  <div class="dw-client-name">{{ r?.employees?.firstName }} {{ r?.employees?.lastName }}</div>
+                  <div class="dw-client-doc">{{ r?.employees?.documentNumber }}</div>
+                  @if (r?.employees?.position) {
+                    <div class="dw-client-extra">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
+                      {{ r?.employees?.position }}
                     </div>
                   }
+                </div>
+              </div>
+
+              <!-- Devengados -->
+              <div class="dw-section">
+                <div class="dw-section-title">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/></svg>
+                  Devengados
+                </div>
+                <div class="dw-pay-table">
+                  <div class="dw-pay-row"><span>Salario base ({{ r.daysWorked }} días)</span><span>{{ r.baseSalary | currency:'COP':'symbol':'1.0-0' }}</span></div>
+                  @if (+r.transportAllowance > 0) { <div class="dw-pay-row"><span>Aux. transporte</span><span>{{ r.transportAllowance | currency:'COP':'symbol':'1.0-0' }}</span></div> }
+                  @if (+r.overtimeHours > 0)      { <div class="dw-pay-row"><span>Horas extra ({{ r.overtimeHours }}h)</span><span>—</span></div> }
+                  @if (+r.bonuses > 0)            { <div class="dw-pay-row"><span>Bonificaciones</span><span>{{ r.bonuses | currency:'COP':'symbol':'1.0-0' }}</span></div> }
+                  @if (+r.commissions > 0)        { <div class="dw-pay-row"><span>Comisiones</span><span>{{ r.commissions | currency:'COP':'symbol':'1.0-0' }}</span></div> }
+                  @if (+r.vacationPay > 0)        { <div class="dw-pay-row"><span>Vacaciones</span><span>{{ r.vacationPay | currency:'COP':'symbol':'1.0-0' }}</span></div> }
+                  <div class="dw-pay-row dw-pay-total"><span>Total devengado</span><span>{{ r.totalEarnings | currency:'COP':'symbol':'1.0-0' }}</span></div>
+                </div>
+              </div>
+
+              <!-- Deducciones -->
+              <div class="dw-section">
+                <div class="dw-section-title">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg>
+                  Deducciones empleado
+                </div>
+                <div class="dw-pay-table">
+                  <div class="dw-pay-row"><span>Salud (4%)</span><span>{{ r.healthEmployee | currency:'COP':'symbol':'1.0-0' }}</span></div>
+                  <div class="dw-pay-row"><span>Pensión (4%)</span><span>{{ r.pensionEmployee | currency:'COP':'symbol':'1.0-0' }}</span></div>
+                  @if (+r.sickLeave > 0)       { <div class="dw-pay-row"><span>Incapacidades</span><span>{{ r.sickLeave | currency:'COP':'symbol':'1.0-0' }}</span></div> }
+                  @if (+r.loans > 0)           { <div class="dw-pay-row"><span>Préstamos</span><span>{{ r.loans | currency:'COP':'symbol':'1.0-0' }}</span></div> }
+                  @if (+r.otherDeductions > 0) { <div class="dw-pay-row"><span>Otros descuentos</span><span>{{ r.otherDeductions | currency:'COP':'symbol':'1.0-0' }}</span></div> }
+                  <div class="dw-pay-row dw-pay-total dw-pay-total--ded"><span>Total deducciones</span><span>{{ r.totalDeductions | currency:'COP':'symbol':'1.0-0' }}</span></div>
+                </div>
+              </div>
+
+              <!-- Aportes empleador -->
+              <div class="dw-section">
+                <div class="dw-section-title">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"/></svg>
+                  Aportes empleador
+                </div>
+                <div class="dw-pay-table">
+                  <div class="dw-pay-row"><span>Salud (8.5%)</span><span>{{ r.healthEmployer | currency:'COP':'symbol':'1.0-0' }}</span></div>
+                  <div class="dw-pay-row"><span>Pensión (12%)</span><span>{{ r.pensionEmployer | currency:'COP':'symbol':'1.0-0' }}</span></div>
+                  <div class="dw-pay-row"><span>ARL (0.522%)</span><span>{{ r.arl | currency:'COP':'symbol':'1.0-0' }}</span></div>
+                  <div class="dw-pay-row"><span>Caja comp. (4%)</span><span>{{ r.compensationFund | currency:'COP':'symbol':'1.0-0' }}</span></div>
+                </div>
+              </div>
+
+              <!-- Liquidación -->
+              <div class="dw-section">
+                <div class="dw-section-title">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z"/></svg>
+                  Liquidación
+                </div>
+                <div class="dw-summary-grid">
+                  <div class="dw-summary-card dw-summary-card--neto">
+                    <span class="dw-summary-lbl">Neto a pagar</span>
+                    <span class="dw-summary-val">{{ r.netPay | currency:'COP':'symbol':'1.0-0' }}</span>
+                  </div>
+                  <div class="dw-summary-card">
+                    <span class="dw-summary-lbl">Costo empresa</span>
+                    <span class="dw-summary-val dw-summary-val--sec">{{ r.totalEmployerCost | currency:'COP':'symbol':'1.0-0' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- DIAN -->
+              @if (r.payrollNumber || r.cuneHash || r.dianZipKey || r.dianStatusCode) {
+                <div class="dw-section">
+                  <div class="dw-section-title">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+                    DIAN — Nómina electrónica
+                  </div>
+                  <div class="dw-card dw-dian-card">
+                    @if (r.payrollNumber) {
+                      <div class="dw-dian-row">
+                        <span class="dw-dian-lbl">N° Nómina</span>
+                        <span style="font-size:13px;font-family:monospace;font-weight:700;color:#0c1c35">{{ r.payrollNumber }}</span>
+                      </div>
+                    }
+                    @if (r.payrollType === 'NOMINA_AJUSTE') {
+                      <div class="dw-dian-row" style="margin-top:6px">
+                        <span class="dw-dian-lbl">Tipo ajuste</span>
+                        <span class="badge badge--niae" style="font-size:10px">{{ r.tipoAjuste === 'Eliminar' ? 'Nota Eliminar' : 'Nota Reemplazar' }}</span>
+                      </div>
+                      @if (r.payrollNumberRef) {
+                        <div class="dw-dian-row" style="margin-top:4px">
+                          <span class="dw-dian-lbl">Predecesor</span>
+                          <span style="font-size:12px;color:#374151;font-family:monospace">{{ r.payrollNumberRef }}</span>
+                        </div>
+                      }
+                    }
+                    @if (r.isAnulado) {
+                      <div style="margin-top:8px;display:flex;align-items:center;gap:6px;background:#fef3c7;border-radius:6px;padding:8px 10px;font-size:12px;font-weight:700;color:#92400e">
+                        <span class="material-symbols-outlined" style="font-size:15px">cancel</span>
+                        Período anulado por Nota de Eliminar
+                      </div>
+                    }
+                    @if (r.dianStatusCode) {
+                      <div class="dw-dian-row" style="margin-top:8px">
+                        <span class="dw-dian-lbl">Estado DIAN</span>
+                        <span class="dian-st" [class.dian-ok]="r.dianStatusCode==='00'" [class.dian-err]="r.dianStatusCode==='99'">
+                          {{ r.dianStatusCode === '00' ? '✓ Aceptada' : r.dianStatusCode === '99' ? '✗ Rechazada' : 'Cód ' + r.dianStatusCode }}
+                        </span>
+                      </div>
+                    }
+                    @if (r.dianStatusMsg) {
+                      <div class="dian-msg-block" style="margin-top:6px"
+                           [class.dian-msg-ok]="r.dianStatusCode === '00'"
+                           [class.dian-msg-err]="r.dianStatusCode === '99'">
+                        {{ r.dianStatusMsg }}
+                      </div>
+                    }
+                    @if (r.dianErrors) {
+                      <div class="dian-errors-block" style="margin-top:8px">
+                        <div class="dian-errors-header">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="13" style="flex-shrink:0"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                          <span>Errores DIAN ({{ parseDianErrors(r.dianErrors).length }})</span>
+                        </div>
+                        <ul class="dian-errors-list">
+                          @for (err of parseDianErrors(r.dianErrors); track $index) {
+                            <li class="dian-error-item dian-error-rechazo">
+                              <span class="dian-error-badge">Rechazo</span>
+                              <span class="dian-error-text">{{ err }}</span>
+                            </li>
+                          }
+                        </ul>
+                      </div>
+                    }
+                    @if (r.cuneHash) {
+                      <div class="dw-dian-cufe" style="margin-top:10px">
+                        <div class="dw-dian-lbl">CUNE</div>
+                        <code class="dw-cufe-code">{{ r.cuneHash }}</code>
+                      </div>
+                    }
+                    @if (r.dianZipKey) {
+                      <div class="dw-dian-row" style="margin-top:8px">
+                        <span class="dw-dian-lbl">ZipKey</span>
+                        <span style="font-size:11px;color:#374151;font-family:monospace">{{ r.dianZipKey.slice(0,24) }}…</span>
+                      </div>
+                    }
+                    @if (r.dianAttempts) {
+                      <div class="dw-dian-row" style="margin-top:4px">
+                        <span class="dw-dian-lbl">Intentos envío</span>
+                        <span style="font-size:12px;color:#374151">{{ r.dianAttempts }}</span>
+                      </div>
+                    }
+                  </div>
                 </div>
               }
+
+              <!-- Notas -->
+              @if (r.notes) {
+                <div class="dw-section">
+                  <div class="dw-section-title">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z"/></svg>
+                    Notas
+                  </div>
+                  <div class="dw-notes">{{ r.notes }}</div>
+                </div>
+              }
+
+            </div><!-- /drawer-body -->
+
+            <!-- ── Drawer footer ──────────────────────────────────────────── -->
+            <div class="drawer-footer">
+              @if (r.status === 'SUBMITTED' || r.status === 'ACCEPTED' || r.status === 'REJECTED') {
+                <button class="btn btn--sm btn--dl-xml" [disabled]="downloading()" (click)="downloadPayrollFile(r, 'xml')" title="Descargar XML firmado">
+                  <span class="material-symbols-outlined" style="font-size:14px">code</span>
+                  XML
+                </button>
+                <button class="btn btn--sm btn--dl-zip" [disabled]="downloading()" (click)="downloadPayrollFile(r, 'zip')" title="Descargar ZIP DIAN">
+                  <span class="material-symbols-outlined" style="font-size:14px">folder_zip</span>
+                  ZIP
+                </button>
+              }
+              @if (canSubmit() && (r.dianZipKey || r.cuneHash) && r.status !== 'DRAFT' && r.status !== 'VOIDED') {
+                <button class="btn btn--sm btn--secondary" [disabled]="transmitting()" (click)="checkStatus(r)">
+                  <span class="material-symbols-outlined" style="font-size:14px">refresh</span>
+                  Consultar DIAN
+                </button>
+              }
+              @if (r.status === 'ACCEPTED' && canSubmit() && !r.isAnulado
+                   && (r.payrollType === 'NOMINA_ELECTRONICA' || r.tipoAjuste === 'Reemplazar')) {
+                <button class="btn btn--sm btn--ajuste-reemplazar" (click)="openAjusteModal(r, 'Reemplazar')">
+                  <span class="material-symbols-outlined" style="font-size:14px">edit_document</span>
+                  Reemplazar
+                </button>
+                <button class="btn btn--sm btn--ajuste-eliminar" (click)="openAjusteModal(r, 'Eliminar')">
+                  <span class="material-symbols-outlined" style="font-size:14px">remove_circle</span>
+                  Eliminar
+                </button>
+              }
+              <button class="btn btn--sm btn--secondary" style="margin-left:auto" (click)="showRecordDetail.set(false)">Cerrar</button>
             </div>
+
           }
-          <div class="modal-footer">
-            @if (selectedRecord()?.status === 'ACCEPTED' && canSubmit()
-                 && !selectedRecord()?.isAnulado
-                 && (selectedRecord()?.payrollType === 'NOMINA_ELECTRONICA' || selectedRecord()?.tipoAjuste === 'Reemplazar')) {
-              <button class="btn btn--sm btn--ajuste-reemplazar"
-                      (click)="openAjusteModal(selectedRecord()!, 'Reemplazar')">
-                <span class="material-symbols-outlined" style="font-size:15px">edit_document</span>
-                Nota de Ajuste — Reemplazar
-              </button>
-              <button class="btn btn--sm btn--ajuste-eliminar"
-                      (click)="openAjusteModal(selectedRecord()!, 'Eliminar')">
-                <span class="material-symbols-outlined" style="font-size:15px">remove_circle</span>
-                Nota de Ajuste — Eliminar
-              </button>
-            }
-            @if (selectedRecord()?.isAnulado) {
-              <span class="badge badge--anulado" style="padding:6px 12px">Período anulado</span>
-            }
-            <button class="btn btn--secondary" (click)="showRecordDetail.set(false)">Cerrar</button>
-          </div>
-        </div>
-      </div>
+
+        </div><!-- /drawer -->
+      </div><!-- /drawer-overlay -->
     }
 
     <!-- ══ MODAL: NUEVA LIQUIDACIÓN ═══════════════════════════════════════ -->
@@ -927,7 +1063,7 @@ type ViewMode  = 'table' | 'grid';
                 <div class="nae-ref-grid">
                   <div><span class="nae-ref-lbl">N° Nómina</span><code>{{ src.payrollNumber }}</code></div>
                   <div><span class="nae-ref-lbl">Período</span><code>{{ src.period }}</code></div>
-                  <div><span class="nae-ref-lbl">Empleado</span><span>{{ src.employees?.firstName }} {{ src.employees?.lastName }}</span></div>
+                  <div><span class="nae-ref-lbl">Empleado</span><span>{{ src?.employees?.firstName }} {{ src?.employees?.lastName }}</span></div>
                   <div><span class="nae-ref-lbl">Neto original</span><span>{{ src.netPay | currency:'COP':'symbol':'1.0-0' }}</span></div>
                 </div>
                 @if (src.cuneHash) {
@@ -1302,6 +1438,67 @@ type ViewMode  = 'table' | 'grid';
     .ec-salary .material-symbols-outlined { color:#059669; }
     .ec-actions { display:flex; gap:6px; align-items:center; border-top:1px solid #f0f4f8; padding-top:10px; }
 
+    /* ══ DRAWER (panel detalle derecho) ══════════════════════════════════ */
+    .drawer-overlay { position:fixed; inset:0; background:rgba(12,28,53,.45); z-index:200; display:flex; justify-content:flex-end; backdrop-filter:blur(2px); }
+    .drawer { width:480px; max-width:100vw; background:#fff; height:100%; display:flex; flex-direction:column; box-shadow:-8px 0 40px rgba(12,28,53,.15); }
+    .drawer-header { display:flex; align-items:flex-start; justify-content:space-between; padding:20px 22px 16px; border-bottom:1px solid #f0f4f8; flex-shrink:0; gap:12px; }
+    .drawer-header-left { flex:1; min-width:0; }
+    .drawer-emp-name { font-family:'Sora',sans-serif; font-size:18px; font-weight:800; color:#0c1c35; letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .drawer-inv-meta { display:flex; align-items:center; gap:6px; margin-top:5px; flex-wrap:wrap; }
+    .drawer-dot { color:#cbd5e1; font-size:12px; }
+    .drawer-date { font-size:12px; color:#94a3b8; }
+    .drawer-header-right { display:flex; align-items:center; gap:8px; flex-shrink:0; padding-top:2px; }
+    .drawer-close { background:none; border:none; cursor:pointer; color:#94a3b8; padding:5px; border-radius:7px; transition:all .15s; }
+    .drawer-close:hover { background:#f1f5f9; color:#374151; }
+    .drawer-body { flex:1; overflow-y:auto; padding:0; scrollbar-width:thin; scrollbar-color:#e2e8f0 transparent; }
+    .drawer-body::-webkit-scrollbar { width:4px; }
+    .drawer-body::-webkit-scrollbar-track { background:transparent; }
+    .drawer-body::-webkit-scrollbar-thumb { background:#e2e8f0; border-radius:2px; }
+    .drawer-footer { padding:14px 22px; border-top:1px solid #f0f4f8; display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; align-items:center; }
+    .dw-section { padding:16px 22px; border-bottom:1px solid #f8fafc; }
+    .dw-section:last-child { border-bottom:none; }
+    .dw-section-title { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; margin-bottom:10px; }
+    .dw-section-title svg { flex-shrink:0; }
+    .dw-card { background:#f8fafc; border:1px solid #f0f4f8; border-radius:10px; padding:12px 14px; }
+    .dw-client-name { font-size:14px; font-weight:700; color:#0c1c35; margin-bottom:2px; }
+    .dw-client-doc { font-size:12px; color:#64748b; font-family:monospace; margin-bottom:4px; }
+    .dw-client-extra { display:flex; align-items:center; gap:5px; font-size:12px; color:#64748b; margin-top:4px; }
+    .dw-client-extra svg { color:#94a3b8; flex-shrink:0; }
+    .dw-pay-table { border:1px solid #f0f4f8; border-radius:10px; overflow:hidden; }
+    .dw-pay-row { display:flex; justify-content:space-between; align-items:center; padding:8px 14px; border-bottom:1px solid #f8fafc; font-size:12.5px; color:#374151; }
+    .dw-pay-row:last-child { border-bottom:none; }
+    .dw-pay-row span:last-child { font-weight:600; color:#0c1c35; font-family:monospace; }
+    .dw-pay-total { background:#f8fafc; border-top:1px solid #e8eef8 !important; font-weight:700; }
+    .dw-pay-total span:last-child { font-family:'Sora',sans-serif; font-size:13.5px; color:#1a407e !important; }
+    .dw-pay-total--ded span:last-child { color:#dc2626 !important; }
+    .dw-summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .dw-summary-card { background:#f8fafc; border:1px solid #f0f4f8; border-radius:10px; padding:12px 14px; }
+    .dw-summary-card--neto { background:#f0f6ff; border-color:#c7dbf7; }
+    .dw-summary-lbl { display:block; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; margin-bottom:5px; }
+    .dw-summary-val { font-family:'Sora',sans-serif; font-size:17px; font-weight:800; color:#1a407e; }
+    .dw-summary-val--sec { font-size:15px; color:#64748b; }
+    .dw-summary-card--neto .dw-summary-lbl { color:#1a407e; }
+    .dw-dian-card { padding:10px 14px; }
+    .dw-dian-row { display:flex; align-items:center; justify-content:space-between; }
+    .dw-dian-lbl { font-size:11px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; }
+    .dw-dian-cufe { margin-top:4px; }
+    .dw-cufe-code { display:block; font-size:10px; color:#475569; font-family:monospace; word-break:break-all; margin-top:4px; background:#f1f5f9; padding:6px 8px; border-radius:6px; line-height:1.5; }
+    .dian-msg-block { padding:8px 10px; background:#f8fafc; border-radius:7px; border-left:3px solid #94a3b8; font-size:12px; color:#374151; line-height:1.5; }
+    .dian-msg-ok { border-left-color:#10b981; background:#f0fdf4; color:#065f46; }
+    .dian-msg-err { border-left-color:#dc2626; background:#fef2f2; color:#991b1b; }
+    .dian-errors-block { border:1px solid #fca5a5; border-radius:8px; overflow:hidden; }
+    .dian-errors-header { display:flex; align-items:center; gap:6px; padding:7px 10px; background:#fef2f2; font-size:11.5px; font-weight:600; color:#b91c1c; border-bottom:1px solid #fca5a5; }
+    .dian-errors-list { list-style:none; margin:0; padding:0; }
+    .dian-error-item { display:flex; align-items:flex-start; gap:6px; padding:7px 10px; font-size:11.5px; line-height:1.45; border-bottom:1px solid #fee2e2; }
+    .dian-error-item:last-child { border-bottom:none; }
+    .dian-error-rechazo { background:#fff5f5; }
+    .dian-error-notif { background:#fafafa; }
+    .dian-error-badge { flex-shrink:0; margin-top:1px; padding:1px 5px; border-radius:3px; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+    .dian-error-rechazo .dian-error-badge { background:#fee2e2; color:#b91c1c; }
+    .dian-error-notif .dian-error-badge { background:#e0f2fe; color:#0369a1; }
+    .dian-error-text { color:#374151; }
+    .dw-notes { font-size:13px; color:#475569; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; line-height:1.5; }
+
     /* ══ MODALS ═══════════════════════════════════════════════════════════ */
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200;
                      display:flex; align-items:center; justify-content:center; padding:16px; }
@@ -1351,29 +1548,7 @@ type ViewMode  = 'table' | 'grid';
     .btn--secondary:hover { background:#e8eef8; }
     .btn--sm { padding:7px 14px; font-size:12.5px; }
 
-    /* Detail modal content */
-    .det-cols   { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
-    .det-title  { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
-                  color:#94a3b8; padding-bottom:6px; border-bottom:1px solid #f0f4f8; margin-bottom:8px; }
-    .det-row    { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #f8fafc; font-size:12.5px; color:#374151; }
-    .det-total  { font-weight:700; border-top:1px solid #e8eef8; border-bottom:none; margin-top:4px; padding-top:6px; }
-    .det-footer { display:flex; gap:16px; margin-top:16px; padding-top:16px; border-top:2px solid #f0f4f8; }
-    .det-neto, .det-costo { flex:1; background:#f8fafc; border-radius:10px; padding:12px 14px; }
-    .det-neto span, .det-costo span { display:block; font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
-    .det-neto strong  { font-family:'Sora',sans-serif; font-size:18px; font-weight:800; color:#0c1c35; }
-    .det-costo strong { font-family:'Sora',sans-serif; font-size:15px; font-weight:700; color:#64748b; }
-    .det-dian { background:#f0f6ff; border:1px solid #c7dbf7; border-radius:10px; padding:14px;
-                margin-top:16px; font-size:12.5px; color:#374151; display:flex; flex-direction:column; gap:6px; }
-    .det-dian__title   { display:flex; align-items:center; gap:6px; font-weight:700; color:#1a407e; font-size:13px; }
-    .det-dian__chain   { display:flex; align-items:center; gap:5px; font-size:12px; color:#374151; padding:4px 8px; background:#f0f6ff; border-radius:6px; }
-    .det-dian__anulado { display:flex; align-items:center; gap:5px; font-size:12px; color:#92400e; padding:4px 8px; background:#fef3c7; border-radius:6px; font-weight:700; }
-    .det-dian__title .material-symbols-outlined { font-size:18px; }
-    /* Descarga */
-    .det-dian__downloads { margin-top:10px; padding-top:10px; border-top:1px solid #c7dbf7; }
-    .det-dian__dl-label  { display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700;
-                           color:#1a407e; text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
-    .det-dian__dl-label .material-symbols-outlined { font-size:15px; }
-    .det-dian__dl-buttons { display:flex; gap:8px; flex-wrap:wrap; }
+    /* Download buttons (still used in drawer footer) */
     .btn--dl-xml { background:#fff; color:#1a407e; border:1.5px solid #1a407e; }
     .btn--dl-xml:hover:not(:disabled) { background:#e8eef8; }
     .btn--dl-zip { background:#1a407e; color:#fff; border:1.5px solid #1a407e; }
@@ -1393,10 +1568,6 @@ type ViewMode  = 'table' | 'grid';
     .dian-val  { font-family:'Sora',sans-serif; font-size:15px; font-weight:700; color:#0c1c35; }
     .dian-code { font-family:monospace; font-size:12.5px; color:#1a407e; word-break:break-all; }
     .dian-code--sm { font-size:10px; }
-    .dian-errors { background:#fff8f8; border:1px solid #fecaca; border-radius:8px; padding:12px; margin-bottom:12px; }
-    .dian-errors__title { display:flex; align-items:center; gap:6px; font-weight:700; color:#991b1b; font-size:13px; margin-bottom:8px; }
-    .dian-errors__item  { font-size:12.5px; color:#7f1d1d; padding:4px 0; border-bottom:1px solid #fee2e2; }
-    .dian-errors__item:last-child { border-bottom:none; }
     .dian-hint  { display:flex; align-items:flex-start; gap:8px; background:#eff6ff; border-radius:8px;
                   padding:10px 12px; font-size:12.5px; color:#1e40af; }
     .dian-hint .material-symbols-outlined { font-size:18px; flex-shrink:0; margin-top:1px; }
@@ -1450,9 +1621,8 @@ type ViewMode  = 'table' | 'grid';
     @media (max-width: 900px) {
       .py__resumen { flex-wrap:wrap; }
       .py__res-item { flex:1 1 45%; }
-      .det-cols { grid-template-columns:1fr 1fr; }
-      .det-footer { flex-direction:column; }
       .py__form-grid { grid-template-columns:1fr; }
+      .drawer { width:100vw; }
       .py__preview { order:-1; position:static; }
       .record-grid   { grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); }
       .employee-grid { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); }
@@ -1474,7 +1644,6 @@ type ViewMode  = 'table' | 'grid';
       .py__res-item:last-child { border-bottom:none; }
       .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
       .data-table { min-width:620px; }
-      .det-cols { grid-template-columns:1fr; }
       .record-grid   { grid-template-columns:repeat(2,1fr); gap:10px; }
       .employee-grid { grid-template-columns:repeat(2,1fr); gap:10px; }
       .modal-overlay { align-items:flex-end; padding:0; }
@@ -1652,9 +1821,16 @@ export class PayrollComponent implements OnInit {
       next: res => {
         this.transmitting.set(false);
         const dian = (res?.data ?? res)?.dian;
-        if (dian?.isValid)      { this.notify.success(`DIAN aceptó la nómina ${r.payrollNumber} (código ${dian.statusCode})`); }
-        else if (dian?.statusCode) { this.notify.error(`DIAN: ${dian.statusDesc ?? dian.statusMsg ?? 'Error ' + dian.statusCode}`); }
-        else                    { this.notify.info?.('Estado DIAN actualizado'); }
+        if (dian?.isValid) {
+          this.notify.success(`DIAN aceptó la nómina ${r.payrollNumber} (código ${dian.statusCode})`);
+        } else if (dian?.errors?.length) {
+          const firstErr = dian.errors[0];
+          this.notify.error(`DIAN (${dian.statusCode}): ${firstErr}`);
+        } else if (dian?.statusCode) {
+          this.notify.error(`DIAN: ${dian.statusDesc ?? dian.statusMsg ?? 'Error ' + dian.statusCode}`);
+        } else {
+          this.notify.info?.('Estado DIAN actualizado');
+        }
         this.loadRecords();
       },
       error: e => { this.transmitting.set(false); this.notify.error(e?.error?.message ?? 'Error consultando DIAN'); },
@@ -1835,6 +2011,11 @@ export class PayrollComponent implements OnInit {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
+
+  parseDianErrors(raw?: string): string[] {
+    if (!raw) return [];
+    try { return JSON.parse(raw); } catch { return [raw]; }
+  }
 
   statusClass(s: string) {
     return { 'badge--draft': s==='DRAFT', 'badge--submit': s==='SUBMITTED',
