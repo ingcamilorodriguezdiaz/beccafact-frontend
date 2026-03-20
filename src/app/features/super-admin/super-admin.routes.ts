@@ -27,6 +27,21 @@ export const SUPER_ADMIN_ROUTES: Routes = [
           import('./pages/sa-audit.component').then((m) => m.SaAuditComponent),
       },
       {
+        path: 'banks',
+        loadComponent: () =>
+          import('./pages/sa-banks.component').then((m) => m.SaBanksComponent),
+      },
+      {
+        path: 'parameters',
+        loadComponent: () =>
+          import('./pages/sa-parameters.component').then((m) => m.SaParametersComponent),
+      },
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./pages/sa-users.component').then((m) => m.SaUsersComponent),
+      },
+      {
         path: 'template',
         loadComponent: () =>
           import('./pages/sa-template.component').then((m) => m.SaTemplateComponent),

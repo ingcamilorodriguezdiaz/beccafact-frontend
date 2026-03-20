@@ -18,7 +18,7 @@ const ACTION_COLORS: Record<string, string> = {
   LOGIN:'action-login', EXPORT:'action-export', SUSPEND:'action-suspend',
   ACTIVATE:'action-activate', CHANGE_PLAN:'action-change',
 };
-
+  
 @Component({
   selector: 'app-sa-audit',
   standalone: true,
