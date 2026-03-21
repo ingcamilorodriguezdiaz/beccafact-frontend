@@ -1,8 +1,9 @@
-import { Component, signal, OnInit, AfterViewInit, ElementRef, ViewChildren, QueryList } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../../core/auth/auth.service';
 
 interface KpiData {
   revenue: { current: number; previous: number; change: number };
@@ -82,16 +83,18 @@ const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov
             <div class="kpi-sub">Mes {{ monthName(selectedMonth) }}</div>
           </div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-icon kpi-icon-orange">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+        @if (auth.hasFeature('has_cartera')()) {
+          <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-orange">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-value">{{ fmtCOP(cartera()?.totalOutstanding ?? 0) }}</div>
+              <div class="kpi-label">Cartera total</div>
+              <div class="kpi-sub kpi-sub-warn">Por cobrar</div>
+            </div>
           </div>
-          <div class="kpi-content">
-            <div class="kpi-value">{{ fmtCOP(cartera()?.totalOutstanding ?? 0) }}</div>
-            <div class="kpi-label">Cartera total</div>
-            <div class="kpi-sub kpi-sub-warn">Por cobrar</div>
-          </div>
-        </div>
+        }
       </div>
 
       <!-- Charts row -->
@@ -117,29 +120,31 @@ const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov
           }
         </div>
 
-        <!-- Aging pie -->
-        <div class="chart-card">
-          <div class="chart-header"><h3>Cartera por vencimiento</h3></div>
-          @if (loadingCartera()) {
-            <div class="chart-skeleton"></div>
-          } @else {
-            <div class="aging-chart">
-              @for (seg of agingSegments(); track seg.label) {
-                <div class="aging-row">
-                  <div class="aging-dot" [style.background]="seg.color"></div>
-                  <div class="aging-info">
-                    <span class="aging-label">{{ seg.label }}</span>
-                    <span class="aging-value">{{ fmtCOP(seg.value) }}</span>
+        @if (auth.hasFeature('has_cartera')()) {
+          <!-- Aging pie -->
+          <div class="chart-card">
+            <div class="chart-header"><h3>Cartera por vencimiento</h3></div>
+            @if (loadingCartera()) {
+              <div class="chart-skeleton"></div>
+            } @else {
+              <div class="aging-chart">
+                @for (seg of agingSegments(); track seg.label) {
+                  <div class="aging-row">
+                    <div class="aging-dot" [style.background]="seg.color"></div>
+                    <div class="aging-info">
+                      <span class="aging-label">{{ seg.label }}</span>
+                      <span class="aging-value">{{ fmtCOP(seg.value) }}</span>
+                    </div>
+                    <div class="aging-bar-wrap">
+                      <div class="aging-bar-fill" [style.width.%]="seg.pct" [style.background]="seg.color"></div>
+                    </div>
+                    <span class="aging-pct">{{ seg.pct.toFixed(0) }}%</span>
                   </div>
-                  <div class="aging-bar-wrap">
-                    <div class="aging-bar-fill" [style.width.%]="seg.pct" [style.background]="seg.color"></div>
-                  </div>
-                  <span class="aging-pct">{{ seg.pct.toFixed(0) }}%</span>
-                </div>
-              }
-            </div>
-          }
-        </div>
+                }
+              </div>
+            }
+          </div>
+        }
       </div>
 
       <!-- Tables row -->
@@ -164,27 +169,29 @@ const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov
           }
         </div>
 
-        <!-- Cartera por cliente -->
-        <div class="rank-card">
-          <div class="rank-header"><h3>Cartera por cliente</h3><span class="rank-sub">Saldo pendiente</span></div>
-          @if (cartera()?.byCustomer?.length) {
-            @for (c of cartera()!.byCustomer.slice(0,5); track c.customer.name) {
-              <div class="rank-row">
-                <div class="rank-avatar rank-avatar-orange">{{ c.customer.name[0].toUpperCase() }}</div>
-                <div class="rank-info">
-                  <div class="rank-name">{{ c.customer.name }}</div>
-                  <div class="rank-meta">{{ c.invoices.length }} docs</div>
+        @if (auth.hasFeature('has_cartera')()) {
+          <!-- Cartera por cliente -->
+          <div class="rank-card">
+            <div class="rank-header"><h3>Cartera por cliente</h3><span class="rank-sub">Saldo pendiente</span></div>
+            @if (cartera()?.byCustomer?.length) {
+              @for (c of cartera()!.byCustomer.slice(0,5); track c.customer.name) {
+                <div class="rank-row">
+                  <div class="rank-avatar rank-avatar-orange">{{ c.customer.name[0].toUpperCase() }}</div>
+                  <div class="rank-info">
+                    <div class="rank-name">{{ c.customer.name }}</div>
+                    <div class="rank-meta">{{ c.invoices.length }} docs</div>
+                  </div>
+                  <div class="rank-bar-wrap">
+                    <div class="rank-bar" [style.width.%]="carteraPct(c.total)"></div>
+                  </div>
+                  <div class="rank-value rank-value-orange">{{ fmtCOP(c.total) }}</div>
                 </div>
-                <div class="rank-bar-wrap">
-                  <div class="rank-bar" [style.width.%]="carteraPct(c.total)"></div>
-                </div>
-                <div class="rank-value rank-value-orange">{{ fmtCOP(c.total) }}</div>
-              </div>
+              }
+            } @else {
+              <div class="rank-empty">Sin cartera pendiente 🎉</div>
             }
-          } @else {
-            <div class="rank-empty">Sin cartera pendiente 🎉</div>
-          }
-        </div>
+          </div>
+        }
       </div>
     </div>
   `,
@@ -295,14 +302,16 @@ export class ReportsComponent implements OnInit {
 
   monthOptions = MONTHS.map((m, i) => ({ value: i + 1, label: m }));
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, public auth: AuthService) {}
 
   ngOnInit() { this.loadAll(); }
 
   loadAll() {
     this.loadKpis();
     this.loadMonthly();
-    this.loadCartera();
+    if (this.auth.hasFeature('has_cartera')()) {
+      this.loadCartera();
+    }
   }
 
   loadKpis() {

@@ -22,14 +22,14 @@ export interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard',     iconId: 'dashboard',  route: '/dashboard' },
-  { label: 'Facturación',   iconId: 'invoice',    route: '/invoices',  feature: 'has_invoices' },
-  { label: 'Inventario',    iconId: 'inventory',  route: '/inventory', feature: 'has_inventory' },
-  { label: 'Clientes',      iconId: 'customers',  route: '/customers' },
-  { label: 'Cartera',       iconId: 'cartera',    route: '/cartera',   feature: 'has_cartera',  roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
-  { label: 'Nómina',        iconId: 'payroll',    route: '/payroll',   feature: 'has_payroll',  roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
-  { label: 'Reportes',      iconId: 'reports',    route: '/reports',   feature: 'has_reports' },
-  { label: 'Importar',      iconId: 'import',     route: '/import',    feature: 'bulk_import',  roles: ['ADMIN', 'MANAGER'] },
-  { label: 'Configuración', iconId: 'settings',   route: '/settings',  roles: ['ADMIN'] },
+  { label: 'Facturación',   iconId: 'invoice',    route: '/invoices',  feature: 'has_invoices',  roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
+  { label: 'Inventario',    iconId: 'inventory',  route: '/inventory', feature: 'has_inventory', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+  { label: 'Clientes',      iconId: 'customers',  route: '/customers',                           roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
+  { label: 'Cartera',       iconId: 'cartera',    route: '/cartera',   feature: 'has_cartera',   roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+  { label: 'Nómina',        iconId: 'payroll',    route: '/payroll',   feature: 'has_payroll',   roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
+  { label: 'Reportes',      iconId: 'reports',    route: '/reports',   feature: 'has_reports',   roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
+  { label: 'Importar',      iconId: 'import',     route: '/import',    feature: 'bulk_import',   roles: ['ADMIN', 'MANAGER'] },
+  { label: 'Configuración', iconId: 'settings',   route: '/settings',                            roles: ['ADMIN'] },
 ];
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -38,6 +38,8 @@ const FEATURE_LABELS: Record<string, string> = {
   has_cartera:             'Cartera y cobros',
   has_payroll:             'Nómina electrónica',
   has_reports:             'Reportes avanzados',
+  has_multicompany:        'Multiempresa',
+  priority_support:        'Soporte prioritario',
   has_integrations:        'Integraciones',
   bulk_import:             'Importación masiva',
   dian_enabled:            'Facturación DIAN',
@@ -318,6 +320,10 @@ const FEATURE_LABELS: Record<string, string> = {
     .plan-empresarial { background: rgba(0,198,160,0.2);   color: #5eead4; }
     .plan-corporativo { background: rgba(245,158,11,0.2);  color: #fcd34d; }
     .plan-free        { background: rgba(100,116,139,0.2); color: #94a3b8; }
+    .plan-starter  { background: rgba(59,130,246,0.2);  color: #93c5fd; }
+    .plan-pro      { background: rgba(0,198,160,0.2);   color: #5eead4; }
+    .plan-business { background: rgba(245,158,11,0.2);  color: #fcd34d; }
+    .plan-free     { background: rgba(156,163,175,0.2); color: #9ca3af; }
 
     .sidebar-nav { flex: 1; padding: 8px; overflow-y: auto; overflow-x: hidden; }
     .sidebar-nav::-webkit-scrollbar { width: 3px; }

@@ -29,25 +29,29 @@ export const routes: Routes = [
       },
       {
         path: 'invoices',
-        canActivate: [planGuard],
-        data: { feature: 'has_invoices' },
+        canActivate: [planGuard, roleGuard],
+        data: { feature: 'has_invoices', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
         loadChildren: () =>
           import('./features/invoices/invoices.routes').then((m) => m.INVOICE_ROUTES),
       },
       {
         path: 'inventory',
-        canActivate: [planGuard],
-        data: { feature: 'has_inventory' },
+        canActivate: [planGuard, roleGuard],
+        data: { feature: 'has_inventory', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
         loadChildren: () =>
           import('./features/inventory/inventory.routes').then((m) => m.INVENTORY_ROUTES),
       },
       {
         path: 'customers',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
         loadChildren: () =>
           import('./features/customers/customers.routes').then((m) => m.CUSTOMER_ROUTES),
       },
       {
         path: 'reports',
+        canActivate: [planGuard, roleGuard],
+        data: { feature: 'has_reports', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
         loadChildren: () =>
           import('./features/reports/reports.routes').then((m) => m.REPORTS_ROUTES),
       },
@@ -68,12 +72,14 @@ export const routes: Routes = [
       {
         path: 'payroll',
         canActivate: [planGuard, roleGuard],
-        data: { feature: 'has_payroll', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+        data: { feature: 'has_payroll', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
         loadChildren: () =>
           import('./features/payroll/payroll.routes').then((m) => m.PAYROLL_ROUTES),
       },
       {
         path: 'settings',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
         loadChildren: () =>
           import('./features/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
       },
