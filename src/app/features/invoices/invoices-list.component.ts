@@ -23,6 +23,22 @@ interface Invoice {
   customer: { id: string; name: string; documentNumber: string; email?: string; phone?: string; address?: string };
   items?: InvoiceItem[];
   _count?: { items: number };
+  // Reference fields for NC/ND
+  originalInvoiceId?: string;
+  discrepancyReasonCode?: string;
+  discrepancyReason?: string;
+  dianCude?: string;
+  // Relations
+  creditDebitNotes?: Array<{
+    id: string; invoiceNumber: string; prefix: string; type: string; status: string;
+    total: number; issueDate: string; discrepancyReasonCode?: string; discrepancyReason?: string;
+    dianCude?: string;
+  }>;
+  // Balance (loaded separately)
+  balance?: {
+    originalTotal: number; totalCredits: number; totalDebits: number;
+    remainingBalance: number; creditCount: number; debitCount: number; fullyOffset: boolean;
+  };
 }
 
 interface Customer { id: string; name: string; documentNumber: string; documentType: string; }
@@ -50,7 +66,16 @@ interface InvoiceLine {
           <h2 class="page-title">Facturación Electrónica</h2>
           <p class="page-subtitle">{{ total() }} facturas · DIAN certificada</p>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <!-- Vista tabla / cuadrícula -->
+          <div class="view-toggle">
+            <button class="view-btn" [class.view-btn-active]="viewMode()==='table'" title="Vista tabla" (click)="viewMode.set('table')">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg>
+            </button>
+            <button class="view-btn" [class.view-btn-active]="viewMode()==='grid'" title="Vista cuadrícula" (click)="viewMode.set('grid')">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+            </button>
+          </div>
           <button class="btn btn-outline btn-sm" (click)="load()">
             <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/></svg>
             Actualizar
@@ -118,7 +143,7 @@ interface InvoiceLine {
             <p>No hay facturas con los filtros actuales</p>
             <button class="btn btn-primary btn-sm" (click)="openNewInvoice()">Crear primera factura</button>
           </div>
-        } @else {
+        } @else if (viewMode() === 'table') {
           <table class="data-table">
             <thead>
               <tr>
@@ -183,11 +208,80 @@ interface InvoiceLine {
                         <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
                       </button>
                     }
+                    @if (inv.status === 'ACCEPTED_DIAN' && inv.type === 'VENTA') {
+                      <button class="btn-icon btn-icon-nc" title="Nueva Nota Crédito" (click)="openNoteModal(inv,'credit')">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg>
+                      </button>
+                      <button class="btn-icon btn-icon-nd" title="Nueva Nota Débito" (click)="openNoteModal(inv,'debit')">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+                      </button>
+                    }
                   </td>
                 </tr>
               }
             </tbody>
           </table>
+
+          @if (totalPages() > 1) {
+            <div class="pagination">
+              <span class="pagination-info">{{ (page()-1)*20+1 }}–{{ min(page()*20, total()) }} de {{ total() }}</span>
+              <div class="pagination-btns">
+                <button class="btn-page" [disabled]="page()===1" (click)="setPage(page()-1)">‹</button>
+                @for (p of pageRange(); track p) {
+                  <button class="btn-page" [class.active]="p===page()" (click)="setPage(p)">{{ p }}</button>
+                }
+                <button class="btn-page" [disabled]="page()===totalPages()" (click)="setPage(page()+1)">›</button>
+              </div>
+            </div>
+          }
+        } @else {
+          <!-- ── Vista cuadrícula ── -->
+          <div class="inv-grid">
+            @for (inv of invoices(); track inv.id) {
+              <div class="inv-card" (click)="viewDetail(inv)">
+                <div class="inv-card-top">
+                  <div class="inv-card-number">{{ inv.invoiceNumber }}</div>
+                  <span class="status-pill status-{{ inv.status.toLowerCase() }}">{{ statusLabel(inv.status) }}</span>
+                </div>
+                <div class="inv-card-type">
+                  <span class="type-badge type-{{ inv.type.toLowerCase() }}">{{ typeLabel(inv.type) }}</span>
+                  @if (inv.dianCufe) { <span class="cufe-badge">CUFE ✓</span> }
+                </div>
+                <div class="inv-card-client">{{ inv?.customer?.name }}</div>
+                <div class="inv-card-doc">{{ inv?.customer?.documentNumber }}</div>
+                <div class="inv-card-total">{{ fmtCOP(inv.total) }}</div>
+                <div class="inv-card-meta">
+                  <span>{{ inv.issueDate | date:'dd/MM/yy' }}</span>
+                  <span class="dian-badge dian-{{ (inv.dianStatus ?? 'pending').toLowerCase() }}">{{ dianLabel(inv.dianStatus) }}</span>
+                </div>
+                <div class="inv-card-actions" (click)="$event.stopPropagation()">
+                  @if (inv.status === 'DRAFT') {
+                    <button class="btn-icon btn-icon-blue" title="Enviar a DIAN" [disabled]="sending()[inv.id]" (click)="issueInvoice(inv)">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
+                    </button>
+                  }
+                  @if (inv.status === 'ACCEPTED_DIAN' || inv.status === 'SENT_DIAN' || inv.status === 'ISSUED') {
+                    <button class="btn-icon btn-icon-success" title="Marcar pagada" (click)="markPaid(inv)">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                    </button>
+                  }
+                  @if (inv.status === 'ACCEPTED_DIAN' && inv.type === 'VENTA') {
+                    <button class="btn-icon btn-icon-nc" title="Nota Crédito" (click)="openNoteModal(inv,'credit')">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg>
+                    </button>
+                    <button class="btn-icon btn-icon-nd" title="Nota Débito" (click)="openNoteModal(inv,'debit')">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+                    </button>
+                  }
+                  @if (inv.dianZipKey || inv.dianCufe) {
+                    <button class="btn-icon" title="Consultar DIAN" [disabled]="querying()[inv.id]" (click)="queryDianStatus(inv)">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/></svg>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
 
           @if (totalPages() > 1) {
             <div class="pagination">
@@ -278,6 +372,16 @@ interface InvoiceLine {
                 </div>
               </div>
             </div>
+
+            <!-- Balance strip (VENTA + ACCEPTED_DIAN) -->
+            @if (detailInvoice()!.type === 'VENTA' && detailInvoice()!.status === 'ACCEPTED_DIAN') {
+              <div class="dw-section" style="padding-top:12px;padding-bottom:12px">
+                <div class="balance-strip" (click)="openNoteModal(detailInvoice()!, 'credit')">
+                  <span class="balance-label">Saldo disponible</span>
+                  <span class="balance-value">Cargar saldo →</span>
+                </div>
+              </div>
+            }
 
             <!-- Ítems -->
             <div class="dw-section">
@@ -495,6 +599,18 @@ interface InvoiceLine {
                 Marcar pagada
               </button>
             }
+            @if (detailInvoice()!.status === 'ACCEPTED_DIAN' && detailInvoice()!.type === 'VENTA') {
+              <button class="btn btn-outline btn-sm" style="border-color:#9d174d;color:#9d174d"
+                      (click)="openNoteModal(detailInvoice()!, 'credit')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg>
+                Nota Crédito
+              </button>
+              <button class="btn btn-outline btn-sm" style="border-color:#92400e;color:#92400e"
+                      (click)="openNoteModal(detailInvoice()!, 'debit')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+                Nota Débito
+              </button>
+            }
           </div>
 
         </div><!-- /drawer -->
@@ -702,6 +818,146 @@ interface InvoiceLine {
         </div>
       </div>
     }
+
+    <!-- ── Modal Nota Crédito / Débito ─────────────────────────────── -->
+    @if (noteModal() !== 'none') {
+      <div class="modal-overlay" (click)="closeNoteModal()">
+        <div class="modal modal-box modal-lg" (click)="$event.stopPropagation()">
+
+          <div class="modal-header">
+            <h3 class="modal-title">
+              @if (noteModal() === 'credit') { Nueva Nota Crédito }
+              @else { Nueva Nota Débito }
+              <span class="ref-badge">Ref: {{ noteTarget()?.invoiceNumber }}</span>
+            </h3>
+            <button class="modal-close" (click)="closeNoteModal()">✕</button>
+          </div>
+
+          <!-- Balance info -->
+          @if (noteModal() === 'credit') {
+            <div class="balance-info">
+              @if (loadingBalance()) {
+                <span class="balance-loading">Calculando saldo...</span>
+              } @else if (noteBalance()) {
+                <span>Valor original: <strong>{{ noteBalance().originalTotal | number:'1.2-2' }}</strong></span>
+                <span>Créditos emitidos: <strong style="color:#dc2626">−{{ noteBalance().totalCredits | number:'1.2-2' }}</strong></span>
+                <span>Saldo disponible: <strong style="color:#059669">{{ noteBalance().remainingBalance | number:'1.2-2' }}</strong></span>
+              }
+            </div>
+          }
+
+          <div class="modal-body">
+
+            <!-- Motivo -->
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Código de motivo DIAN *</label>
+                <select [(ngModel)]="noteForm.discrepancyReasonCode" class="form-control">
+                  @if (noteModal() === 'credit') {
+                    <option value="1">1 – Devolución parcial de bienes</option>
+                    <option value="2">2 – Anulación de factura electrónica</option>
+                    <option value="3">3 – Rebaja total aplicada</option>
+                    <option value="4">4 – Descuento total aplicado</option>
+                    <option value="5">5 – Rescisión: nulidad por falta de requisitos</option>
+                    <option value="6">6 – Otros</option>
+                  } @else {
+                    <option value="1">1 – Intereses</option>
+                    <option value="2">2 – Gastos por cobrar</option>
+                    <option value="3">3 – Cambio en el valor</option>
+                    <option value="4">4 – Otros</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Prefijo documento</label>
+                <input type="text" [(ngModel)]="noteForm.prefix" class="form-control" style="max-width:100px" placeholder="NC"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Fecha de emisión *</label>
+                <input type="date" [(ngModel)]="noteForm.issueDate" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Fecha vencimiento</label>
+                <input type="date" [(ngModel)]="noteForm.dueDate" class="form-control"/>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Descripción del motivo *</label>
+              <input type="text" [(ngModel)]="noteForm.discrepancyReason" class="form-control"
+                     placeholder="Ej: Devolución de mercancía en mal estado"/>
+            </div>
+
+            <!-- Líneas -->
+            <div class="note-lines-header">
+              <span class="form-label" style="margin:0">Ítems de la nota</span>
+              <button type="button" class="btn btn-sm btn-outline" (click)="addNoteLine()">+ Línea</button>
+            </div>
+            <div class="note-line note-line-head">
+              <div class="nl-desc"><span class="nl-label">Descripción *</span></div>
+              <div class="nl-num"><span class="nl-label">Cantidad</span></div>
+              <div class="nl-num"><span class="nl-label">Precio unit.</span></div>
+              <div class="nl-num"><span class="nl-label">Dto. %</span></div>
+              <div class="nl-num"><span class="nl-label">IVA %</span></div>
+              <div class="nl-total"><span class="nl-label">Total</span></div>
+              <div class="nl-del"></div>
+            </div>
+            @for (item of noteForm.items; track $index; let i = $index) {
+              <div class="note-line">
+                <div class="nl-desc">
+                  <input type="text" [(ngModel)]="item.description" class="form-control"
+                         placeholder="Descripción del ítem"/>
+                </div>
+                <div class="nl-num">
+                  <input type="number" [(ngModel)]="item.quantity" class="form-control" min="0.0001" step="0.01" placeholder="1"/>
+                </div>
+                <div class="nl-num">
+                  <input type="number" [(ngModel)]="item.unitPrice" class="form-control" min="0" step="0.01" placeholder="0.00"/>
+                </div>
+                <div class="nl-num">
+                  <input type="number" [(ngModel)]="item.discount" class="form-control" min="0" max="100" step="0.01" placeholder="0"/>
+                </div>
+                <div class="nl-num">
+                  <input type="number" [(ngModel)]="item.taxRate" class="form-control" min="0" step="1" placeholder="19"/>
+                </div>
+                <div class="nl-total">
+                  {{ noteLineTotal(item) | number:'1.2-2' }}
+                </div>
+                <div class="nl-del">
+                  @if (noteForm.items.length > 1) {
+                    <button type="button" class="icon-btn danger" (click)="removeNoteLine(i)" title="Eliminar línea">✕</button>
+                  }
+                </div>
+              </div>
+            }
+
+            <div class="note-total-row">
+              <span>Total nota:</span>
+              <strong>{{ noteTotalAmount() | number:'1.2-2' }}</strong>
+              @if (noteModal() === 'credit' && noteBalance() && noteTotalAmount() > noteBalance().remainingBalance + 0.01) {
+                <span class="note-exceeds">⚠ Excede el saldo disponible</span>
+              }
+            </div>
+
+            <div class="form-group" style="margin-top:12px">
+              <label class="form-label">Observaciones</label>
+              <input type="text" [(ngModel)]="noteForm.notes" class="form-control" placeholder="Notas adicionales (opcional)"/>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-outline btn-sm" (click)="closeNoteModal()">Cancelar</button>
+            <button class="btn btn-primary btn-sm" (click)="submitNote()" [disabled]="saving()">
+              @if (saving()) { Guardando... }
+              @else {
+                @if (noteModal() === 'credit') { Crear Nota Crédito }
+                @else { Crear Nota Débito }
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `,
   styles: [`
     .page { max-width:1300px; }
@@ -763,6 +1019,25 @@ interface InvoiceLine {
     .btn-icon:disabled { opacity:.4; cursor:default; }
     .btn-icon-success:hover:not(:disabled) { background:#d1fae5; color:#065f46; }
     .btn-icon-blue:hover:not(:disabled) { background:#dbeafe; color:#1e40af; }
+    .btn-icon-nc:hover:not(:disabled) { background:#fce7f3; color:#9d174d; }
+    .btn-icon-nd:hover:not(:disabled) { background:#fef3c7; color:#92400e; }
+    /* View toggle */
+    .view-toggle { display:flex; border:1px solid #dce6f0; border-radius:8px; overflow:hidden; }
+    .view-btn { background:#fff; border:none; padding:7px 10px; cursor:pointer; color:#9ca3af; transition:all .15s; display:inline-flex; align-items:center; }
+    .view-btn:hover { background:#f0f4f9; color:#374151; }
+    .view-btn-active { background:#1a407e; color:#fff !important; }
+    /* Grid view */
+    .inv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; padding:16px; }
+    .inv-card { background:#fff; border:1px solid #dce6f0; border-radius:10px; padding:16px; cursor:pointer; transition:box-shadow .15s,border-color .15s; display:flex; flex-direction:column; gap:8px; }
+    .inv-card:hover { border-color:#93c5fd; box-shadow:0 4px 12px rgba(26,64,126,.08); }
+    .inv-card-top { display:flex; align-items:center; justify-content:space-between; }
+    .inv-card-number { font-family:monospace; font-weight:700; color:#1a407e; font-size:14px; }
+    .inv-card-type { display:flex; align-items:center; gap:6px; }
+    .inv-card-client { font-weight:600; color:#0c1c35; font-size:13.5px; }
+    .inv-card-doc { font-size:11.5px; color:#9ca3af; }
+    .inv-card-total { font-size:16px; font-weight:700; color:#0c1c35; }
+    .inv-card-meta { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:#9ca3af; }
+    .inv-card-actions { display:flex; gap:4px; padding-top:4px; border-top:1px solid #f0f4f8; }
     .pagination { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid #f0f4f8; }
     .pagination-info { font-size:13px; color:#9ca3af; }
     .pagination-btns { display:flex; gap:4px; }
@@ -956,6 +1231,31 @@ interface InvoiceLine {
       .form-row-3 { grid-template-columns:1fr !important; }
       .modal-header h3 { font-size:14px; }
     }
+
+    /* Note modal */
+    .modal-lg { max-width: 720px; }
+    .ref-badge { font-size:12px; font-weight:500; color:#6b7280; background:#f3f4f6; padding:2px 8px; border-radius:6px; margin-left:8px; }
+    .balance-info { display:flex; flex-wrap:wrap; gap:16px; padding:10px 16px; background:#f0fdf4; border-radius:8px; margin:0 0 16px; font-size:13px; color:#374151; }
+    .balance-loading { color:#9ca3af; font-size:13px; }
+    .note-lines-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+    .note-line { display:grid; grid-template-columns:1fr 80px 110px 70px 70px 100px 28px; gap:6px; align-items:center; margin-bottom:6px; }
+    .note-line-head { margin-bottom:2px; }
+    .nl-label { font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.04em; }
+    .nl-desc, .nl-num, .nl-total, .nl-del { font-size:13px; }
+    .nl-total { text-align:right; color:#374151; font-weight:600; font-size:13px; padding-right:4px; }
+    .nl-del { display:flex; justify-content:center; }
+    .note-total-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid #e5e7eb; font-size:14px; margin-top:4px; }
+    .note-total-row strong { font-size:15px; color:#0c1c35; }
+    .note-exceeds { color:#dc2626; font-size:12px; font-weight:600; }
+    .balance-strip { display:inline-flex; align-items:center; gap:8px; padding:6px 12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; font-size:12.5px; cursor:pointer; margin-bottom:12px; }
+    .balance-label { color:#0369a1; font-weight:600; }
+    .balance-value { color:#0284c7; }
+    .icon-btn { background:none; border:none; cursor:pointer; padding:3px 6px; border-radius:4px; font-size:13px; }
+    .icon-btn.danger { color:#9ca3af; }
+    .icon-btn.danger:hover { color:#dc2626; background:#fee2e2; }
+    .form-row { display:grid; grid-template-columns:1fr auto auto; gap:12px; margin-bottom:12px; }
+    .form-label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:5px; }
+    .modal-box { background:#fff; border-radius:16px; width:100%; max-height:90vh; display:flex; flex-direction:column; }
   `]
 })
 export class InvoicesListComponent implements OnInit {
@@ -975,6 +1275,7 @@ export class InvoicesListComponent implements OnInit {
 
   detailInvoice = signal<Invoice | null>(null);
   showModal     = signal(false);
+  viewMode      = signal<'table' | 'grid'>('table');
   showPdfModal  = signal(false);
   showEditModal = signal(false);
   pdfUrl        = signal<SafeResourceUrl | null>(null);
@@ -984,6 +1285,21 @@ export class InvoicesListComponent implements OnInit {
   // DIAN async state tracking
   sending  = signal<Record<string, boolean>>({});
   querying = signal<Record<string, boolean>>({});
+
+  // Credit / Debit note modal state
+  noteModal      = signal<'none'|'credit'|'debit'>('none');
+  noteTarget     = signal<Invoice | null>(null);
+  noteBalance    = signal<any>(null);
+  loadingBalance = signal(false);
+  noteForm = {
+    prefix:                'NC',
+    discrepancyReasonCode: '1',
+    discrepancyReason:     '',
+    items:                 [] as any[],
+    notes:                 '',
+    issueDate:             new Date().toISOString().substring(0, 10),
+    dueDate:               '',
+  };
 
   editInvoice = { customerId:'', prefix:'FV', issueDate:'', dueDate:'', notes:'', currency:'COP' };
   editLines: InvoiceLine[] = [];
@@ -1203,9 +1519,9 @@ export class InvoicesListComponent implements OnInit {
   }
 
   markPaid(inv: Invoice) {
-    this.http.post(`${this.API}/${inv.id}/mark-paid`, {}).subscribe({
+    this.http.patch(`${this.API}/${inv.id}/paid`, {}).subscribe({
       next: () => { this.notify.success('Factura marcada como pagada'); this.detailInvoice.set(null); this.load(); },
-      error: e => this.notify.error(e?.error?.message ?? 'Error')
+      error: e => this.notify.error(e?.error?.message ?? 'Error al marcar como pagada')
     });
   }
 
@@ -1227,4 +1543,100 @@ export class InvoicesListComponent implements OnInit {
   fmtCOP(v: number) { return new Intl.NumberFormat('es-CO',{ style:'currency', currency:'COP', minimumFractionDigits:0 }).format(v); }
   min(a: number, b: number) { return Math.min(a, b); }
   private newLine(): InvoiceLine { return { productId:'', description:'', quantity:1, unitPrice:0, taxRate:19, discount:0 }; }
+
+  // ── Notas Crédito / Débito ───────────────────────────────────────────
+
+  async openNoteModal(inv: Invoice, type: 'credit' | 'debit') {
+    this.noteTarget.set(inv);
+    this.noteModal.set(type === 'credit' ? 'credit' : 'debit');
+    this.noteForm.prefix = type === 'credit' ? 'NC' : 'ND';
+    this.noteForm.discrepancyReasonCode = type === 'credit' ? '1' : '6';
+    this.noteForm.discrepancyReason = '';
+    this.noteForm.items = [{ productId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 19, discount: 0 }];
+    this.noteForm.issueDate = new Date().toISOString().substring(0, 10);
+    // Load balance
+    this.loadingBalance.set(true);
+    this.http.get<any>(`${this.API}/${inv.id}/balance`).subscribe({
+      next: bal => { this.noteBalance.set(bal); this.loadingBalance.set(false); },
+      error: ()  => this.loadingBalance.set(false),
+    });
+  }
+
+  closeNoteModal() {
+    this.noteModal.set('none');
+    this.noteTarget.set(null);
+    this.noteBalance.set(null);
+  }
+
+  addNoteLine() {
+    this.noteForm.items = [...this.noteForm.items, { productId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 19, discount: 0 }];
+  }
+
+  removeNoteLine(i: number) {
+    this.noteForm.items = this.noteForm.items.filter((_, idx) => idx !== i);
+  }
+
+  noteLineTotal(item: any): number {
+    const sub = item.quantity * item.unitPrice * (1 - item.discount / 100);
+    return sub * (1 + item.taxRate / 100);
+  }
+
+  noteTotalAmount(): number {
+    return this.noteForm.items.reduce((s, item) => s + this.noteLineTotal(item), 0);
+  }
+
+  submitNote() {
+    const inv = this.noteTarget();
+    if (!inv) return;
+    const type = this.noteModal();
+    if (type === 'none') return;
+
+    if (!this.noteForm.discrepancyReason.trim()) {
+      this.notify.error('Ingresa la descripción del motivo'); return;
+    }
+    if (this.noteForm.items.length === 0 || this.noteForm.items.some(i => !i.description || i.unitPrice <= 0)) {
+      this.notify.error('Completa todas las líneas de la nota'); return;
+    }
+    const bal = this.noteBalance();
+    if (type === 'credit' && bal && this.noteTotalAmount() > bal.remainingBalance + 0.01) {
+      this.notify.error(`El valor (${this.noteTotalAmount().toFixed(2)}) supera el saldo disponible (${bal.remainingBalance.toFixed(2)})`); return;
+    }
+
+    const endpoint = type === 'credit'
+      ? `${this.API}/${inv.id}/credit-note`
+      : `${this.API}/${inv.id}/debit-note`;
+
+    const body = {
+      customerId:            inv.customer.id,
+      prefix:                this.noteForm.prefix,
+      discrepancyReasonCode: this.noteForm.discrepancyReasonCode,
+      discrepancyReason:     this.noteForm.discrepancyReason,
+      issueDate:             this.noteForm.issueDate,
+      dueDate:               this.noteForm.dueDate || undefined,
+      notes:                 this.noteForm.notes,
+      items: this.noteForm.items.map((item, i) => ({
+        ...(item.productId ? { productId: item.productId } : {}),
+        description: item.description,
+        quantity:    Number(item.quantity),
+        unitPrice:   Number(item.unitPrice),
+        taxRate:     Number(item.taxRate ?? 19),
+        discount:    Number(item.discount ?? 0),
+        position:    i + 1,
+      })),
+    };
+
+    this.saving.set(true);
+    this.http.post<any>(endpoint, body).subscribe({
+      next: () => {
+        this.notify.success(type === 'credit' ? 'Nota crédito creada' : 'Nota débito creada');
+        this.closeNoteModal();
+        this.load();
+        this.saving.set(false);
+      },
+      error: err => {
+        this.notify.error(err?.error?.message || 'Error al crear la nota');
+        this.saving.set(false);
+      },
+    });
+  }
 }
