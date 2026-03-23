@@ -22,6 +22,11 @@ export const SUPER_ADMIN_ROUTES: Routes = [
           import('./pages/sa-plans.component').then((m) => m.SaPlansComponent),
       },
       {
+        path: 'integrations',
+        loadComponent: () =>
+          import('./pages/sa-integrations.component').then((m) => m.SaIntegrationsComponent),
+      },
+      {
         path: 'audit',
         loadComponent: () =>
           import('./pages/sa-audit.component').then((m) => m.SaAuditComponent),

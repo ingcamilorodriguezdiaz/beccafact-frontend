@@ -61,7 +61,7 @@ interface InvoiceLine {
     <div class="page animate-in">
 
       <!-- Header -->
-      <div class="page-header">
+      <div class="page-header" id="tour-invoice-header">
         <div>
           <h2 class="page-title">Facturación Electrónica</h2>
           <p class="page-subtitle">{{ total() }} facturas · DIAN certificada</p>
@@ -80,7 +80,7 @@ interface InvoiceLine {
             <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/></svg>
             Actualizar
           </button>
-          <button class="btn btn-primary btn-sm" (click)="openNewInvoice()">
+          <button class="btn btn-primary btn-sm" id="tour-new-invoice" (click)="openNewInvoice()">
             <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
             Nueva factura
           </button>
@@ -98,7 +98,7 @@ interface InvoiceLine {
       </div>
 
       <!-- Filters -->
-      <div class="filters-bar">
+      <div class="filters-bar" id="tour-invoice-filters">
         <div class="search-wrap">
           <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
           <input type="text" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Buscar por número o cliente..." class="search-input"/>
@@ -124,7 +124,7 @@ interface InvoiceLine {
       </div>
 
       <!-- Table -->
-      <div class="table-card">
+      <div class="table-card" id="tour-invoice-table">
         @if (loading()) {
           <div class="table-loading">
             @for (i of [1,2,3,4,5]; track i) {

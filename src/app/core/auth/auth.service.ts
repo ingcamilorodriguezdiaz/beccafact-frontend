@@ -10,6 +10,7 @@ export interface User {
   firstName: string;
   lastName: string;
   isSuperAdmin: boolean;
+  hasSeenTour: boolean;
   companyId: string | null;
   roles: string[];
   company?: {

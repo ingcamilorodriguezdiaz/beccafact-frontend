@@ -56,12 +56,12 @@ interface Country { code: string; name: string; }
     <div class="page animate-in">
 
       <!-- Header -->
-      <div class="page-header">
+      <div class="page-header" id="tour-customers-header">
         <div>
           <h2 class="page-title">Clientes</h2>
           <p class="page-subtitle">{{ total() }} clientes registrados</p>
         </div>
-        <button class="btn btn-primary" (click)="openModal()">
+        <button class="btn btn-primary" id="tour-new-customer" (click)="openModal()">
           <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
           Nuevo cliente
         </button>
@@ -91,7 +91,7 @@ interface Country { code: string; name: string; }
 
       <!-- ══ TABLE VIEW ══ -->
       @if (viewMode() === 'table') {
-        <div class="table-card">
+        <div class="table-card" id="tour-customers-table">
           @if (loading()) {
             <div class="table-loading">
               @for (i of [1,2,3,4,5]; track i) {

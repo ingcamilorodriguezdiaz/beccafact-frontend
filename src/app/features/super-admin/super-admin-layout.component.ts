@@ -151,6 +151,11 @@ interface SANavItem { label: string; route: string; iconId: string; }
               <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"/>
             </svg>
           }
+          @case ('integrations') {
+            <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+              <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z"/>
+            </svg>
+          }
         }
       </ng-template>
 
@@ -417,14 +422,15 @@ export class SuperAdminLayoutComponent {
   onEscape() { this.mobileOpen.set(false); }
 
   navItems: SANavItem[] = [
-    { label: 'Dashboard',   route: 'dashboard',   iconId: 'dashboard'   },
-    { label: 'Empresas',    route: 'companies',   iconId: 'companies'   },
-    { label: 'Planes',      route: 'plans',       iconId: 'plans'       },
-    { label: 'Usuarios',    route: 'users',       iconId: 'users'       },
-    { label: 'Bancos',      route: 'banks',       iconId: 'banks'       },
-    { label: 'Parámetros',  route: 'parameters',  iconId: 'parameters'  },
-    { label: 'Auditoría',   route: 'audit',       iconId: 'audit'       },
-    { label: 'Plantilla',   route: 'template',    iconId: 'template'    },
+    { label: 'Dashboard',    route: 'dashboard',    iconId: 'dashboard'    },
+    { label: 'Empresas',     route: 'companies',    iconId: 'companies'    },
+    { label: 'Planes',       route: 'plans',        iconId: 'plans'        },
+    { label: 'Integraciones',route: 'integrations', iconId: 'integrations' },
+    { label: 'Usuarios',     route: 'users',        iconId: 'users'        },
+    { label: 'Bancos',       route: 'banks',        iconId: 'banks'        },
+    { label: 'Parámetros',   route: 'parameters',   iconId: 'parameters'   },
+    { label: 'Auditoría',    route: 'audit',        iconId: 'audit'        },
+    { label: 'Plantilla',    route: 'template',     iconId: 'template'     },
   ];
 
   constructor(protected auth: AuthService) {}

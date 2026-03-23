@@ -53,7 +53,7 @@ const FEATURE_LABELS: Record<string, string> = {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
-    <aside class="sidebar" [class.collapsed]="collapsed()" [class.mobile-open]="mobileOpen">
+    <aside class="sidebar" id="tour-sidebar" [class.collapsed]="collapsed()" [class.mobile-open]="mobileOpen">
 
       <!-- Brand -->
       <div class="sidebar-brand">
@@ -119,6 +119,7 @@ const FEATURE_LABELS: Record<string, string> = {
                class="nav-item"
                [class.nav-item--collapsed]="collapsed()"
                [title]="collapsed() ? item.label : ''"
+               [id]="'tour-' + item.iconId"
                (click)="mobileClose.emit()">
               <span class="nav-icon">
                 <ng-container *ngTemplateOutlet="iconTpl; context: { id: item.iconId }"/>

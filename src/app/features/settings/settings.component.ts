@@ -9,14 +9,16 @@ import { AuthService } from '../../core/auth/auth.service';
   imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
   template: `
     <div class="settings-layout">
-      <aside class="settings-sidebar">
+      <aside class="settings-sidebar" id="tour-settings-menu">
         <h3>Configuración</h3>
         <nav>
           <a routerLink="profile" routerLinkActive="active" class="settings-link">👤 Mi perfil</a>
           <a routerLink="company" routerLinkActive="active" class="settings-link">🏢 Mi empresa</a>
           <a routerLink="users" routerLinkActive="active" class="settings-link">👥 Usuarios</a>
           <a routerLink="billing" routerLinkActive="active" class="settings-link">💳 Plan y facturación</a>
-          <a routerLink="integrations" routerLinkActive="active" class="settings-link">🔌 Integraciones</a>
+          @if (!auth.isSuperAdmin()) {
+            <a routerLink="integrations" routerLinkActive="active" class="settings-link">🔌 Integraciones</a>
+          }
         </nav>
       </aside>
       <div class="settings-content">

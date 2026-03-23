@@ -14,7 +14,7 @@ import { DashboardMetrics } from '../../model/dashboard-metrics.model';
     <div class="dashboard animate-in">
 
       <!-- Welcome bar -->
-      <div class="welcome-bar">
+      <div class="welcome-bar" id="tour-welcome">
         <div class="welcome-left">
           <div class="greeting-tag">{{ greetingEmoji() }} Bienvenido</div>
           <h1 class="welcome-name">{{ auth.user()?.firstName }} {{ auth.user()?.lastName }}</h1>
@@ -73,7 +73,7 @@ import { DashboardMetrics } from '../../model/dashboard-metrics.model';
       </div>
 
       <!-- Stats grid -->
-      <div class="stats-grid">
+      <div class="stats-grid" id="tour-stats">
         <div class="stat-card" style="animation-delay:0.05s">
           <div class="sc-top">
             <div class="sc-icon-wrap sc-blue">
@@ -128,7 +128,7 @@ import { DashboardMetrics } from '../../model/dashboard-metrics.model';
       </div>
 
       <!-- Quick actions -->
-      <div class="quick-section">
+      <div class="quick-section" id="tour-quick-actions">
         <div class="qs-header">
           <h3 class="qs-title">Acciones rápidas</h3>
         </div>

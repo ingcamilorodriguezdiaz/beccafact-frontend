@@ -54,7 +54,7 @@ interface UnitMeasure { name: string; usage: string; }
     <div class="page animate-in">
 
       <!-- Header -->
-      <div class="page-header">
+      <div class="page-header" id="tour-inventory-header">
         <div>
           <h2 class="page-title">Inventario</h2>
           <p class="page-subtitle">{{ total() }} productos · {{ lowStockCount() }} con stock bajo</p>
@@ -64,7 +64,7 @@ interface UnitMeasure { name: string; usage: string; }
             <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
             Importar CSV
           </a>
-          <button class="btn btn-primary" (click)="openModal()">
+          <button class="btn btn-primary" id="tour-new-product" (click)="openModal()">
             <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
             Nuevo producto
           </button>
@@ -111,7 +111,7 @@ interface UnitMeasure { name: string; usage: string; }
 
       <!-- ══ TABLE VIEW ══ -->
       @if (viewMode() === 'table') {
-        <div class="table-card">
+        <div class="table-card" id="tour-inventory-table">
           @if (loading()) {
             <div class="table-loading">
               @for (i of [1,2,3,4,5]; track i) {

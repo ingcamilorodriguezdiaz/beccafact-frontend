@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, HostListener } from '@angular/core';
+import { Component, computed, inject, signal, HostListener, effect } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -6,6 +6,7 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
 import { NavbarComponent } from '../navbar/navbar.component';
 import { ToastComponent } from '../toast/toast.component';
 import { GlobalLoaderComponent } from '../global-loader/global-loader.component';
+import { TourService } from '../../../core/services/tour.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -81,8 +82,19 @@ interface UsageData {
 export class LayoutComponent {
   mobileSidebarOpen = signal(false);
 
- private http = inject(HttpClient);
-  protected auth = inject(AuthService);
+  private http        = inject(HttpClient);
+  protected auth      = inject(AuthService);
+  private tourService = inject(TourService);
+
+  constructor() {
+    effect(() => {
+      const user = this.auth.user();
+      console.log("validar usuarios:",user);
+      if (user && !user.isSuperAdmin && !user.hasSeenTour) {
+        this.tourService.start(user.firstName);
+      }
+    });
+  }
   /**
    * Calcula el porcentaje de uso mensual de documentos comparando
    * los documentos emitidos este mes contra el límite del plan.
