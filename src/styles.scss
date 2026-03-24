@@ -515,3 +515,21 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
     min-width: unset !important;
   }
 }
+
+/* FIX: Angular 20 + Shepherd → dialog con fondo blanco */
+dialog.shepherd-element.beccafact-tour {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+/* FIX: evita borde/outline nativo del dialog */
+dialog.shepherd-element.beccafact-tour:focus-visible {
+  outline: none !important;
+}
+
+/* FIX: backdrop del dialog */
+dialog.shepherd-element.beccafact-tour::backdrop {
+  background: transparent !important;
+}

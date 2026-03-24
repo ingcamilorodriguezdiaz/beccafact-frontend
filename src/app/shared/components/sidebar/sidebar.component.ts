@@ -47,7 +47,9 @@ const FEATURE_LABELS: Record<string, string> = {
   dian_enabled:            'Facturación DIAN',
   max_documents_per_month: 'Documentos / mes',
   max_products:            'Productos',
+  max_customers:           'Clientes',
   max_users:               'Usuarios',
+  max_support_tickets:     'Tickets soporte / mes',
 };
 
 @Component({
@@ -482,8 +484,8 @@ export class SidebarComponent {
 
   planFeatureList(): Array<{ key: string; label: string; enabled: boolean; isBoolean: boolean; value: string }> {
     if (!this.plan) return [];
-    const BOOL_KEYS = ['has_invoices','has_inventory','has_cartera','has_payroll','has_pos','has_reports','has_integrations','bulk_import','dian_enabled'];
-    const NUM_KEYS  = ['max_documents_per_month','max_products','max_users'];
+    const BOOL_KEYS = ['has_invoices','has_inventory','has_cartera','has_payroll','has_pos','has_reports','has_integrations','bulk_import','dian_enabled','priority_support'];
+    const NUM_KEYS  = ['max_products','max_customers','max_users','max_support_tickets'];
     return [...BOOL_KEYS, ...NUM_KEYS]
       .filter(k => FEATURE_LABELS[k] && this.featureMap[k] !== undefined)
       .map(k => {
