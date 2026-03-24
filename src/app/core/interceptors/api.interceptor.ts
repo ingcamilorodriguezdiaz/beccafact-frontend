@@ -9,12 +9,10 @@ export const apiResponseInterceptor: HttpInterceptorFn = (req, next) => {
 
       if (event instanceof HttpResponse) {
 
-        const {data} = event.body as ApiResponse<any>;
-       
-        if (data && data !== undefined) {
-          return event.clone({
-            body: data
-          });
+        const body = event.body as ApiResponse<any>;
+
+        if (body && typeof body === 'object' && 'data' in body) {
+          return event.clone({ body: body.data });
         }
 
       }

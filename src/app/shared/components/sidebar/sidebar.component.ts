@@ -27,12 +27,14 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Clientes',      iconId: 'customers',  route: '/customers',                           roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
   { label: 'Cartera',       iconId: 'cartera',    route: '/cartera',   feature: 'has_cartera',   roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
   { label: 'Nómina',        iconId: 'payroll',    route: '/payroll',   feature: 'has_payroll',   roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
+  { label: 'Punto de Venta', iconId: 'pos',       route: '/pos',       feature: 'has_pos',       roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
   { label: 'Reportes',      iconId: 'reports',    route: '/reports',   feature: 'has_reports',   roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
   { label: 'Importar',      iconId: 'import',     route: '/import',    feature: 'bulk_import',   roles: ['ADMIN', 'MANAGER'] },
   { label: 'Configuración', iconId: 'settings',   route: '/settings',                            roles: ['ADMIN'] },
 ];
 
 const FEATURE_LABELS: Record<string, string> = {
+  has_pos:                 'Punto de Venta (POS)',
   has_invoices:            'Facturación electrónica',
   has_inventory:           'Inventario',
   has_cartera:             'Cartera y cobros',
@@ -256,6 +258,11 @@ const FEATURE_LABELS: Record<string, string> = {
             <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
           </svg>
         }
+        @case ('pos') {
+          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+            <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
+          </svg>
+        }
         @case ('settings') {
           <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
             <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"/>
@@ -475,7 +482,7 @@ export class SidebarComponent {
 
   planFeatureList(): Array<{ key: string; label: string; enabled: boolean; isBoolean: boolean; value: string }> {
     if (!this.plan) return [];
-    const BOOL_KEYS = ['has_invoices','has_inventory','has_cartera','has_payroll','has_reports','has_integrations','bulk_import','dian_enabled'];
+    const BOOL_KEYS = ['has_invoices','has_inventory','has_cartera','has_payroll','has_pos','has_reports','has_integrations','bulk_import','dian_enabled'];
     const NUM_KEYS  = ['max_documents_per_month','max_products','max_users'];
     return [...BOOL_KEYS, ...NUM_KEYS]
       .filter(k => FEATURE_LABELS[k] && this.featureMap[k] !== undefined)

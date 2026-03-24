@@ -77,6 +77,13 @@ export const routes: Routes = [
           import('./features/payroll/payroll.routes').then((m) => m.PAYROLL_ROUTES),
       },
       {
+        path: 'pos',
+        canActivate: [planGuard, roleGuard],
+        data: { feature: 'has_pos', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+        loadChildren: () =>
+          import('./features/pos/pos.routes').then((m) => m.POS_ROUTES),
+      },
+      {
         path: 'settings',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN'] },
