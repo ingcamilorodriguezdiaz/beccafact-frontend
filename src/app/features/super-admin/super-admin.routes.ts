@@ -51,6 +51,11 @@ export const SUPER_ADMIN_ROUTES: Routes = [
         loadComponent: () =>
           import('./pages/sa-template.component').then((m) => m.SaTemplateComponent),
       },
+      {
+        path: 'dian-tests',
+        loadComponent: () =>
+          import('./pages/sa-dian-tests.component').then((m) => m.SaDianTestsComponent),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

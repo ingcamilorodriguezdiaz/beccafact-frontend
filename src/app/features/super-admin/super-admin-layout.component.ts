@@ -156,6 +156,11 @@ interface SANavItem { label: string; route: string; iconId: string; }
               <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z"/>
             </svg>
           }
+          @case ('dian-tests') {
+            <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+              <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V8z"/>
+            </svg>
+          }
         }
       </ng-template>
 
@@ -431,6 +436,7 @@ export class SuperAdminLayoutComponent {
     { label: 'Parámetros',   route: 'parameters',   iconId: 'parameters'   },
     { label: 'Auditoría',    route: 'audit',        iconId: 'audit'        },
     { label: 'Plantilla',    route: 'template',     iconId: 'template'     },
+    { label: 'Sets DIAN',    route: 'dian-tests',   iconId: 'dian-tests'   },
   ];
 
   constructor(protected auth: AuthService) {}
