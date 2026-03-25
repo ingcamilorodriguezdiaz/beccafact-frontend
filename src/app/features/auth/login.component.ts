@@ -97,11 +97,11 @@ import { AuthService } from '../../core/auth/auth.service';
       <!-- Right panel: hero -->
       <div class="login-hero">
         <div class="hero-inner">
-          <div class="hero-badge">✦ Certificado DIAN Colombia</div>
-          <h2 class="hero-headline">Facturación electrónica<br>para empresas<br>que crecen.</h2>
+          <div class="hero-badge">✦ Certificado DIAN · Factura + Nómina</div>
+          <h2 class="hero-headline">ERP Cloud para<br>empresas colombianas<br>que crecen.</h2>
           <p class="hero-desc">
-            Emite facturas electrónicas, gestiona inventario y controla tu cartera,
-            todo desde un solo panel integrado con la DIAN.
+            Facturación electrónica, nómina, POS, inventario y cartera,
+            todo integrado y certificado por la DIAN desde un solo panel.
           </p>
 
           <div class="hero-features">
@@ -320,10 +320,11 @@ export class LoginComponent {
 
   features = [
     { label: 'Facturación electrónica certificada DIAN' },
-    { label: 'Inventario y cartera integrados' },
-    { label: 'Importación masiva de productos' },
-    { label: 'Multi-empresa en un solo panel' },
-    { label: 'Nómina electrónica incluida' },
+    { label: 'Nómina electrónica individual y de ajuste' },
+    { label: 'Punto de venta (POS) integrado' },
+    { label: 'Inventario y cartera en tiempo real' },
+    { label: 'Importación masiva de datos (CSV/XLSX)' },
+    { label: 'Multi-empresa y multi-usuario' },
   ];
 
   constructor(protected auth: AuthService) {}
