@@ -29,7 +29,7 @@ interface Customer {
 
   <!-- ═══ SESSION BAR ═══ -->
   @if (activeSession()) {
-    <div class="session-bar">
+    <div class="session-bar" id="tour-pos-session-bar">
       <div class="session-left">
         <div class="session-live">
           <span class="live-dot"></span>
@@ -57,7 +57,7 @@ interface Customer {
         </div>
       </div>
       <div class="session-actions">
-        <button class="sb-btn" (click)="toggleHistory()">
+        <button class="sb-btn" id="tour-pos-history" (click)="toggleHistory()">
           <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H4zm3 3a1 1 0 112 0v4a1 1 0 11-2 0V5z" clip-rule="evenodd"/></svg>
           Historial
         </button>
@@ -99,7 +99,7 @@ interface Customer {
     <div class="pos-layout">
 
       <!-- ── LEFT: Products panel ─────────────────────────── -->
-      <div class="products-panel">
+      <div class="products-panel" id="tour-pos-products">
 
         <!-- Toolbar -->
         <div class="panel-toolbar">
@@ -173,7 +173,7 @@ interface Customer {
       </div>
 
       <!-- ── RIGHT: Cart panel ───────────────────────────── -->
-      <div class="cart-panel">
+      <div class="cart-panel" id="tour-pos-cart">
 
         <!-- Cart header -->
         <div class="cart-header">
@@ -196,7 +196,7 @@ interface Customer {
         </div>
 
         <!-- Customer picker -->
-        <div class="customer-zone">
+        <div class="customer-zone" id="tour-pos-customer">
           @if (!selectedCustomer()) {
             <div class="cust-search-wrap">
               <div class="cust-field" [class.focused]="showCustomerDropdown()">
@@ -250,7 +250,7 @@ interface Customer {
         </div>
 
         <!-- SKU / barcode search -->
-        <div class="sku-search-zone">
+        <div class="sku-search-zone" id="tour-pos-sku">
           <div class="sku-field">
             <svg viewBox="0 0 20 20" fill="currentColor" width="12" class="sku-icon"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h1a1 1 0 010 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h1a1 1 0 010 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h1a1 1 0 010 2H4a1 1 0 01-1-1zm5-8a1 1 0 011-1h6a1 1 0 010 2h-6a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 010 2h-6a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 010 2h-6a1 1 0 01-1-1z"/></svg>
             <input type="text" class="sku-input" placeholder="SKU / código de barras"
@@ -367,7 +367,7 @@ interface Customer {
         </div>
 
         <!-- Charge button -->
-        <div class="charge-wrap">
+        <div class="charge-wrap" id="tour-pos-charge">
           <button class="btn-charge" [disabled]="cart().length === 0 || processing()"
                   (click)="openPaymentModal()">
             @if (processing()) {

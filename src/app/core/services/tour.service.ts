@@ -213,7 +213,60 @@ export class TourService {
       });
     }
 
-    // ── 6. Configuración ───────────────────────────────────────────────────
+    // ── 6. Punto de Venta (POS) ────────────────────────────────────────────
+    if (this.feat('has_pos')) {
+      steps.push({
+        id: 'pos-session-bar',
+        title: 'Punto de Venta (POS)',
+        text: 'Aquí gestionas tu <strong>caja registradora digital</strong>. La barra superior muestra el efectivo de apertura, el total de ventas del día y el número de transacciones de la sesión activa.',
+        attachTo: { element: '#tour-pos-session-bar', on: 'bottom' },
+        navigateTo: '/pos',
+      });
+
+      steps.push({
+        id: 'pos-products',
+        title: 'Catálogo de productos',
+        text: 'En este panel aparecen todos los <strong>productos disponibles</strong>. Puedes buscarlos por nombre o SKU, y hacer clic en cualquier tarjeta para agregarlo al carrito al instante. Las tarjetas con stock bajo o agotado se marcan en amarillo o gris.',
+        attachTo: { element: '#tour-pos-products', on: 'right' },
+      });
+
+      steps.push({
+        id: 'pos-sku',
+        title: 'Búsqueda por SKU / código de barras',
+        text: 'Escribe o escanea el <strong>código de barras o SKU</strong> y presiona Enter para agregar el producto al carrito sin buscarlo visualmente. Ideal para cajas con lector de código de barras. Con <strong>"+ Ítem libre"</strong> puedes añadir productos sin SKU o servicios puntuales.',
+        attachTo: { element: '#tour-pos-sku', on: 'left' },
+      });
+
+      steps.push({
+        id: 'pos-customer',
+        title: 'Asignar un cliente',
+        text: 'Busca y selecciona el <strong>cliente</strong> para esta venta. Si marcas la opción de factura electrónica, el documento DIAN quedará vinculado automáticamente. Para ventas rápidas sin cliente registrado, puedes dejarlo vacío.',
+        attachTo: { element: '#tour-pos-customer', on: 'left' },
+      });
+
+      steps.push({
+        id: 'pos-cart',
+        title: 'Carrito de venta',
+        text: 'Aquí ves todos los <strong>ítems de la venta actual</strong>: ajusta cantidades con + / −, aplica descuento global por porcentaje y revisa el subtotal, IVA y total. Cuando todo esté listo, pulsa el botón de cobro.',
+        attachTo: { element: '#tour-pos-cart', on: 'left' },
+      });
+
+      steps.push({
+        id: 'pos-charge',
+        title: 'Cobrar la venta',
+        text: 'Presiona <strong>Cobrar</strong> para registrar el pago. Selecciona el método (efectivo, tarjeta, transferencia, etc.), ingresa el monto recibido si pagas en efectivo y confirma. La venta queda registrada y el stock se descuenta automáticamente.',
+        attachTo: { element: '#tour-pos-charge', on: 'top' },
+      });
+
+      steps.push({
+        id: 'pos-history',
+        title: 'Historial de la sesión',
+        text: 'Con el botón <strong>Historial</strong> puedes ver todas las ventas de la caja actual: hora, cliente, método de pago, total y estado. Al cerrar caja obtendrás un resumen por método de pago para hacer el cuadre del día.',
+        attachTo: { element: '#tour-pos-history', on: 'bottom' },
+      });
+    }
+
+    // ── 7. Configuración ───────────────────────────────────────────────────
     steps.push({
       id: 'settings-menu',
       title: 'Configuración de la cuenta',
@@ -222,7 +275,7 @@ export class TourService {
       navigateTo: '/settings/profile',
     });
 
-    // ── 7. Finalización ────────────────────────────────────────────────────
+    // ── 8. Finalización ────────────────────────────────────────────────────
     steps.push({
       id: 'done',
       title: '¡Recorrido completado! 🎉',
