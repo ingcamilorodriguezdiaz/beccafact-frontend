@@ -6,16 +6,16 @@ import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/auth/auth.service';
 
-interface CarteraFactura {
+interface ReceivableInvoice {
   id: string;
   invoiceNumber: string;
   issueDate: string;
   dueDate?: string;
   total: number;
-  saldo: number;
+  balance: number;
   status: string;
   carteraStatus: 'AL_DIA' | 'POR_VENCER' | 'VENCIDA' | 'EN_MORA';
-  diasVencimiento?: number;
+  daysOverdue?: number;
   customer: {
     id: string;
     name: string;
@@ -27,7 +27,7 @@ interface CarteraFactura {
   };
 }
 
-interface Dashboard {
+interface ReceivableDashboard {
   resumen: {
     totalCartera: number;
     totalVencido: number;
@@ -38,12 +38,12 @@ interface Dashboard {
   };
 }
 
-interface PagoForm {
-  monto: number;
-  fecha: string;
-  medioPago: string;
-  referencia: string;
-  notas: string;
+interface PaymentForm {
+  amount: number;
+  date: string;
+  paymentMethod: string;
+  reference: string;
+  notes: string;
 }
 
 @Component({
@@ -77,7 +77,7 @@ interface PagoForm {
             <div class="ct__kpi-body">
               <div class="ct__kpi-val">{{ dashboard()!.resumen.totalCartera | currency:'COP':'symbol':'1.0-0' }}</div>
               <div class="ct__kpi-label">Total cartera</div>
-              <div class="ct__kpi-sub">{{ dashboard()!.resumen.totalFacturas }} facturas</div>
+              <div class="ct__kpi-sub">{{ dashboard()!.resumen.totalFacturas }} invoices</div>
             </div>
           </div>
           <div class="ct__kpi ct__kpi--danger">
@@ -137,10 +137,10 @@ interface PagoForm {
                 </div>
               }
             </div>
-          } @else if (facturas().length === 0) {
+          } @else if (invoices().length === 0) {
             <div class="ct__empty">
               <span class="material-symbols-outlined">inbox</span>
-              <p>No hay facturas en cartera con los filtros seleccionados</p>
+              <p>No hay invoices en cartera con los filtros seleccionados</p>
             </div>
           } @else {
             <table class="bf-table">
@@ -156,7 +156,7 @@ interface PagoForm {
                 </tr>
               </thead>
               <tbody>
-                @for (f of facturas(); track f.id) {
+                @for (f of invoices(); track f.id) {
                   <tr [class.ct__row--mora]="f.carteraStatus === 'EN_MORA'">
                     <td><code class="inv-num">{{ f.invoiceNumber }}</code></td>
                     <td>
@@ -168,17 +168,17 @@ interface PagoForm {
                     <td class="td-date">{{ f.issueDate | date:'dd/MM/yy' }}</td>
                     <td class="td-date">
                       @if (f.dueDate) {
-                        <span [class.text-danger]="f.diasVencimiento! > 0">
+                        <span [class.text-danger]="f.daysOverdue! > 0">
                           {{ f.dueDate | date:'dd/MM/yy' }}
-                          @if (f.diasVencimiento! > 0) {
-                            <small class="ct__dias-badge">+{{ f.diasVencimiento }}d</small>
+                          @if (f.daysOverdue! > 0) {
+                            <small class="ct__dias-badge">+{{ f.daysOverdue }}d</small>
                           }
                         </span>
                       } @else {
                         <span class="text-muted">—</span>
                       }
                     </td>
-                    <td class="td-currency">{{ f.saldo | currency:'COP':'symbol':'1.0-0' }}</td>
+                    <td class="td-currency">{{ f.balance | currency:'COP':'symbol':'1.0-0' }}</td>
                     <td>
                       <span class="badge" [ngClass]="statusClass(f.carteraStatus)">
                         {{ statusLabel(f.carteraStatus) }}
@@ -233,43 +233,43 @@ interface PagoForm {
     <!-- ══════════════════════════════════════════════════════════════
          MODAL CLIENTE (detalle de cartera por cliente)
          ══════════════════════════════════════════════════════════════ -->
-    @if (showClienteModal()) {
+    @if (showCustomerModal()) {
       <div class="modal-overlay" >
         <div class="modal modal--lg" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Cartera del cliente</h3>
-            <button class="modal-close" (click)="showClienteModal.set(false)">
+            <button class="modal-close" (click)="showCustomerModal.set(false)">
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
           <div class="modal-body">
-            @if (clienteCartera()) {
+            @if (customerReceivables()) {
               <div class="ct__cliente-header">
-                <div class="ct__cliente-avatar">{{ clienteCartera()!.customer.name[0] }}</div>
+                <div class="ct__cliente-avatar">{{ customerReceivables()!.customer.name[0] }}</div>
                 <div>
-                  <div class="ct__cliente-title">{{ clienteCartera()!.customer.name }}</div>
+                  <div class="ct__cliente-title">{{ customerReceivables()!.customer.name }}</div>
                   <div class="ct__cliente-meta">
-                    {{ clienteCartera()!.customer.documentType }} {{ clienteCartera()!.customer.documentNumber }}
-                    @if (clienteCartera()!.customer.email) { · {{ clienteCartera()!.customer.email }} }
-                    @if (clienteCartera()!.customer.phone) { · {{ clienteCartera()!.customer.phone }} }
+                    {{ customerReceivables()!.customer.documentType }} {{ customerReceivables()!.customer.documentNumber }}
+                    @if (customerReceivables()!.customer.email) { · {{ customerReceivables()!.customer.email }} }
+                    @if (customerReceivables()!.customer.phone) { · {{ customerReceivables()!.customer.phone }} }
                   </div>
                 </div>
               </div>
               <div class="ct__cliente-kpis">
                 <div class="ct__ck">
-                  <div class="ct__ck-val">{{ clienteCartera()!.resumen.saldoPendiente | currency:'COP':'symbol':'1.0-0' }}</div>
+                  <div class="ct__ck-val">{{ customerReceivables()!.resumen.saldoPendiente | currency:'COP':'symbol':'1.0-0' }}</div>
                   <div class="ct__ck-label">Saldo pendiente</div>
                 </div>
                 <div class="ct__ck ct__ck--danger">
-                  <div class="ct__ck-val">{{ clienteCartera()!.resumen.saldoVencido | currency:'COP':'symbol':'1.0-0' }}</div>
+                  <div class="ct__ck-val">{{ customerReceivables()!.resumen.saldoVencido | currency:'COP':'symbol':'1.0-0' }}</div>
                   <div class="ct__ck-label">Saldo vencido</div>
                 </div>
                 <div class="ct__ck">
-                  <div class="ct__ck-val">{{ clienteCartera()!.resumen.facturasPendientes }}</div>
+                  <div class="ct__ck-val">{{ customerReceivables()!.resumen.invoicesPendientes }}</div>
                   <div class="ct__ck-label">Facturas pendientes</div>
                 </div>
                 <div class="ct__ck">
-                  <div class="ct__ck-val">{{ clienteCartera()!.resumen.facturasPagadas }}</div>
+                  <div class="ct__ck-val">{{ customerReceivables()!.resumen.invoicesPagadas }}</div>
                   <div class="ct__ck-label">Facturas pagadas</div>
                 </div>
               </div>
@@ -278,7 +278,7 @@ interface PagoForm {
                   <tr><th>Factura</th><th>Emisión</th><th>Vencimiento</th><th>Total</th><th>Estado</th></tr>
                 </thead>
                 <tbody>
-                  @for (inv of clienteCartera()!.facturas; track inv.id) {
+                  @for (inv of customerReceivables()!.invoices; track inv.id) {
                     <tr>
                       <td><code>{{ inv.invoiceNumber }}</code></td>
                       <td>{{ inv.issueDate | date:'dd/MM/yy' }}</td>
@@ -302,11 +302,11 @@ interface PagoForm {
     <!-- ══════════════════════════════════════════════════════════════
          MODAL REGISTRAR PAGO
          ══════════════════════════════════════════════════════════════ -->
-    @if (showPagoModal()) {
+    @if (showPaymentModal()) {
       <div class="modal-overlay" >
         <div class="modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3>Registrar pago — {{ pagoFactura()?.invoiceNumber }}</h3>
+            <h3>Registrar pago — {{ paymentInvoice()?.invoiceNumber }}</h3>
             <button class="modal-close" (click)="closePago()">
               <span class="material-symbols-outlined">close</span>
             </button>
@@ -314,17 +314,17 @@ interface PagoForm {
           <div class="modal-body">
             <div class="form-group">
               <label class="form-label">Monto recibido *</label>
-              <input type="number" class="form-control" [(ngModel)]="pagoForm.monto"
-                     [placeholder]="pagoFactura()?.saldo ?? 0" min="0" />
+              <input type="number" class="form-control" [(ngModel)]="paymentForm.amount"
+                     [placeholder]="paymentInvoice()?.balance ?? 0" min="0" />
             </div>
             <div class="form-row-2">
               <div class="form-group">
                 <label class="form-label">Fecha de pago *</label>
-                <input type="date" class="form-control" [(ngModel)]="pagoForm.fecha" />
+                <input type="date" class="form-control" [(ngModel)]="paymentForm.date" />
               </div>
               <div class="form-group">
                 <label class="form-label">Medio de pago *</label>
-                <select class="form-control" [(ngModel)]="pagoForm.medioPago">
+                <select class="form-control" [(ngModel)]="paymentForm.paymentMethod">
                   <option value="">Seleccionar…</option>
                   <option value="EFECTIVO">Efectivo</option>
                   <option value="TRANSFERENCIA">Transferencia</option>
@@ -336,12 +336,12 @@ interface PagoForm {
             </div>
             <div class="form-group">
               <label class="form-label">N° Referencia / Comprobante</label>
-              <input type="text" class="form-control" [(ngModel)]="pagoForm.referencia"
+              <input type="text" class="form-control" [(ngModel)]="paymentForm.reference"
                      placeholder="Nro. transferencia, cheque, etc." />
             </div>
             <div class="form-group">
               <label class="form-label">Notas</label>
-              <textarea class="form-control" [(ngModel)]="pagoForm.notas" rows="2"></textarea>
+              <textarea class="form-control" [(ngModel)]="paymentForm.notes" rows="2"></textarea>
             </div>
           </div>
           <div class="modal-footer">
@@ -505,20 +505,20 @@ export class CarteraComponent implements OnInit {
 
   private readonly api = `${environment.apiUrl}/cartera`;
 
-  facturas      = signal<CarteraFactura[]>([]);
-  dashboard     = signal<Dashboard | null>(null);
+  invoices      = signal<ReceivableInvoice[]>([]);
+  dashboard     = signal<any | null>(null);
   loading       = signal(true);
   saving        = signal(false);
   total         = signal(0);
   page          = signal(1);
   search        = '';
   statusFilter  = signal('');
-  showPagoModal = signal(false);
-  pagoFactura   = signal<CarteraFactura | null>(null);
-  showClienteModal = signal(false);
-  clienteCartera   = signal<any>(null);
+  showPaymentModal = signal(false);
+  paymentInvoice   = signal<ReceivableInvoice | null>(null);
+  showCustomerModal = signal(false);
+  customerReceivables   = signal<any>(null);
 
-  pagoForm: PagoForm = { monto: 0, fecha: new Date().toISOString().split('T')[0], medioPago: '', referencia: '', notas: '' };
+  paymentForm: PaymentForm = { amount: 0, date: new Date().toISOString().split('T')[0], paymentMethod: '', reference: '', notes: '' };
 
   // Permisos según rol
   canRegisterPayment = computed(() => {
@@ -560,7 +560,7 @@ export class CarteraComponent implements OnInit {
     this.http.get<any>(this.api, { params }).subscribe({
       next: r => {
         const res = r.data ?? r;
-        this.facturas.set(res.data ?? res);
+        this.invoices.set(res.data ?? res);
         this.total.set(res.total ?? 0);
         this.loading.set(false);
       },
@@ -577,31 +577,31 @@ export class CarteraComponent implements OnInit {
   setFilter(v: string) { this.statusFilter.set(v); this.page.set(1); this.load(); }
 
   verCliente(customerId: string) {
-    this.clienteCartera.set(null);
-    this.showClienteModal.set(true);
+    this.customerReceivables.set(null);
+    this.showCustomerModal.set(true);
     this.http.get<any>(`${this.api}/cliente/${customerId}`).subscribe({
-      next: d => this.clienteCartera.set(d.data ?? d),
-      error: () => { this.notify.error('Error al cargar cartera del cliente'); this.showClienteModal.set(false); },
+      next: d => this.customerReceivables.set(d.data ?? d),
+      error: () => { this.notify.error('Error al cargar cartera del cliente'); this.showCustomerModal.set(false); },
     });
   }
 
-  openPago(f: CarteraFactura) {
-    this.pagoFactura.set(f);
-    this.pagoForm = { monto: f.saldo, fecha: new Date().toISOString().split('T')[0], medioPago: '', referencia: '', notas: '' };
-    this.showPagoModal.set(true);
+  openPago(f: ReceivableInvoice) {
+    this.paymentInvoice.set(f);
+    this.paymentForm = { amount: f.balance, date: new Date().toISOString().split('T')[0], paymentMethod: '', reference: '', notes: '' };
+    this.showPaymentModal.set(true);
   }
   @HostListener('document:keydown.escape')
   onEscapeKey() {
     // Escape no cierra los modales — solo el botón X
   }
 
-    closePago() { this.showPagoModal.set(false); this.pagoFactura.set(null); }
+    closePago() { this.showPaymentModal.set(false); this.paymentInvoice.set(null); }
 
   submitPago() {
-    if (!this.pagoForm.medioPago) { this.notify.error('Selecciona el medio de pago'); return; }
-    if (!this.pagoForm.monto) { this.notify.error('Ingresa el monto'); return; }
+    if (!this.paymentForm.paymentMethod) { this.notify.error('Selecciona el medio de pago'); return; }
+    if (!this.paymentForm.amount) { this.notify.error('Ingresa el monto'); return; }
     this.saving.set(true);
-    this.http.post<any>(`${this.api}/${this.pagoFactura()!.id}/pago`, this.pagoForm).subscribe({
+    this.http.post<any>(`${this.api}/${this.paymentInvoice()!.id}/pago`, this.paymentForm).subscribe({
       next: () => {
         this.saving.set(false); this.closePago();
         this.notify.success('Pago registrado correctamente');
@@ -611,7 +611,7 @@ export class CarteraComponent implements OnInit {
     });
   }
 
-  sendReminder(f: CarteraFactura) {
+  sendReminder(f: ReceivableInvoice) {
     this.http.post<any>(`${this.api}/${f.id}/recordatorio`, {}).subscribe({
       next: r => this.notify.success((r.data ?? r).message ?? 'Recordatorio enviado'),
       error: e => this.notify.error(e?.error?.message ?? 'Error al enviar recordatorio'),
