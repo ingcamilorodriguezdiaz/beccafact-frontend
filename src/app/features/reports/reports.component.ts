@@ -586,8 +586,28 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
           @if (!invoicesLoading() && invoicesData()) {
             <div class="report-table-wrap printable">
               <div class="print-header">
-                <h3>Reporte de Facturación</h3>
-                <p>Período: {{ invoicesFrom() }} – {{ invoicesTo() }}</p>
+                <div class="print-logo-row">
+                  <div class="print-brand">
+                    <span class="print-brand-name">BeccaFact</span>
+                    <span class="print-brand-tag">Sistema ERP Empresarial</span>
+                  </div>
+                  <div class="print-meta">
+                    <div class="print-date">Generado: {{ printDate() }}</div>
+                  </div>
+                </div>
+                <div class="print-title-row">
+                  <h1 class="print-title">Reporte de Facturación Electrónica</h1>
+                </div>
+                <div class="print-filters-row">
+                  <span class="print-filter-item"><strong>Período:</strong> {{ fmtDate(invoicesFrom()) }} al {{ fmtDate(invoicesTo()) }}</span>
+                  @if (invoicesStatus()) {
+                    <span class="print-filter-item"><strong>Estado:</strong> {{ badge(invoicesStatus()).label }}</span>
+                  }
+                  @if (invoicesData()) {
+                    <span class="print-filter-item print-filter-total"><strong>Total facturas:</strong> {{ invoicesData()!.summary.count }}</span>
+                    <span class="print-filter-item print-filter-total"><strong>Total ingresos:</strong> {{ fmtCOP(invoicesData()!.summary.total) }}</span>
+                  }
+                </div>
               </div>
               @if (invoicesData()!.items.length === 0) {
                 <div class="empty-state">
@@ -757,8 +777,25 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
           @if (!payrollLoading() && payrollData()) {
             <div class="report-table-wrap printable">
               <div class="print-header">
-                <h3>Reporte de Nómina</h3>
-                <p>Período: {{ payrollFrom() }} – {{ payrollTo() }}</p>
+                <div class="print-logo-row">
+                  <div class="print-brand">
+                    <span class="print-brand-name">BeccaFact</span>
+                    <span class="print-brand-tag">Sistema ERP Empresarial</span>
+                  </div>
+                  <div class="print-meta">
+                    <div class="print-date">Generado: {{ printDate() }}</div>
+                  </div>
+                </div>
+                <div class="print-title-row">
+                  <h1 class="print-title">Reporte de Nómina Electrónica</h1>
+                </div>
+                <div class="print-filters-row">
+                  <span class="print-filter-item"><strong>Período:</strong> {{ fmtDate(payrollFrom()) }} al {{ fmtDate(payrollTo()) }}</span>
+                  @if (payrollData()) {
+                    <span class="print-filter-item print-filter-total"><strong>Empleados:</strong> {{ payrollData()!.summary.count }}</span>
+                    <span class="print-filter-item print-filter-total"><strong>Neto total:</strong> {{ fmtCOP(payrollData()!.summary.totalNet) }}</span>
+                  }
+                </div>
               </div>
               @if (payrollData()!.items.length === 0) {
                 <div class="empty-state">
@@ -889,8 +926,25 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
           @if (!posLoading() && posData()) {
             <div class="report-table-wrap printable">
               <div class="print-header">
-                <h3>Reporte POS</h3>
-                <p>Período: {{ posFrom() }} – {{ posTo() }}</p>
+                <div class="print-logo-row">
+                  <div class="print-brand">
+                    <span class="print-brand-name">BeccaFact</span>
+                    <span class="print-brand-tag">Sistema ERP Empresarial</span>
+                  </div>
+                  <div class="print-meta">
+                    <div class="print-date">Generado: {{ printDate() }}</div>
+                  </div>
+                </div>
+                <div class="print-title-row">
+                  <h1 class="print-title">Reporte de Punto de Venta (POS)</h1>
+                </div>
+                <div class="print-filters-row">
+                  <span class="print-filter-item"><strong>Período:</strong> {{ fmtDate(posFrom()) }} al {{ fmtDate(posTo()) }}</span>
+                  @if (posData()) {
+                    <span class="print-filter-item print-filter-total"><strong>Sesiones:</strong> {{ posData()!.summary.sessions }}</span>
+                    <span class="print-filter-item print-filter-total"><strong>Total ventas:</strong> {{ fmtCOP(posData()!.summary.totalSales) }}</span>
+                  }
+                </div>
               </div>
               @if (posData()!.items.length === 0) {
                 <div class="empty-state">
@@ -1042,8 +1096,24 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
           @if (!collectionsLoading() && collectionsData()) {
             <div class="report-table-wrap printable">
               <div class="print-header">
-                <h3>Reporte de Cartera</h3>
-                <p>Corte al: {{ collectionsAsOf() }}</p>
+                <div class="print-logo-row">
+                  <div class="print-brand">
+                    <span class="print-brand-name">BeccaFact</span>
+                    <span class="print-brand-tag">Sistema ERP Empresarial</span>
+                  </div>
+                  <div class="print-meta">
+                    <div class="print-date">Generado: {{ printDate() }}</div>
+                  </div>
+                </div>
+                <div class="print-title-row">
+                  <h1 class="print-title">Reporte de Cartera por Vencimiento</h1>
+                </div>
+                <div class="print-filters-row">
+                  <span class="print-filter-item"><strong>Corte al día:</strong> {{ fmtDate(collectionsAsOf()) }}</span>
+                  @if (collectionsData()) {
+                    <span class="print-filter-item print-filter-total"><strong>Total cartera:</strong> {{ fmtCOP(collectionsData()!.summary.totalBalance) }}</span>
+                  }
+                </div>
               </div>
               @if (collectionsData()!.items.length === 0) {
                 <div class="empty-state">
@@ -1359,9 +1429,34 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
       border-radius: 12px;
       overflow: hidden;
     }
-    .print-header { display: none; padding: 16px 20px 0; }
-    .print-header h3 { font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; color: #0c1c35; margin: 0 0 4px; }
-    .print-header p { font-size: 12px; color: #6b7280; margin: 0 0 12px; }
+    .print-header { display: none; }
+
+    /* ── Print header blocks (screen hidden, print visible) ────────── */
+    .print-logo-row {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 14px 24px 10px; background: #0c1c35; color: #fff;
+    }
+    .print-brand { display: flex; flex-direction: column; gap: 2px; }
+    .print-brand-name {
+      font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 800;
+      color: #fff; letter-spacing: -0.5px;
+    }
+    .print-brand-tag { font-size: 11px; color: #7ea3cc; }
+    .print-meta { text-align: right; }
+    .print-date { font-size: 11px; color: #7ea3cc; }
+    .print-title-row {
+      padding: 8px 24px 7px; background: #1a407e; border-bottom: 3px solid #00c6a0;
+    }
+    .print-title {
+      font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700;
+      color: #fff; margin: 0;
+    }
+    .print-filters-row {
+      display: flex; flex-wrap: wrap; gap: 6px 20px;
+      padding: 7px 24px 9px; background: #f4f7fb; border-bottom: 1px solid #dce6f0;
+    }
+    .print-filter-item { font-size: 11px; color: #374151; }
+    .print-filter-total { color: #1a407e; }
 
     /* ── Report table ──────────────────────────────────────────────── */
     .report-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -1460,27 +1555,53 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
 
     /* ── Print styles ──────────────────────────────────────────────── */
     @media print {
+      @page { size: A4 landscape; margin: 8mm 10mm 10mm; }
       :host { display: block; }
-      .report-tabs,
-      .report-filters,
-      .export-btns,
-      .page-header,
-      .kpi-grid,
-      .charts-row,
-      .tables-row,
-      .summary-row,
-      .btn-consultar,
-      .empty-state-idle { display: none !important; }
-      .printable { display: block !important; }
-      .print-header { display: block !important; }
-      body { background: white; }
-      .report-table-wrap {
-        border: none;
-        border-radius: 0;
-        overflow: visible;
+
+      .report-tabs, .report-filters, .export-btns, .page-header,
+      .kpi-grid, .charts-row, .tables-row, .btn-consultar,
+      .tab-content > .chart-card, .empty-state-idle { display: none !important; }
+
+      .summary-row, .summary-row-5 {
+        display: grid !important; break-inside: avoid; margin-bottom: 10px;
       }
-      .report-table th,
-      .report-table td { font-size: 11px; padding: 6px 8px; }
+      .summary-mini-card { border: 1px solid #dce6f0 !important; border-radius: 6px; padding: 9px 12px; }
+
+      .tab-content { display: block !important; }
+      .printable { display: block !important; }
+
+      .print-header {
+        display: block !important; margin-bottom: 12px;
+        border: 1px solid #c8d7e8; border-radius: 8px; overflow: hidden;
+      }
+
+      body, html { background: white; }
+
+      .report-table-wrap {
+        border: 1px solid #c8d7e8 !important; border-radius: 6px; overflow: visible;
+      }
+      .report-table { font-size: 10px; width: 100%; }
+      .report-table thead tr {
+        background: #1a407e !important;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      .report-table th {
+        padding: 7px 10px; font-size: 9px;
+        color: #fff !important; background: #1a407e !important;
+        border-bottom: 2px solid #1a407e;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      .report-table td { padding: 5px 10px; font-size: 10px; border-bottom: 1px solid #e8eef8; }
+      .report-table tbody tr:nth-child(even) td {
+        background: #f4f7fb !important;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      .badge {
+        font-size: 9px; padding: 1px 6px; border-radius: 9999px;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      .smc-value { font-size: 14px; }
+      .smc-label { font-size: 10px; }
     }
   `],
 })
@@ -1790,6 +1911,10 @@ export class ReportsComponent implements OnInit {
 
   printReport(): void {
     window.print();
+  }
+
+  printDate(): string {
+    return new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
   }
 
   // ── Dashboard helpers ─────────────────────────────────────────────────
