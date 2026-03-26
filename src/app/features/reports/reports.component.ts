@@ -123,9 +123,46 @@ interface CollectionsReport {
   }>;
 }
 
+interface InvoiceByStatus { status: string; count: number; total: number; }
+interface PayrollTrendItem { period: string; count: number; totalEarnings: number; totalDeductions: number; totalNet: number; }
+interface BadgeConfig { label: string; cssClass: string; }
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+const BADGE_MAP: Record<string, BadgeConfig> = {
+  // Facturas
+  DRAFT:          { label: 'Borrador',      cssClass: 'badge-gray'   },
+  ISSUED:         { label: 'Emitida',       cssClass: 'badge-blue'   },
+  SENT_DIAN:      { label: 'Enviada DIAN',  cssClass: 'badge-blue'   },
+  ACCEPTED_DIAN:  { label: 'Aceptado DIAN', cssClass: 'badge-green'  },
+  REJECTED_DIAN:  { label: 'Rechazado DIAN',cssClass: 'badge-red'    },
+  CANCELLED:      { label: 'Anulada',       cssClass: 'badge-gray'   },
+  OVERDUE:        { label: 'Vencida',       cssClass: 'badge-red'    },
+  // Estados DIAN numéricos
+  '00':           { label: 'Aceptado',      cssClass: 'badge-green'  },
+  '99':           { label: 'Rechazado',     cssClass: 'badge-red'    },
+  '2':            { label: 'Rechazado',     cssClass: 'badge-red'    },
+  '66':           { label: 'Error',         cssClass: 'badge-red'    },
+  '0':            { label: 'En proceso',    cssClass: 'badge-yellow' },
+  NOT_SENT:       { label: 'No enviado',    cssClass: 'badge-gray'   },
+  PROCESSING:     { label: 'En proceso',    cssClass: 'badge-blue'   },
+  // Nómina
+  APPROVED:       { label: 'Aprobada',      cssClass: 'badge-blue'   },
+  PAID:           { label: 'Pagada',        cssClass: 'badge-green'  },
+  TRANSMITTED:    { label: 'Transmitida',   cssClass: 'badge-purple' },
+  PENDING:        { label: 'Pendiente',     cssClass: 'badge-yellow' },
+  // POS
+  OPEN:           { label: 'Abierta',       cssClass: 'badge-green'  },
+  CLOSED:         { label: 'Cerrada',       cssClass: 'badge-blue'   },
+  // Envejecimiento cartera
+  CURRENT:        { label: 'Al día',        cssClass: 'badge-green'  },
+  DAYS_1_30:      { label: '1–30 días',     cssClass: 'badge-yellow' },
+  DAYS_31_60:     { label: '31–60 días',    cssClass: 'badge-orange' },
+  DAYS_61_90:     { label: '61–90 días',    cssClass: 'badge-red'    },
+  OVER_90:        { label: '+90 días',      cssClass: 'badge-red'    },
+};
 
 type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
 
@@ -155,6 +192,19 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
                 <option [value]="m.value">{{ m.label }}</option>
               }
             </select>
+            <button class="btn-excel" (click)="downloadXlsx('dashboard')"
+                    [disabled]="dashboardDownloading()" [class.loading]="dashboardDownloading()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
+              </svg>
+              {{ dashboardDownloading() ? 'Descargando...' : 'Excel' }}
+            </button>
+            <button class="btn-pdf" (click)="printReport()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a1 1 0 001 1h8a1 1 0 001-1v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1zm2 0h6v3H7V4zm-1 9H5v-1h1v1zm7 0h1v-1h-1v1zm-7 2v-1h8v1H6z"/>
+              </svg>
+              PDF
+            </button>
           </div>
         }
       </div>
@@ -258,6 +308,45 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
                 <div class="kpi-value">{{ fmtCOP(collectionsDash()?.totalOutstanding ?? 0) }}</div>
                 <div class="kpi-label">Cartera total</div>
                 <div class="kpi-sub kpi-sub-warn">Por cobrar</div>
+              </div>
+            </div>
+          }
+
+          @if (auth.hasFeature('has_payroll')()) {
+            <div class="kpi-card">
+              <div class="kpi-icon kpi-icon-teal">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="20">
+                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+                </svg>
+              </div>
+              <div class="kpi-content">
+                @if (payrollLoading()) {
+                  <div class="kpi-value">—</div>
+                } @else {
+                  <div class="kpi-value">{{ fmtCOP(payrollData()?.summary?.totalNet ?? 0) }}</div>
+                }
+                <div class="kpi-label">Neto nómina</div>
+                <div class="kpi-sub">{{ payrollData()?.summary?.count ?? 0 }} liquidaciones</div>
+              </div>
+            </div>
+          }
+
+          @if (auth.hasFeature('has_pos')()) {
+            <div class="kpi-card">
+              <div class="kpi-icon kpi-icon-indigo">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="20">
+                  <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/>
+                  <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/>
+                </svg>
+              </div>
+              <div class="kpi-content">
+                @if (posLoading()) {
+                  <div class="kpi-value">—</div>
+                } @else {
+                  <div class="kpi-value">{{ fmtCOP(posData()?.summary?.totalSales ?? 0) }}</div>
+                }
+                <div class="kpi-label">Ventas POS</div>
+                <div class="kpi-sub">{{ posData()?.summary?.sessions ?? 0 }} sesiones · {{ posData()?.summary?.transactions ?? 0 }} tx</div>
               </div>
             </div>
           }
@@ -371,6 +460,7 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
             </div>
           }
         </div>
+
       }
 
       <!-- ════════════════════════════════════════════════════════════ -->
@@ -411,11 +501,11 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
             </button>
             <div class="export-btns">
               <button class="btn-excel" (click)="downloadXlsx('invoices')"
-                      [disabled]="downloadingXlsx()" [class.loading]="downloadingXlsx()">
+                      [disabled]="invoicesDownloading()" [class.loading]="invoicesDownloading()">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
                   <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
                 </svg>
-                {{ downloadingXlsx() ? 'Descargando...' : 'Excel' }}
+                {{ invoicesDownloading() ? 'Descargando...' : 'Excel' }}
               </button>
               <button class="btn-pdf" (click)="printReport()">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
@@ -444,6 +534,31 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
               <div class="summary-mini-card smc-primary">
                 <div class="smc-value">{{ fmtCOP(invoicesData()!.summary.total) }}</div>
                 <div class="smc-label">Total</div>
+              </div>
+            </div>
+          }
+
+          <!-- Gráfico: distribución de facturas por estado -->
+          @if (invoicesByStatus().length && !invoicesLoading()) {
+            <div class="chart-card" style="margin-bottom:0">
+              <div class="chart-header">
+                <h3>Distribución por estado</h3>
+                @if (loadingInvoicesByStatus()) { <span class="chart-loading">Cargando...</span> }
+              </div>
+              <div class="aging-chart">
+                @for (seg of invoiceStatusSegments(); track seg.status) {
+                  <div class="aging-row">
+                    <div class="aging-dot" [style.background]="seg.color"></div>
+                    <div class="aging-info">
+                      <span class="aging-label">{{ badge(seg.status).label }}</span>
+                      <span class="aging-value">{{ seg.count }} facturas</span>
+                    </div>
+                    <div class="aging-bar-wrap">
+                      <div class="aging-bar-fill" [style.width.%]="seg.pct" [style.background]="seg.color"></div>
+                    </div>
+                    <span class="aging-pct">{{ fmtCOP(seg.total) }}</span>
+                  </div>
+                }
               </div>
             </div>
           }
@@ -508,13 +623,13 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
                         <td class="text-right">{{ fmtCOP(item.taxes) }}</td>
                         <td class="text-right td-bold">{{ fmtCOP(item.total) }}</td>
                         <td>
-                          <span class="badge" [class]="statusClass(item.status)">
-                            {{ fmtStatus(item.status) }}
+                          <span class="badge" [class]="badge(item.status).cssClass">
+                            {{ badge(item.status).label }}
                           </span>
                         </td>
                         <td>
-                          <span class="badge" [class]="dianStatusClass(item.dianStatus)">
-                            {{ fmtDianStatus(item.dianStatus) }}
+                          <span class="badge" [class]="badge(item.dianStatus).cssClass">
+                            {{ badge(item.dianStatus).label }}
                           </span>
                         </td>
                       </tr>
@@ -563,11 +678,11 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
             </button>
             <div class="export-btns">
               <button class="btn-excel" (click)="downloadXlsx('payroll')"
-                      [disabled]="downloadingXlsx()" [class.loading]="downloadingXlsx()">
+                      [disabled]="payrollDownloading()" [class.loading]="payrollDownloading()">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
                   <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
                 </svg>
-                {{ downloadingXlsx() ? 'Descargando...' : 'Excel' }}
+                {{ payrollDownloading() ? 'Descargando...' : 'Excel' }}
               </button>
               <button class="btn-pdf" (click)="printReport()">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
@@ -596,6 +711,34 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
                 <div class="smc-value">{{ fmtCOP(payrollData()!.summary.totalNet) }}</div>
                 <div class="smc-label">Total Neto</div>
               </div>
+            </div>
+          }
+
+          <!-- Gráfico: tendencia mensual de nómina -->
+          @if (payrollTrend().length && !payrollLoading()) {
+            <div class="chart-card" style="margin-bottom:0">
+              <div class="chart-header">
+                <h3>Tendencia de nómina — últimos 12 meses</h3>
+                <div class="legend-row">
+                  <span class="legend-dot" style="background:#3b82f6"></span><span class="legend-lbl">Devengado</span>
+                  <span class="legend-dot" style="background:#ef4444"></span><span class="legend-lbl">Deducciones</span>
+                  <span class="legend-dot" style="background:#10b981"></span><span class="legend-lbl">Neto</span>
+                </div>
+              </div>
+              @if (loadingPayrollTrend()) {
+                <div class="chart-skeleton"></div>
+              } @else {
+                <div class="bar-chart">
+                  @for (item of payrollTrend(); track item.period) {
+                    <div class="bar-col">
+                      <div class="bar-wrap" [title]="fmtCOP(item.totalEarnings)">
+                        <div class="bar" [style.height.%]="payrollBarHeight(item.totalEarnings)" style="background:#3b82f6;"></div>
+                      </div>
+                      <div class="bar-label">{{ item.period.slice(5,7) }}/{{ item.period.slice(2,4) }}</div>
+                    </div>
+                  }
+                </div>
+              }
             </div>
           }
 
@@ -650,8 +793,8 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
                         <td class="text-right td-red">{{ fmtCOP(item.totalDeductions) }}</td>
                         <td class="text-right td-bold">{{ fmtCOP(item.totalNet) }}</td>
                         <td>
-                          <span class="badge" [class]="nominaStatusClass(item.status)">
-                            {{ fmtNominaStatus(item.status) }}
+                          <span class="badge" [class]="badge(item.status).cssClass">
+                            {{ badge(item.status).label }}
                           </span>
                         </td>
                       </tr>
@@ -699,11 +842,11 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
             </button>
             <div class="export-btns">
               <button class="btn-excel" (click)="downloadXlsx('pos')"
-                      [disabled]="downloadingXlsx()" [class.loading]="downloadingXlsx()">
+                      [disabled]="posDownloading()" [class.loading]="posDownloading()">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
                   <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
                 </svg>
-                {{ downloadingXlsx() ? 'Descargando...' : 'Excel' }}
+                {{ posDownloading() ? 'Descargando...' : 'Excel' }}
               </button>
               <button class="btn-pdf" (click)="printReport()">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
@@ -774,8 +917,8 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
                         <td class="td-date">{{ fmtDate(item.date) }}</td>
                         <td>{{ item.cashierName }}</td>
                         <td>
-                          <span class="badge" [class]="posStatusClass(item.status)">
-                            {{ fmtPosStatus(item.status) }}
+                          <span class="badge" [class]="badge(item.status).cssClass">
+                            {{ badge(item.status).label }}
                           </span>
                         </td>
                         <td class="text-right">{{ fmtCOP(item.openingCash) }}</td>
@@ -822,11 +965,11 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
             </button>
             <div class="export-btns">
               <button class="btn-excel" (click)="downloadXlsx('collections/detail')"
-                      [disabled]="downloadingXlsx()" [class.loading]="downloadingXlsx()">
+                      [disabled]="collectionsDownloading()" [class.loading]="collectionsDownloading()">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
                   <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
                 </svg>
-                {{ downloadingXlsx() ? 'Descargando...' : 'Excel' }}
+                {{ collectionsDownloading() ? 'Descargando...' : 'Excel' }}
               </button>
               <button class="btn-pdf" (click)="printReport()">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
@@ -858,6 +1001,28 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
               <div class="summary-mini-card smc-red">
                 <div class="smc-value">{{ fmtCOP(collectionsData()!.summary.overdueOver90) }}</div>
                 <div class="smc-label">Vencido +90 días</div>
+              </div>
+            </div>
+          }
+
+          <!-- Gráfico: distribución por vencimiento -->
+          @if (collectionsData() && !collectionsLoading()) {
+            <div class="chart-card" style="margin-bottom:0">
+              <div class="chart-header"><h3>Distribución por antigüedad</h3></div>
+              <div class="aging-chart">
+                @for (seg of collectionsDetailSegments(); track seg.label) {
+                  <div class="aging-row">
+                    <div class="aging-dot" [style.background]="seg.color"></div>
+                    <div class="aging-info">
+                      <span class="aging-label">{{ seg.label }}</span>
+                      <span class="aging-value">{{ fmtCOP(seg.value) }}</span>
+                    </div>
+                    <div class="aging-bar-wrap">
+                      <div class="aging-bar-fill" [style.width.%]="seg.pct" [style.background]="seg.color"></div>
+                    </div>
+                    <span class="aging-pct">{{ seg.pct.toFixed(0) }}%</span>
+                  </div>
+                }
               </div>
             </div>
           }
@@ -913,8 +1078,8 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
                         </td>
                         <td class="text-right td-bold">{{ fmtCOP(item.total) }}</td>
                         <td>
-                          <span class="badge" [class]="agingClass(item.aging)">
-                            {{ fmtAging(item.aging) }}
+                          <span class="badge" [class]="badge(item.aging).cssClass">
+                            {{ badge(item.aging).label }}
                           </span>
                         </td>
                       </tr>
@@ -949,13 +1114,15 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
     .filter-select { padding: 8px 12px; border: 1px solid #dce6f0; border-radius: 8px; font-size: 13.5px; outline: none; background: #fff; }
 
     /* ── KPI ───────────────────────────────────────────────────────── */
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
     .kpi-card { background: #fff; border: 1px solid #dce6f0; border-radius: 12px; padding: 18px; display: flex; align-items: flex-start; gap: 14px; }
     .kpi-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .kpi-icon-green { background: #d1fae5; color: #065f46; }
     .kpi-icon-blue { background: #dbeafe; color: #1e40af; }
     .kpi-icon-purple { background: #ede9fe; color: #5b21b6; }
     .kpi-icon-orange { background: #fef3c7; color: #92400e; }
+    .kpi-icon-teal { background: #ccfbf1; color: #0f766e; }
+    .kpi-icon-indigo { background: #e0e7ff; color: #3730a3; }
     .kpi-content { min-width: 0; }
     .kpi-value { font-family: 'Sora', sans-serif; font-size: 19px; font-weight: 700; color: #0c1c35; }
     .kpi-label { font-size: 12px; color: #9ca3af; margin-top: 2px; }
@@ -968,7 +1135,7 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
     /* ── Charts ────────────────────────────────────────────────────── */
     .charts-row { display: grid; grid-template-columns: 1fr 380px; gap: 14px; margin-bottom: 20px; }
     .chart-card { background: #fff; border: 1px solid #dce6f0; border-radius: 12px; padding: 18px; }
-    .chart-header h3 { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: #0c1c35; margin: 0 0 16px; }
+    /* chart-header definido arriba */
     .chart-skeleton { height: 140px; background: linear-gradient(90deg, #f0f4f8 25%, #e8eef8 50%, #f0f4f8 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
     @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
 
@@ -1010,6 +1177,18 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
     .rank-value { font-size: 13px; font-weight: 700; color: #0c1c35; flex-shrink: 0; }
     .rank-value-orange { color: #d97706; }
     .rank-empty { padding: 24px; text-align: center; color: #9ca3af; font-size: 13px; }
+
+    /* ── Legend (gráficos de nómina) ──────────────────────────────── */
+    .legend-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .legend-lbl { font-size: 12px; color: #6b7280; }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .chart-header h3 { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: #0c1c35; margin: 0; }
+    .chart-loading { font-size: 12px; color: #9ca3af; }
+
+    /* ── Botones export en header-actions ──────────────────────────── */
+    .header-actions .btn-excel,
+    .header-actions .btn-pdf { padding: 8px 14px; }
 
     /* ── Tab navigation ────────────────────────────────────────────── */
     .report-tabs {
@@ -1319,7 +1498,19 @@ export class ReportsComponent implements OnInit {
 
   // ── Shared state ─────────────────────────────────────────────────────
   activeTab = signal<TabId>('dashboard');
-  downloadingXlsx = signal(false);
+
+  // Señales de descarga individuales por tab
+  invoicesDownloading = signal(false);
+  payrollDownloading = signal(false);
+  posDownloading = signal(false);
+  collectionsDownloading = signal(false);
+  dashboardDownloading = signal(false);
+
+  // Señales para gráficos adicionales
+  invoicesByStatus = signal<InvoiceByStatus[]>([]);
+  loadingInvoicesByStatus = signal(false);
+  payrollTrend = signal<PayrollTrendItem[]>([]);
+  loadingPayrollTrend = signal(false);
 
   // ── Dashboard state (existing) ───────────────────────────────────────
   kpi = signal<KpiData | null>(null);
@@ -1400,6 +1591,16 @@ export class ReportsComponent implements OnInit {
     if (this.auth.hasFeature('has_cartera')()) {
       this.loadCollectionsDash();
     }
+    // Carga resúmenes de módulos para el panel dashboard
+    if (this.auth.hasFeature('has_invoices')()) {
+      this.loadInvoices();
+    }
+    if (this.auth.hasFeature('has_payroll')()) {
+      this.loadPayroll();
+    }
+    if (this.auth.hasFeature('has_pos')()) {
+      this.loadPos();
+    }
   }
 
   loadKpis(): void {
@@ -1456,6 +1657,7 @@ export class ReportsComponent implements OnInit {
         },
         error: () => { this.invoicesLoading.set(false); this.cdr.markForCheck(); },
       });
+    this.loadInvoicesByStatus();
   }
 
   loadPayroll(): void {
@@ -1474,6 +1676,7 @@ export class ReportsComponent implements OnInit {
         },
         error: () => { this.payrollLoading.set(false); this.cdr.markForCheck(); },
       });
+    this.loadPayrollTrend();
   }
 
   loadPos(): void {
@@ -1511,10 +1714,41 @@ export class ReportsComponent implements OnInit {
       });
   }
 
+  loadInvoicesByStatus(): void {
+    this.loadingInvoicesByStatus.set(true);
+    const params = new URLSearchParams();
+    params.set('from', this.invoicesFrom());
+    params.set('to', this.invoicesTo());
+    this.http.get<InvoiceByStatus[]>(`${this.API}/invoice/by-status?${params.toString()}`)
+      .subscribe({
+        next: (r) => { this.invoicesByStatus.set(r); this.loadingInvoicesByStatus.set(false); this.cdr.markForCheck(); },
+        error: () => { this.loadingInvoicesByStatus.set(false); this.cdr.markForCheck(); },
+      });
+  }
+
+  loadPayrollTrend(): void {
+    this.loadingPayrollTrend.set(true);
+    const now = new Date();
+    const from = `${now.getFullYear() - 1}-${String(now.getMonth() + 2).padStart(2, '0')}`;
+    const to = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    this.http.get<PayrollTrendItem[]>(`${this.API}/payroll/monthly-trend?fromPeriod=${from}&toPeriod=${to}`)
+      .subscribe({
+        next: (r) => { this.payrollTrend.set(r); this.loadingPayrollTrend.set(false); this.cdr.markForCheck(); },
+        error: () => { this.loadingPayrollTrend.set(false); this.cdr.markForCheck(); },
+      });
+  }
+
   // ── Export actions ───────────────────────────────────────────────────
 
   downloadXlsx(type: string): void {
-    this.downloadingXlsx.set(true);
+    // Determina señal de descarga según el tipo
+    const loadingSignal = type === 'invoices' ? this.invoicesDownloading
+      : type === 'payroll' ? this.payrollDownloading
+      : type === 'pos' ? this.posDownloading
+      : type === 'collections/detail' ? this.collectionsDownloading
+      : this.dashboardDownloading;
+
+    loadingSignal.set(true);
 
     const params = new URLSearchParams();
 
@@ -1530,6 +1764,9 @@ export class ReportsComponent implements OnInit {
       params.set('to', this.posTo());
     } else if (type === 'collections/detail') {
       params.set('asOf', this.collectionsAsOf());
+    } else if (type === 'dashboard') {
+      params.set('year', String(this.selectedYear));
+      params.set('month', String(this.selectedMonth));
     }
 
     const url = `${this.API}/${type}/xlsx?${params.toString()}`;
@@ -1538,14 +1775,14 @@ export class ReportsComponent implements OnInit {
       next: (blob) => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `report-${type.replace('/', '-')}.xlsx`;
+        a.download = `report-${type.replace(/\//g, '-')}.xlsx`;
         a.click();
         URL.revokeObjectURL(a.href);
-        this.downloadingXlsx.set(false);
+        loadingSignal.set(false);
         this.cdr.markForCheck();
       },
       error: () => {
-        this.downloadingXlsx.set(false);
+        loadingSignal.set(false);
         this.cdr.markForCheck();
       },
     });
@@ -1607,118 +1844,56 @@ export class ReportsComponent implements OnInit {
     }
   }
 
-  fmtStatus(status: string): string {
-    const map: Record<string, string> = {
-      DRAFT: 'Borrador',
-      ISSUED: 'Emitida',
-      ACCEPTED_DIAN: 'Aceptado DIAN',
-      REJECTED_DIAN: 'Rechazado DIAN',
-      CANCELLED: 'Anulada',
-      PENDING: 'Pendiente',
-      PAID: 'Pagada',
-    };
-    return map[status] ?? status ?? '—';
-  }
+  // ── Badge unificado ──────────────────────────────────────────────────
+  // Reemplaza los 5 pares fmt*/class* anteriores con un solo método
 
-  fmtDianStatus(status: string): string {
-    const map: Record<string, string> = {
-      ACCEPTED_DIAN: 'Aceptado',
-      REJECTED_DIAN: 'Rechazado',
-      PENDING: 'Pendiente',
-      NOT_SENT: 'No enviado',
-      PROCESSING: 'En proceso',
-    };
-    return map[status] ?? status ?? '—';
-  }
-
-  fmtNominaStatus(status: string): string {
-    const map: Record<string, string> = {
-      DRAFT: 'Borrador',
-      APPROVED: 'Aprobada',
-      PAID: 'Pagada',
-      CANCELLED: 'Anulada',
-      TRANSMITTED: 'Transmitida',
-    };
-    return map[status] ?? status ?? '—';
-  }
-
-  fmtPosStatus(status: string): string {
-    const map: Record<string, string> = {
-      OPEN: 'Abierta',
-      CLOSED: 'Cerrada',
-      CANCELLED: 'Anulada',
-    };
-    return map[status] ?? status ?? '—';
-  }
-
-  fmtAging(aging: string): string {
-    const map: Record<string, string> = {
-      CURRENT: 'Al día',
-      DAYS_1_30: '1–30 días',
-      DAYS_31_60: '31–60 días',
-      DAYS_61_90: '61–90 días',
-      OVER_90: '+90 días',
-    };
-    return map[aging] ?? aging ?? '—';
-  }
-
-  statusClass(status: string): string {
-    const map: Record<string, string> = {
-      DRAFT: 'badge-gray',
-      ISSUED: 'badge-blue',
-      ACCEPTED_DIAN: 'badge-green',
-      REJECTED_DIAN: 'badge-red',
-      CANCELLED: 'badge-gray',
-      PENDING: 'badge-yellow',
-      PAID: 'badge-green',
-    };
-    return map[status] ?? 'badge-gray';
-  }
-
-  dianStatusClass(status: string): string {
-    const map: Record<string, string> = {
-      ACCEPTED_DIAN: 'badge-green',
-      REJECTED_DIAN: 'badge-red',
-      PENDING: 'badge-yellow',
-      NOT_SENT: 'badge-gray',
-      PROCESSING: 'badge-blue',
-    };
-    return map[status] ?? 'badge-gray';
-  }
-
-  nominaStatusClass(status: string): string {
-    const map: Record<string, string> = {
-      DRAFT: 'badge-gray',
-      APPROVED: 'badge-blue',
-      PAID: 'badge-green',
-      CANCELLED: 'badge-red',
-      TRANSMITTED: 'badge-purple',
-    };
-    return map[status] ?? 'badge-gray';
-  }
-
-  posStatusClass(status: string): string {
-    const map: Record<string, string> = {
-      OPEN: 'badge-green',
-      CLOSED: 'badge-blue',
-      CANCELLED: 'badge-red',
-    };
-    return map[status] ?? 'badge-gray';
-  }
-
-  agingClass(aging: string): string {
-    const map: Record<string, string> = {
-      CURRENT: 'badge-green',
-      DAYS_1_30: 'badge-yellow',
-      DAYS_31_60: 'badge-orange',
-      DAYS_61_90: 'badge-red',
-      OVER_90: 'badge-red',
-    };
-    return map[aging] ?? 'badge-gray';
+  badge(value: string): BadgeConfig {
+    return BADGE_MAP[value] ?? { label: value ?? '—', cssClass: 'badge-gray' };
   }
 
   abs(n: number): number {
     return Math.abs(n);
+  }
+
+  // ── Gráfico: facturas por estado ──────────────────────────────────────
+
+  invoiceStatusSegments() {
+    const items = this.invoicesByStatus();
+    const totalCount = items.reduce((s, i) => s + i.count, 0) || 1;
+    const colors: Record<string, string> = {
+      DRAFT: '#9ca3af', ISSUED: '#3b82f6', SENT_DIAN: '#60a5fa',
+      ACCEPTED_DIAN: '#10b981', REJECTED_DIAN: '#ef4444',
+      CANCELLED: '#6b7280', OVERDUE: '#f59e0b',
+    };
+    return items.map(i => ({
+      status: i.status,
+      count: i.count,
+      total: i.total,
+      color: colors[i.status] ?? '#9ca3af',
+      pct: (i.count / totalCount) * 100,
+    }));
+  }
+
+  // ── Gráfico: tendencia mensual de nómina ─────────────────────────────
+
+  payrollBarHeight(value: number): number {
+    const max = Math.max(...this.payrollTrend().map(m => m.totalEarnings), 1);
+    return (value / max) * 100;
+  }
+
+  // ── Gráfico: distribución cartera por vencimiento (tab detalle) ──────
+
+  collectionsDetailSegments() {
+    const s = this.collectionsData()?.summary;
+    if (!s) return [];
+    const total = (s.current + s.overdue1_30 + s.overdue31_60 + s.overdue61_90 + s.overdueOver90) || 1;
+    return [
+      { label: 'Al día',     value: s.current,       color: '#10b981', pct: (s.current / total) * 100 },
+      { label: '1–30 días',  value: s.overdue1_30,    color: '#f59e0b', pct: (s.overdue1_30 / total) * 100 },
+      { label: '31–60 días', value: s.overdue31_60,   color: '#ef4444', pct: (s.overdue31_60 / total) * 100 },
+      { label: '61–90 días', value: s.overdue61_90,   color: '#dc2626', pct: (s.overdue61_90 / total) * 100 },
+      { label: '> 90 días',  value: s.overdueOver90,  color: '#991b1b', pct: (s.overdueOver90 / total) * 100 },
+    ];
   }
 
   // ── Private helpers ────────────────────────────────────────────────────
