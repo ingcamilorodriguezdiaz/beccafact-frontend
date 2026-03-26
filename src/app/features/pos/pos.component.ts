@@ -1,6 +1,6 @@
 import {
   Component, OnInit, OnDestroy, signal, computed, inject,
-  ChangeDetectionStrategy, ChangeDetectorRef,
+  ChangeDetectionStrategy, ChangeDetectorRef, ViewChild, ElementRef, afterNextRender,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -54,6 +54,16 @@ interface Customer {
             <span class="sb-stat-lbl">Transacciones</span>
             <span class="sb-stat-val">{{ activeSession()!.totalTransactions }}</span>
           </div>
+          @if (activeSession()!.totalTransactions > 0) {
+            <div class="sb-stat">
+              <span class="sb-stat-lbl">Ticket prom.</span>
+              <span class="sb-stat-val">{{ fmtCOP(activeSession()!.totalSales / activeSession()!.totalTransactions) }}</span>
+            </div>
+          }
+          <div class="sb-stat">
+            <span class="sb-stat-lbl">Sesión abierta</span>
+            <span class="sb-stat-val sb-session-time">{{ sessionElapsed() }}</span>
+          </div>
         </div>
       </div>
       <div class="session-actions">
@@ -105,8 +115,8 @@ interface Customer {
         <div class="panel-toolbar">
           <div class="toolbar-search">
             <svg viewBox="0 0 20 20" fill="currentColor" width="14" class="ts-icon"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
-            <input type="text" placeholder="Buscar por nombre o SKU..." [(ngModel)]="productSearch"
-                   (input)="onProductSearch()" class="ts-input" />
+            <input #productSearchInput type="text" placeholder="Buscar por nombre o SKU..." [(ngModel)]="productSearch"
+                   (input)="onProductSearch()" class="ts-input" aria-label="Buscar productos por nombre o SKU" />
             @if (productSearch) {
               <button class="ts-clear" (click)="productSearch=''; loadProducts()">
                 <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z"/></svg>
@@ -141,12 +151,15 @@ interface Customer {
         } @else {
           <div class="products-grid">
             @for (p of products(); track p.id) {
-              <div class="product-card" [class.out-of-stock]="p.stock <= 0" (click)="addToCart(p)">
+              <div class="product-card" [class.out-of-stock]="p.stock <= 0"
+                   (click)="addToCart(p)"
+                   [attr.aria-disabled]="p.stock <= 0"
+                   [attr.title]="p.stock <= 0 ? 'Sin stock disponible' : ('Agregar ' + p.name + ' al carrito')">
                 <!-- Stock ribbon -->
                 @if (p.stock <= 0) {
-                  <div class="pc-ribbon out">Sin stock</div>
-                } @else if (p.stock <= (p.minStock ?? 5)) {
-                  <div class="pc-ribbon low">Stock bajo</div>
+                  <div class="pc-ribbon out">✗ Sin stock</div>
+                } @else if (p.stock <= (p.minStock ?? 10)) {
+                  <div class="pc-ribbon low">⚠ Stock bajo</div>
                 }
 
                 <div class="pc-content">
@@ -157,13 +170,18 @@ interface Customer {
                   <div class="pc-name">{{ p.name }}</div>
                   <div class="pc-price">{{ fmtCOP(p.price) }}</div>
                   <div class="pc-footer">
-                    <span class="pc-stock" [class.low]="p.stock > 0 && p.stock <= (p.minStock ?? 5)">
-                      <svg viewBox="0 0 12 12" fill="currentColor" width="9"><path d="M6 1L1 3.5v5L6 11l5-2.5v-5L6 1z"/></svg>
-                      {{ p.stock }} {{ p.unit }}
-                    </span>
-                    <div class="pc-add-btn">
-                      <svg viewBox="0 0 12 12" fill="currentColor" width="11"><path d="M6 1a.5.5 0 01.5.5v4h4a.5.5 0 010 1h-4v4a.5.5 0 01-1 0v-4h-4a.5.5 0 010-1h4v-4A.5.5 0 016 1z"/></svg>
-                    </div>
+                    @if (p.stock <= 0) {
+                      <span class="pc-stock-badge out-of-stock-badge">✗ Sin stock</span>
+                    } @else if (p.stock <= (p.minStock ?? 10)) {
+                      <span class="pc-stock-badge low-stock-badge">⚠ {{ p.stock }} {{ p.unit }}</span>
+                    } @else {
+                      <span class="pc-stock-badge in-stock-badge">✓ En stock</span>
+                    }
+                    @if (p.stock > 0) {
+                      <div class="pc-add-btn" aria-hidden="true">
+                        <svg viewBox="0 0 12 12" fill="currentColor" width="11"><path d="M6 1a.5.5 0 01.5.5v4h4a.5.5 0 010 1h-4v4a.5.5 0 01-1 0v-4h-4a.5.5 0 010-1h4v-4A.5.5 0 016 1z"/></svg>
+                      </div>
+                    }
                   </div>
                 </div>
               </div>
@@ -280,14 +298,16 @@ interface Customer {
           @if (cart().length === 0) {
             <div class="cart-empty">
               <div class="ce-icon">
-                <svg viewBox="0 0 48 48" fill="none" width="32">
-                  <path d="M10 12h28l-3 18H13L10 12z" stroke="#1e3a5f" stroke-width="2.5"/>
-                  <circle cx="17" cy="37" r="2.5" fill="#1e3a5f"/>
-                  <circle cx="31" cy="37" r="2.5" fill="#1e3a5f"/>
-                  <path d="M6 8h4l4 22" stroke="#1e3a5f" stroke-width="2.5" stroke-linecap="round"/>
+                <svg viewBox="0 0 64 64" fill="none" width="52" aria-hidden="true">
+                  <path d="M8 10h6l6 30h28l5-20H18" stroke="#dce6f0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="26" cy="48" r="3.5" stroke="#dce6f0" stroke-width="2.5"/>
+                  <circle cx="42" cy="48" r="3.5" stroke="#dce6f0" stroke-width="2.5"/>
+                  <path d="M4 6h4" stroke="#dce6f0" stroke-width="2.5" stroke-linecap="round"/>
+                  <path d="M32 22v8M28 26h8" stroke="#7ea3cc" stroke-width="2" stroke-linecap="round"/>
                 </svg>
               </div>
-              <p>Selecciona productos del catálogo</p>
+              <p class="ce-title">Carrito vacío</p>
+              <p class="ce-hint">Busca productos en el panel izquierdo<br>o escanea un código de barras</p>
             </div>
           }
           @for (item of cart(); track $index; let i = $index) {
@@ -320,9 +340,9 @@ interface Customer {
           <div class="ct-row"><span>Subtotal</span><span>{{ fmtCOP(cartSubtotal()) }}</span></div>
           <div class="ct-row"><span>IVA</span><span>{{ fmtCOP(cartTax()) }}</span></div>
           <div class="ct-row ct-disc-input">
-            <label class="ct-disc-label">Descuento %</label>
-            <input type="number" class="ct-disc-field" [(ngModel)]="discountPctProxy"
-                   min="0" max="100" step="1" placeholder="0" />
+            <label class="ct-disc-label" for="discount-pct">Descuento %</label>
+            <input id="discount-pct" type="number" class="ct-disc-field" [(ngModel)]="discountPctProxy"
+                   min="0" max="100" step="1" placeholder="0" aria-label="Porcentaje de descuento" />
           </div>
           @if (cartDiscountPct() > 0) {
             <div class="ct-row ct-disc">
@@ -330,10 +350,22 @@ interface Customer {
               <span class="disc-val">-{{ fmtCOP(cartDiscountAmount()) }}</span>
             </div>
           }
+          <div class="ct-total-divider"></div>
           <div class="ct-grand">
             <span>TOTAL</span>
-            <span class="ct-grand-amount">{{ fmtCOP(cartTotal()) }}</span>
+            <div class="ct-grand-right">
+              @if (cartDiscountPct() > 0) {
+                <span class="ct-grand-original">{{ cartTotalCOP }}</span> 
+              }
+              <span class="ct-grand-amount">{{ fmtCOP(cartTotal()) }}</span>
+            </div>
           </div>
+          @if (selectedPaymentMethod() === 'CASH' && amountPaid() > cartTotal() && cart().length > 0) {
+            <div class="ct-change-ticker">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="11" aria-hidden="true"><path d="M8.97 4.97a.75.75 0 011.07 1.05l-3.99 4.99a.75.75 0 01-1.08.02L2.324 8.384a.75.75 0 111.06-1.06l2.094 2.093L8.95 4.992a.25.25 0 01.02-.022z"/></svg>
+              Cambio: <strong>{{ fmtCOP(changeAmount()) }}</strong>
+            </div>
+          }
         </div>
 
         <!-- Invoice toggle -->
@@ -532,21 +564,23 @@ interface Customer {
 
   <!-- Close Session -->
   @if (showCloseSessionModal()) {
-    <div class="overlay" (click)="showCloseSessionModal.set(false)">
-      <div class="modal" (click)="$event.stopPropagation()">
+    <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="close-session-title"
+         (click)="showCloseSessionModal.set(false)" (keydown.escape)="showCloseSessionModal.set(false)">
+      <div class="modal modal-close-session" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-header-icon red">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"/></svg>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" aria-hidden="true"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"/></svg>
           </div>
           <div>
-            <div class="modal-title">Cerrar Caja</div>
+            <div class="modal-title" id="close-session-title">Cerrar Caja</div>
             <div class="modal-subtitle">Resumen de la sesión actual</div>
           </div>
-          <button class="modal-close-btn" (click)="showCloseSessionModal.set(false)">
-            <svg viewBox="0 0 16 16" fill="currentColor" width="14"><path d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z"/></svg>
+          <button class="modal-close-btn" (click)="showCloseSessionModal.set(false)" aria-label="Cerrar modal">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="14" aria-hidden="true"><path d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z"/></svg>
           </button>
         </div>
         <div class="modal-body">
+          <!-- Resumen de sesión -->
           <div class="session-summary">
             <div class="ss-item">
               <span>Apertura</span>
@@ -561,30 +595,60 @@ interface Customer {
               <strong>{{ activeSession()?.totalTransactions }}</strong>
             </div>
           </div>
+
+          <!-- Desglose por método de pago -->
           @if (sessionSummary()) {
             <div class="ssb-payment-breakdown">
               <div class="ssb-divider"></div>
               <div class="ssb-row">
-                <span>Efectivo</span>
+                <span>💵 Efectivo en ventas</span>
                 <strong>{{ fmtCOP(sessionSummary()?.byPaymentMethod?.CASH?.total ?? 0) }}</strong>
               </div>
               <div class="ssb-row">
-                <span>Tarjeta</span>
+                <span>💳 Tarjeta</span>
                 <strong>{{ fmtCOP(sessionSummary()?.byPaymentMethod?.CARD?.total ?? 0) }}</strong>
               </div>
               <div class="ssb-row">
-                <span>Transferencia</span>
+                <span>🏦 Transferencia</span>
                 <strong>{{ fmtCOP(sessionSummary()?.byPaymentMethod?.TRANSFER?.total ?? 0) }}</strong>
               </div>
             </div>
           }
-          <div class="field-group">
-            <label>Efectivo final en caja (COP)</label>
-            <input type="number" [(ngModel)]="closeSessionCash" min="0" step="1000" class="field-input big-input" placeholder="0"/>
+
+          <!-- Efectivo esperado en caja -->
+          <div class="close-cash-section">
+            <div class="ssb-divider"></div>
+            <div class="ccs-expected-row">
+              <span class="ccs-label">Efectivo esperado en caja</span>
+              <span class="ccs-value">{{ fmtCOP(expectedCash()) }}</span>
+            </div>
+            <div class="field-group" style="margin-top:12px">
+              <label for="close-cash">Efectivo real en caja (COP)</label>
+              <input id="close-cash" type="number" [(ngModel)]="closeSessionCash"
+                     min="0" step="1000" class="field-input big-input" placeholder="0"
+                     aria-describedby="cash-diff-hint"/>
+            </div>
+            <!-- Diferencia en tiempo real -->
+            @if (closeSessionCash > 0) {
+              <div class="cash-difference" [class.diff-ok]="cashDiff() === 0" [class.diff-over]="cashDiff() > 0" [class.diff-short]="cashDiff() < 0" id="cash-diff-hint" role="status">
+                @if (cashDiff() === 0) {
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/></svg>
+                  La caja cuadra perfectamente
+                } @else if (cashDiff() > 0) {
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z"/></svg>
+                  Sobra {{ fmtCOP(cashDiff()) }}
+                } @else {
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path d="M4 8a.5.5 0 01.5-.5h7a.5.5 0 010 1h-7A.5.5 0 014 8z"/></svg>
+                  Falta {{ fmtCOP(-cashDiff()) }}
+                }
+              </div>
+            }
           </div>
-          <div class="field-group">
-            <label>Notas del cierre (opcional)</label>
-            <textarea [(ngModel)]="closeSessionNotes" rows="2" class="field-input"></textarea>
+
+          <div class="field-group" style="margin-top:14px">
+            <label for="close-notes">Notas del cierre (opcional)</label>
+            <textarea id="close-notes" [(ngModel)]="closeSessionNotes" rows="2" class="field-input"
+                      placeholder="Ej: Turno tarde, sin novedades..."></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -600,48 +664,89 @@ interface Customer {
 
   <!-- Payment Modal -->
   @if (showPaymentModal()) {
-    <div class="overlay" (click)="showPaymentModal.set(false)">
+    <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="payment-modal-title"
+         (click)="showPaymentModal.set(false)"
+         (keydown.escape)="showPaymentModal.set(false)"
+         (keydown.enter)="isPaymentValid() && !processing() && processSale()">
       <div class="modal modal-pay" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-header-icon teal">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/></svg>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" aria-hidden="true"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/></svg>
           </div>
           <div>
-            <div class="modal-title">Confirmar Cobro</div>
+            <div class="modal-title" id="payment-modal-title">Confirmar Cobro</div>
             <div class="modal-subtitle pm-badge pm-{{ selectedPaymentMethod().toLowerCase() }}">{{ getPaymentLabel(selectedPaymentMethod()) }}</div>
           </div>
-          <button class="modal-close-btn" (click)="showPaymentModal.set(false)">
-            <svg viewBox="0 0 16 16" fill="currentColor" width="14"><path d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z"/></svg>
+          <button class="modal-close-btn" (click)="showPaymentModal.set(false)" aria-label="Cerrar modal de cobro">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="14" aria-hidden="true"><path d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z"/></svg>
           </button>
         </div>
         <div class="modal-body">
-          <!-- Big total display -->
+          <!-- Total grande -->
           <div class="pay-total-display">
             <span class="ptd-label">Total a cobrar</span>
             <span class="ptd-amount">{{ fmtCOP(cartTotal()) }}</span>
           </div>
 
-          <!-- Amount received -->
-          <div class="field-group">
-            <label>{{ selectedPaymentMethod() === 'CASH' ? 'Monto recibido del cliente' : 'Monto recibido' }} (COP)</label>
-            <input type="number" [ngModel]="amountPaid()"
-                   (ngModelChange)="amountPaid.set($event)"
-                   min="0" step="1000" class="field-input pay-amount-input"
-                   placeholder="0" />
-          </div>
-
-          <!-- Change (only for cash) -->
           @if (selectedPaymentMethod() === 'CASH') {
-            <div class="change-row" [class.change-ok]="changeAmount() >= 0">
-              <span>Cambio a entregar</span>
-              <strong>{{ fmtCOP(changeAmount()) }}</strong>
+            <!-- Campo de monto recibido -->
+            <div class="field-group">
+              <label for="amount-paid-input">Monto recibido del cliente (COP)</label>
+              <input id="amount-paid-input" type="number" [ngModel]="amountPaid()"
+                     (ngModelChange)="amountPaid.set(+$event)"
+                     min="0" step="1000" class="field-input pay-amount-input"
+                     placeholder="0" aria-describedby="change-display" />
+            </div>
+
+            <!-- Botones de billetes rápidos -->
+            <div class="quick-bills">
+              <button class="qb-btn qb-exact" (click)="amountPaid.set(cartTotal())"
+                      aria-label="Establecer monto exacto">
+                Exacto
+              </button>
+              @for (bill of quickBills; track bill) {
+                <button class="qb-btn" (click)="amountPaid.set(amountPaid() + bill)"
+                        [attr.aria-label]="'Agregar ' + fmtCOP(bill)">
+                  +{{ fmtCOP(bill) }}
+                </button>
+              }
+            </div>
+
+            <!-- Cambio / Falta en tiempo real -->
+            <div id="change-display" class="change-display" role="status" aria-live="polite">
+              @if (amountPaid() <= 0) {
+                <div class="cd-neutral">
+                  <span>Ingresa el monto recibido</span>
+                </div>
+              } @else if (amountPaid() < cartTotal()) {
+                <div class="cd-short">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="14" aria-hidden="true"><path d="M7.938 2.016A.13.13 0 018.002 2a.13.13 0 01.063.016.146.146 0 01.054.057l6.857 11.667c.036.06.035.124.002.183a.163.163 0 01-.054.06.116.116 0 01-.066.017H1.146a.115.115 0 01-.066-.017.163.163 0 01-.054-.06.176.176 0 01.002-.183L7.884 2.073a.147.147 0 01.054-.057z"/></svg>
+                  <span class="cd-label">Falta</span>
+                  <strong class="cd-amount">{{ fmtCOP(cartTotal() - amountPaid()) }}</strong>
+                </div>
+              } @else {
+                <div class="cd-ok">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="14" aria-hidden="true"><path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/></svg>
+                  <span class="cd-label">Cambio</span>
+                  <strong class="cd-amount">{{ fmtCOP(changeAmount()) }}</strong>
+                </div>
+              }
+            </div>
+          } @else {
+            <!-- Tarjeta / Transferencia: monto fijo -->
+            <div class="pay-fixed-notice">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"/></svg>
+              <div>
+                <div class="pfn-title">El monto cobrado es</div>
+                <div class="pfn-amount">{{ fmtCOP(cartTotal()) }}</div>
+              </div>
             </div>
           }
 
-          <!-- Invoice notice -->
+          <!-- Aviso de factura -->
           @if (selectedCustomer() && generateInvoice()) {
             <div class="pay-invoice-notice">
-              <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
               Se generará una factura electrónica DRAFT para <strong>{{ selectedCustomer()!.name }}</strong>
             </div>
           }
@@ -652,7 +757,7 @@ interface Customer {
             @if (processing()) {
               <span class="spinner-sm"></span> Procesando...
             } @else {
-              <svg viewBox="0 0 16 16" fill="currentColor" width="14"><path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/></svg>
+              <svg viewBox="0 0 16 16" fill="currentColor" width="14" aria-hidden="true"><path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/></svg>
               Confirmar Venta
             }
           </button>
@@ -661,49 +766,78 @@ interface Customer {
     </div>
   }
 
-  <!-- Sale Success Modal -->
+  <!-- Sale Success Overlay -->
   @if (completedSale()) {
-    <div class="overlay">
-      <div class="modal modal-success" (click)="$event.stopPropagation()">
-        <div class="success-ring">
-          <svg viewBox="0 0 80 80" fill="none" width="80">
-            <circle cx="40" cy="40" r="36" stroke="rgba(0,198,160,0.2)" stroke-width="2"/>
-            <circle cx="40" cy="40" r="28" stroke="#00c6a0" stroke-width="2" stroke-dasharray="176" stroke-dashoffset="44" stroke-linecap="round"/>
-            <path d="M26 40l10 10 18-18" stroke="#00c6a0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <div class="success-overlay" role="dialog" aria-modal="true" aria-labelledby="success-title">
+      <div class="success-card">
+
+        <!-- Ícono animado -->
+        <div class="success-check-wrap">
+          <svg class="success-check-svg" viewBox="0 0 80 80" fill="none" width="80" aria-hidden="true">
+            <circle class="sc-ring-bg"  cx="40" cy="40" r="36" stroke="#d1fae5" stroke-width="3"/>
+            <circle class="sc-ring-anim" cx="40" cy="40" r="36" stroke="#10b981" stroke-width="3"
+                    stroke-dasharray="226" stroke-dashoffset="226" stroke-linecap="round"/>
+            <path   class="sc-check-anim" d="M24 40l12 12 20-20" stroke="#10b981" stroke-width="3.5"
+                    stroke-linecap="round" stroke-linejoin="round" fill="none"/>
           </svg>
         </div>
-        <div class="success-title">¡Venta Registrada!</div>
+
+        <!-- Título -->
+        <div class="success-title" id="success-title">¡Venta registrada!</div>
         <div class="success-sale-num">{{ completedSale()!.saleNumber }}</div>
 
+        <!-- Totales -->
         <div class="success-amounts">
-          <div class="sa-row"><span>Total cobrado</span><strong>{{ fmtCOP(completedSale()!.total) }}</strong></div>
-          <div class="sa-row"><span>Recibido</span><strong>{{ fmtCOP(completedSale()!.amountPaid) }}</strong></div>
-          <div class="sa-row sa-change"><span>Cambio</span><strong>{{ fmtCOP(completedSale()!.change) }}</strong></div>
+          <div class="sa-row">
+            <span>Total cobrado</span>
+            <strong>{{ fmtCOP(completedSale()!.total) }}</strong>
+          </div>
+          <div class="sa-row">
+            <span>Recibido</span>
+            <strong>{{ fmtCOP(completedSale()!.amountPaid) }}</strong>
+          </div>
         </div>
 
+        <!-- Cambio prominente (solo efectivo con cambio > 0) -->
+        @if (completedSale()!.paymentMethod === 'CASH' && completedSale()!.change > 0) {
+          <div class="success-change-box">
+            <span class="scb-label">Cambio a entregar</span>
+            <span class="scb-amount">{{ fmtCOP(completedSale()!.change) }}</span>
+          </div>
+        }
+
+        <!-- Factura generada -->
         @if (completedSale()!.invoice) {
           <div class="success-inv-badge">
-            <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.78-9.72a.75.75 0 00-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 00-1.06 1.06l2 2a.75.75 0 001.06 0l4.5-4.5z"/></svg>
+            <svg viewBox="0 0 16 16" fill="currentColor" width="12" aria-hidden="true"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
             Factura {{ completedSale()!.invoice!.invoiceNumber }} generada
           </div>
         }
 
+        <!-- Barra de auto-cierre -->
+        <div class="success-progress-bar">
+          <div class="success-progress-fill"></div>
+        </div>
+        <div class="success-autoclosehint">Se cerrará automáticamente en 8 s</div>
+
+        <!-- Acciones -->
         <div class="success-actions">
           <button class="sa-btn" (click)="printReceipt(completedSale()!.id)">
-            <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M2.5 8a.5.5 0 100-1 .5.5 0 000 1z"/><path d="M5 1a2 2 0 00-2 2v2H2a2 2 0 00-2 2v3a2 2 0 002 2h1v1a2 2 0 002 2h6a2 2 0 002-2v-1h1a2 2 0 002-2V7a2 2 0 00-2-2h-1V3a2 2 0 00-2-2H5z"/></svg>
-            Imprimir
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path d="M2.5 8a.5.5 0 100-1 .5.5 0 000 1z"/><path d="M5 1a2 2 0 00-2 2v2H2a2 2 0 00-2 2v3a2 2 0 002 2h1v1a2 2 0 002 2h6a2 2 0 002-2v-1h1a2 2 0 002-2V7a2 2 0 00-2-2h-1V3a2 2 0 00-2-2H5z"/></svg>
+            Imprimir recibo
           </button>
           @if (!completedSale()!.invoiceId && completedSale()!.customer) {
             <button class="sa-btn" (click)="generateInvoiceForSale(completedSale()!)">
-              <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
-              Factura
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
+              Generar factura
             </button>
           }
-          <button class="sa-btn-primary" (click)="completedSale.set(null)">
-            <svg viewBox="0 0 16 16" fill="currentColor" width="14"><path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z"/></svg>
-            Nueva Venta
+          <button class="sa-btn-primary" (click)="dismissSuccessOverlay()">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="14" aria-hidden="true"><path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z"/></svg>
+            Nueva venta
           </button>
         </div>
+
       </div>
     </div>
   }
@@ -1329,6 +1463,190 @@ interface Customer {
       font-size:12.5px; padding:4px 0; color:#9ca3af;
     }
     .ssb-row strong { color:#374151; font-size:13px; }
+
+    /* ═══════════════════════════════════════
+       SESSION CLOSE — MODAL AMPLIADO
+    ═══════════════════════════════════════ */
+    .modal-close-session { width:480px; }
+
+    .close-cash-section { margin-top:4px; }
+    .ccs-expected-row {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:8px 12px; background:#f0fdf4; border:1px solid #bbf7d0;
+      border-radius:8px; margin-bottom:2px;
+    }
+    .ccs-label { font-size:12px; color:#065f46; font-weight:600; }
+    .ccs-value { font-size:14px; font-weight:800; color:#059669; font-family:'Sora',sans-serif; }
+
+    .cash-difference {
+      display:flex; align-items:center; gap:7px; padding:9px 13px;
+      border-radius:8px; font-size:13px; font-weight:600; margin-top:8px;
+    }
+    .diff-ok    { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+    .diff-over  { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+    .diff-short { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+
+    /* ═══════════════════════════════════════
+       PAYMENT MODAL — BILLETES RÁPIDOS
+    ═══════════════════════════════════════ */
+    .quick-bills {
+      display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 12px;
+    }
+    .qb-btn {
+      padding:5px 10px; border-radius:7px; font-size:11.5px; font-weight:600;
+      background:#fff; border:1px solid #dce6f0; color:#374151;
+      cursor:pointer; transition:all .13s; white-space:nowrap;
+    }
+    .qb-btn:hover { background:#eff6ff; border-color:#93c5fd; color:#1a407e; }
+    .qb-exact {
+      background:#dbeafe; border-color:#93c5fd; color:#1e40af;
+    }
+    .qb-exact:hover { background:#bfdbfe; }
+
+    /* Cambio en tiempo real */
+    .change-display {
+      border-radius:10px; overflow:hidden; margin-top:4px;
+    }
+    .cd-neutral {
+      padding:11px 16px; background:#f8fafc; border:1px solid #dce6f0;
+      border-radius:10px; font-size:12.5px; color:#9ca3af; text-align:center;
+    }
+    .cd-short {
+      display:flex; align-items:center; gap:8px; padding:11px 16px;
+      background:#fee2e2; border:1px solid #fecaca; border-radius:10px;
+      color:#dc2626;
+    }
+    .cd-ok {
+      display:flex; align-items:center; gap:8px; padding:11px 16px;
+      background:#d1fae5; border:1px solid #6ee7b7; border-radius:10px;
+      color:#065f46;
+    }
+    .cd-label { font-size:13px; flex:1; font-weight:600; }
+    .cd-amount { font-size:22px; font-weight:800; font-family:'Sora',sans-serif; }
+    .cd-ok .cd-amount { color:#059669; }
+    .cd-short .cd-amount { color:#dc2626; }
+
+    /* Aviso de método no-efectivo */
+    .pay-fixed-notice {
+      display:flex; align-items:center; gap:14px; padding:16px;
+      background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;
+      margin:4px 0 12px;
+    }
+    .pay-fixed-notice svg { color:#1e40af; flex-shrink:0; }
+    .pfn-title { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:3px; }
+    .pfn-amount { font-size:28px; font-weight:800; color:#1a407e; font-family:'Sora',sans-serif; letter-spacing:-.3px; }
+
+    /* ═══════════════════════════════════════
+       CART TOTALS — MEJORAS
+    ═══════════════════════════════════════ */
+    .ct-total-divider { height:1px; background:#dce6f0; margin:8px 0 4px; }
+    .ct-grand-right { display:flex; flex-direction:column; align-items:flex-end; gap:1px; }
+    .ct-grand-original {
+      font-size:11px; color:#9ca3af; text-decoration:line-through; font-weight:400;
+    }
+    .ct-change-ticker {
+      display:flex; align-items:center; justify-content:center; gap:5px;
+      margin-top:7px; padding:6px 12px;
+      background:#d1fae5; border:1px solid #6ee7b7; border-radius:8px;
+      font-size:12.5px; color:#065f46;
+    }
+    .ct-change-ticker strong { font-size:14px; font-weight:800; }
+
+    /* ═══════════════════════════════════════
+       PRODUCT CARDS — STOCK BADGES
+    ═══════════════════════════════════════ */
+    .pc-stock-badge {
+      font-size:9.5px; font-weight:700; padding:2px 7px;
+      border-radius:9999px; letter-spacing:.02em;
+    }
+    .in-stock-badge  { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+    .low-stock-badge { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+    .out-of-stock-badge { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+
+    /* ═══════════════════════════════════════
+       CART EMPTY — MEJORADO
+    ═══════════════════════════════════════ */
+    .cart-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:160px; gap:8px; padding:16px; }
+    .ce-icon { opacity:.55; }
+    .ce-title { color:#7ea3cc; font-size:13.5px; font-weight:700; margin:0; }
+    .ce-hint  { color:#9ca3af; font-size:11.5px; margin:0; text-align:center; line-height:1.55; }
+
+    /* ═══════════════════════════════════════
+       SESSION BAR — TIEMPO DE SESIÓN
+    ═══════════════════════════════════════ */
+    .sb-session-time { color:#1a407e; font-family:'Courier New',monospace; font-size:11.5px; }
+
+    /* ═══════════════════════════════════════
+       SUCCESS OVERLAY (post-venta)
+    ═══════════════════════════════════════ */
+    .success-overlay {
+      position:fixed; inset:0;
+      background:rgba(12,28,53,.55);
+      backdrop-filter:blur(4px);
+      z-index:600;
+      display:flex; align-items:center; justify-content:center;
+      animation:fadeIn .2s ease;
+    }
+
+    .success-card {
+      background:#fff; border-radius:20px;
+      width:420px; max-width:95vw;
+      box-shadow:0 20px 60px rgba(12,28,53,.18);
+      animation:slideUp .22s ease;
+      text-align:center; overflow:hidden;
+      padding-bottom:8px;
+    }
+
+    /* Ícono check animado */
+    .success-check-wrap { margin:28px auto 8px; display:flex; justify-content:center; }
+    .success-check-svg  { display:block; }
+
+    .sc-ring-anim {
+      animation:ringDraw .55s ease-out .1s forwards;
+      transform-origin:center; transform:rotate(-90deg);
+    }
+    @keyframes ringDraw {
+      to { stroke-dashoffset:0; }
+    }
+    .sc-check-anim {
+      stroke-dasharray:50; stroke-dashoffset:50;
+      animation:checkDraw .35s ease-out .6s forwards;
+    }
+    @keyframes checkDraw {
+      to { stroke-dashoffset:0; }
+    }
+
+    /* Cambio prominente */
+    .success-change-box {
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      margin:8px 22px 14px;
+      padding:14px 20px;
+      background:linear-gradient(135deg,#d1fae5,#a7f3d0);
+      border:1.5px solid #6ee7b7; border-radius:14px;
+    }
+    .scb-label  { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#065f46; }
+    .scb-amount {
+      font-size:36px; font-weight:800; color:#059669;
+      font-family:'Sora',sans-serif; letter-spacing:-.5px;
+      line-height:1.1;
+    }
+
+    /* Barra de progreso de auto-cierre */
+    .success-progress-bar {
+      height:3px; background:#f0f4f8; margin:12px 22px 4px; border-radius:2px; overflow:hidden;
+    }
+    .success-progress-fill {
+      height:100%; background:#10b981; border-radius:2px;
+      animation:progressShrink 8s linear forwards;
+      width:100%;
+    }
+    @keyframes progressShrink {
+      from { width:100%; }
+      to   { width:0%; }
+    }
+    .success-autoclosehint {
+      font-size:10.5px; color:#9ca3af; margin-bottom:6px;
+    }
   `],
 })
 export class PosComponent implements OnInit, OnDestroy {
@@ -1338,6 +1656,8 @@ export class PosComponent implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   private destroy$ = new Subject<void>();
   private customerSearch$ = new Subject<string>();
+
+  @ViewChild('productSearchInput') productSearchInputRef?: ElementRef<HTMLInputElement>;
 
   activeSession    = signal<PosSession | null>(null);
   loadingSession   = signal(true);
@@ -1352,6 +1672,16 @@ export class PosComponent implements OnInit, OnDestroy {
   openSessionNotes = '';
   closeSessionCash = 0;
   closeSessionNotes = '';
+
+  // Tiempo de sesión transcurrido
+  sessionElapsedSignal = signal('');
+  private sessionTimerInterval: any;
+
+  // Auto-cierre del overlay de éxito
+  private successAutoCloseTimer: any;
+
+  // Billetes colombianos rápidos
+  readonly quickBills = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000];
 
   products        = signal<Product[]>([]);
   loadingProducts = signal(false);
@@ -1415,10 +1745,59 @@ export class PosComponent implements OnInit, OnDestroy {
     return this.amountPaid() > 0;
   });
 
+  // Efectivo esperado al cierre: inicial + ventas en efectivo
+  expectedCash = computed(() => {
+    const session = this.activeSession();
+    if (!session) return 0;
+    const cashSales = this.sessionSummary()?.byPaymentMethod?.CASH?.total ?? 0;
+    return Number(session.initialCash) + Number(cashSales);
+  });
+
+  // Diferencia entre efectivo real ingresado y esperado (positivo = sobra, negativo = falta)
+  cashDiff = computed(() => this.closeSessionCash - this.expectedCash());
+
+  // Tiempo transcurrido desde la apertura de la sesión
+  sessionElapsed = computed(() => {
+    // Forzar reactividad a través de la señal del timer
+    this.sessionElapsedSignal();
+    const session = this.activeSession();
+    if (!session?.openedAt) return '';
+    const diffMs = Date.now() - new Date(session.openedAt).getTime();
+    const totalMin = Math.floor(diffMs / 60_000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if (h === 0) return `${m}m`;
+    return `${h}h ${m}m`;
+  });
+
   private productSearchTimer: any;
 
-  ngOnInit() { this.loadActiveSession(); this.loadProducts(); this.initCustomerSearch(); }
-  ngOnDestroy() { this.destroy$.next(); this.destroy$.complete(); }
+  constructor() {
+    // Foco automático en el campo de búsqueda cuando la sesión esté activa
+    afterNextRender(() => {
+      if (this.activeSession()) {
+        this.productSearchInputRef?.nativeElement?.focus();
+      }
+    });
+  }
+
+  ngOnInit() {
+    this.loadActiveSession();
+    this.loadProducts();
+    this.initCustomerSearch();
+    // Timer para actualizar el tiempo de sesión cada minuto
+    this.sessionTimerInterval = setInterval(() => {
+      this.sessionElapsedSignal.set(Date.now().toString());
+      this.cdr.markForCheck();
+    }, 60_000);
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+    clearInterval(this.sessionTimerInterval);
+    clearTimeout(this.successAutoCloseTimer);
+  }
 
   private initCustomerSearch() {
     this.customerSearch$.pipe(
@@ -1577,9 +1956,19 @@ export class PosComponent implements OnInit, OnDestroy {
     const dto = { sessionId:session.id, customerId:this.selectedCustomer()?.id, items:this.cart().map(i => ({ productId:i.productId, description:i.description, quantity:i.quantity, unitPrice:i.unitPrice, taxRate:i.taxRate, discount:i.discount })), paymentMethod:this.selectedPaymentMethod(), amountPaid:this.amountPaid(), generateInvoice:this.generateInvoice() && !!this.selectedCustomer(), cartDiscountPct:this.cartDiscountPct() || undefined };
     this.pos.createSale(dto).subscribe({
       next: (sale: any) => {
-        this.completedSale.set(sale); this.cart.set([]); this.clearSelectedCustomer(); this.generateInvoice.set(false); this.showPaymentModal.set(false); this.processing.set(false);
+        this.completedSale.set(sale);
+        this.cart.set([]);
+        this.clearSelectedCustomer();
+        this.generateInvoice.set(false);
+        this.showPaymentModal.set(false);
+        this.processing.set(false);
         const s = this.activeSession()!;
-        this.activeSession.set({ ...s, totalSales:Number(s.totalSales)+Number(sale.total), totalTransactions:s.totalTransactions+1 });
+        this.activeSession.set({ ...s, totalSales: Number(s.totalSales) + Number(sale.total), totalTransactions: s.totalTransactions + 1 });
+        if (this.showHistory()) this.loadSessionSales();
+        // Auto-cerrar overlay de éxito a los 8 segundos
+        clearTimeout(this.successAutoCloseTimer);
+        this.successAutoCloseTimer = setTimeout(() => this.dismissSuccessOverlay(), 8_000);
+        this.cdr.markForCheck();
       },
       error: (err: any) => { this.processing.set(false); this.notify.error(err?.error?.message ?? 'Error al procesar la venta'); },
     });
@@ -1632,6 +2021,16 @@ export class PosComponent implements OnInit, OnDestroy {
     });
   }
 
+  dismissSuccessOverlay() {
+    clearTimeout(this.successAutoCloseTimer);
+    this.completedSale.set(null);
+    this.cartDiscountPct.set(0);
+    this.amountPaid.set(0);
+    this.selectedPaymentMethod.set('CASH');
+    setTimeout(() => this.productSearchInputRef?.nativeElement?.focus(), 100);
+    this.cdr.markForCheck();
+  }
+
   getPaymentLabel(m: string): string { return this.paymentMethods.find(x => x.value === m)?.label ?? m; }
   getStatusLabel(s: string): string { return ({ COMPLETED:'Completada', CANCELLED:'Cancelada', REFUNDED:'Reembolsada' } as any)[s] ?? s; }
 
@@ -1640,5 +2039,9 @@ export class PosComponent implements OnInit, OnDestroy {
       style: 'currency', currency: 'COP',
       minimumFractionDigits: 0, maximumFractionDigits: 0,
     }).format(Number(n ?? 0));
+  }
+
+  get cartTotalCOP() {
+    return this.cart().reduce((s, i) => s + i.total, 0);
   }
 }

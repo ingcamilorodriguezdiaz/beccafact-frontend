@@ -56,6 +56,17 @@ export interface PosSale {
   items: PosSaleItem[];
 }
 
+export interface PosCashMovement {
+  id: string;
+  sessionId: string;
+  userId: string;
+  type: 'IN' | 'OUT';
+  amount: number;
+  reason: string;
+  createdAt: string;
+  user: { id: string; firstName: string; lastName: string };
+}
+
 export interface CartItem {
   productId?: string;
   description: string;
@@ -127,5 +138,18 @@ export class PosApiService {
 
   generateInvoiceFromSale(saleId: string): Observable<any> {
     return this.http.post(`${this.base}/sales/${saleId}/invoice`, {});
+  }
+
+  refundSale(saleId: string, reason?: string): Observable<PosSale> {
+    return this.http.patch<PosSale>(`${this.base}/sales/${saleId}/refund`, { reason });
+  }
+
+  // Cash movements
+  createCashMovement(sessionId: string, dto: { type: 'IN' | 'OUT'; amount: number; reason: string }): Observable<PosCashMovement> {
+    return this.http.post<PosCashMovement>(`${this.base}/sessions/${sessionId}/cash-movements`, dto);
+  }
+
+  getCashMovements(sessionId: string): Observable<PosCashMovement[]> {
+    return this.http.get<PosCashMovement[]>(`${this.base}/sessions/${sessionId}/cash-movements`);
   }
 }
