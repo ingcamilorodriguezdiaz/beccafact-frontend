@@ -4,7 +4,14 @@ import {
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { User, AuthService } from '../../../core/auth/auth.service';
-
+export interface NavItem {
+  label: string;
+  iconId: string;
+  route: string;
+  feature?: string;
+  roles?: string[];
+  section?: string;   // ← agregar esto
+}
 export type PlanInfo = {
   id: string;
   name: string;
@@ -21,17 +28,27 @@ export interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard',     iconId: 'dashboard',  route: '/dashboard' },
-  { label: 'Facturación',   iconId: 'invoice',    route: '/invoices',  feature: 'has_invoices',  roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
-  { label: 'Inventario',    iconId: 'inventory',  route: '/inventory', feature: 'has_inventory', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
-  { label: 'Clientes',      iconId: 'customers',  route: '/customers',                           roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
-  { label: 'Cartera',       iconId: 'cartera',    route: '/cartera',   feature: 'has_cartera',   roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
-  { label: 'Nómina',        iconId: 'payroll',    route: '/payroll',   feature: 'has_payroll',   roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
-  { label: 'Punto de Venta', iconId: 'pos',       route: '/pos',       feature: 'has_pos',       roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
-  { label: 'Reportes',      iconId: 'reports',    route: '/reports',   feature: 'has_reports',   roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
-  { label: 'Importar',      iconId: 'import',     route: '/import',    feature: 'bulk_import',   roles: ['ADMIN', 'MANAGER'] },
-  { label: 'Sucursales',    iconId: 'branches',   route: '/sucursales',                          roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER'] },
-  { label: 'Configuración', iconId: 'settings',   route: '/settings',                            roles: ['ADMIN'] },
+
+  // ── VISIÓN GENERAL ──────────────────────────────────────────
+  { label: 'Dashboard',      iconId: 'dashboard', route: '/dashboard',    section: 'VISIÓN GENERAL' },
+
+  // ── OPERACIÓN ───────────────────────────────────────────────
+  { label: 'Punto de Venta', iconId: 'pos',       route: '/pos',          feature: 'has_pos',       roles: ['ADMIN','MANAGER','OPERATOR'],                section: 'OPERACIÓN' },
+  { label: 'Facturación',    iconId: 'invoice',   route: '/invoices',     feature: 'has_invoices',  roles: ['ADMIN','MANAGER','OPERATOR','CONTADOR'],     section: 'OPERACIÓN' },
+  { label: 'Clientes',       iconId: 'customers', route: '/customers',                              roles: ['ADMIN','MANAGER','OPERATOR','CONTADOR'],     section: 'OPERACIÓN' },
+  { label: 'Cartera',        iconId: 'cartera',   route: '/cartera',      feature: 'has_cartera',   roles: ['ADMIN','MANAGER','OPERATOR'],                section: 'OPERACIÓN' },
+
+  // ── INVENTARIO ──────────────────────────────────────────────
+  { label: 'Inventario',     iconId: 'inventory', route: '/inventory',    feature: 'has_inventory', roles: ['ADMIN','MANAGER','OPERATOR'],                section: 'INVENTARIO' },
+  { label: 'Sucursales',     iconId: 'branches',  route: '/sucursales',                             roles: ['ADMIN','MANAGER','OPERATOR','VIEWER'],       section: 'INVENTARIO' },
+
+  // ── GESTIÓN ─────────────────────────────────────────────────
+  { label: 'Nómina',         iconId: 'payroll',   route: '/payroll',      feature: 'has_payroll',   roles: ['ADMIN','MANAGER','OPERATOR','CONTADOR'],     section: 'GESTIÓN' },
+  { label: 'Reportes',       iconId: 'reports',   route: '/reports',      feature: 'has_reports',   roles: ['ADMIN','MANAGER','OPERATOR','CONTADOR'],     section: 'GESTIÓN' },
+  { label: 'Importar',       iconId: 'import',    route: '/import',       feature: 'bulk_import',   roles: ['ADMIN','MANAGER'],                          section: 'GESTIÓN' },
+
+  // ── ADMIN ───────────────────────────────────────────────────
+  { label: 'Configuración',  iconId: 'settings',  route: '/settings',                               roles: ['ADMIN'],                                    section: 'ADMIN' },
 ];
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -112,48 +129,54 @@ const FEATURE_LABELS: Record<string, string> = {
       </div>
 
       <!-- Nav -->
-      <nav class="sidebar-nav">
-        @if (!collapsed()) {
-          <div class="nav-section-label">MENÚ PRINCIPAL</div>
-        }
-        @for (item of navItems(); track item.route) {
-          @if (isItemEnabled(item)) {
-            <a [routerLink]="item.route"
-               routerLinkActive="active"
-               [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
-               class="nav-item"
+    <nav class="sidebar-nav">
+  @for (section of navSections(); track section.label) {
+    @if (section.items.length > 0) {
+      @if (!collapsed()) {
+        <div class="nav-section-label">{{ section.label }}</div>
+      } @else {
+        <div class="nav-section-divider"></div>
+      }
+      @for (item of section.items; track item.route) {
+        @if (isItemEnabled(item)) {
+          <a [routerLink]="item.route"
+             routerLinkActive="active"
+             [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+             class="nav-item"
+             [class.nav-item--collapsed]="collapsed()"
+             [title]="collapsed() ? item.label : ''"
+             [id]="'tour-' + item.iconId"
+             (click)="mobileClose.emit()">
+            <span class="nav-icon">
+              <ng-container *ngTemplateOutlet="iconTpl; context: { id: item.iconId }"/>
+            </span>
+            @if (!collapsed()) {
+              <span class="nav-label">{{ item.label }}</span>
+            }
+          </a>
+        } @else {
+          <div class="nav-item nav-item--locked"
                [class.nav-item--collapsed]="collapsed()"
-               [title]="collapsed() ? item.label : ''"
-               [id]="'tour-' + item.iconId"
-               (click)="mobileClose.emit()">
-              <span class="nav-icon">
-                <ng-container *ngTemplateOutlet="iconTpl; context: { id: item.iconId }"/>
+               (click)="onLockedClick(item)"
+               [title]="collapsed() ? (item.label + ' — Plan requerido') : ''">
+            <span class="nav-icon nav-icon--locked">
+              <ng-container *ngTemplateOutlet="iconTpl; context: { id: item.iconId }"/>
+            </span>
+            @if (!collapsed()) {
+              <span class="nav-label">{{ item.label }}</span>
+              <span class="lock-chip">
+                <svg viewBox="0 0 16 16" fill="currentColor" width="10" height="10">
+                  <path d="M8 1a3 3 0 00-3 3v1H4a1 1 0 00-1 1v7a1 1 0 001 1h8a1 1 0 001-1V6a1 1 0 00-1-1h-1V4a3 3 0 00-3-3zm0 2a1 1 0 011 1v1H7V4a1 1 0 011-1z"/>
+                </svg>
+                Upgrade
               </span>
-              @if (!collapsed()) {
-                <span class="nav-label">{{ item.label }}</span>
-              }
-            </a>
-          } @else {
-            <div class="nav-item nav-item--locked"
-                 [class.nav-item--collapsed]="collapsed()"
-                 (click)="onLockedClick(item)"
-                 [title]="collapsed() ? (item.label + ' — Plan requerido') : ''">
-              <span class="nav-icon nav-icon--locked">
-                <ng-container *ngTemplateOutlet="iconTpl; context: { id: item.iconId }"/>
-              </span>
-              @if (!collapsed()) {
-                <span class="nav-label">{{ item.label }}</span>
-                <span class="lock-chip">
-                  <svg viewBox="0 0 16 16" fill="currentColor" width="10" height="10">
-                    <path d="M8 1a3 3 0 00-3 3v1H4a1 1 0 00-1 1v7a1 1 0 001 1h8a1 1 0 001-1V6a1 1 0 00-1-1h-1V4a3 3 0 00-3-3zm0 2a1 1 0 011 1v1H7V4a1 1 0 011-1z"/>
-                  </svg>
-                  Upgrade
-                </span>
-              }
-            </div>
-          }
+            }
+          </div>
         }
-      </nav>
+      }
+    }
+  }
+</nav>
 
       <!-- Plan features -->
       @if (!collapsed() && plan && planFeatureList().length > 0) {
@@ -440,6 +463,11 @@ const FEATURE_LABELS: Record<string, string> = {
       border: 1px solid rgba(245,158,11,0.3); white-space: nowrap; transition: background 0.15s;
     }
     .upgrade-btn:hover { background: rgba(245,158,11,0.35); }
+    .nav-section-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 6px 8px;
+}
   `],
 })
 export class SidebarComponent {
@@ -466,13 +494,13 @@ export class SidebarComponent {
   }
 
   navItems(): NavItem[] {
-    return NAV_ITEMS.filter(item => {
-      if (!item.roles) return true;
-      if (this.isSuperAdmin) return true;
-      const userRoles = this.user?.roles ?? [];
-      return item.roles.some(r => userRoles.includes(r));
-    });
-  }
+  return NAV_ITEMS.filter(item => {
+    if (!item.roles) return true;
+    if (this.isSuperAdmin) return true;
+    const userRoles = this.user?.roles ?? [];
+    return item.roles.some(r => userRoles.includes(r));
+  });
+}
 
   isItemEnabled(item: NavItem): boolean {
     if (!item.feature) return true;
@@ -501,4 +529,21 @@ export class SidebarComponent {
         return { key: k, label: FEATURE_LABELS[k], enabled, isBoolean, value: val };
       });
   }
+
+
+navSections(): Array<{ label: string; items: NavItem[] }> {
+  const items = this.navItems();
+  const sections: Array<{ label: string; items: NavItem[] }> = [];
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    const key = item.section ?? 'MENÚ PRINCIPAL';
+    if (!seen.has(key)) {
+      seen.add(key);
+      sections.push({ label: key, items: [] });
+    }
+    sections.find(s => s.label === key)!.items.push(item);
+  }
+  return sections;
+}
 }
