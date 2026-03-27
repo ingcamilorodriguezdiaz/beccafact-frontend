@@ -30,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Punto de Venta', iconId: 'pos',       route: '/pos',       feature: 'has_pos',       roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
   { label: 'Reportes',      iconId: 'reports',    route: '/reports',   feature: 'has_reports',   roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
   { label: 'Importar',      iconId: 'import',     route: '/import',    feature: 'bulk_import',   roles: ['ADMIN', 'MANAGER'] },
+  { label: 'Sucursales',    iconId: 'branches',   route: '/sucursales',                          roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER'] },
   { label: 'Configuración', iconId: 'settings',   route: '/settings',                            roles: ['ADMIN'] },
 ];
 
@@ -40,7 +41,7 @@ const FEATURE_LABELS: Record<string, string> = {
   has_cartera:             'Cartera y cobros',
   has_payroll:             'Nómina electrónica',
   has_reports:             'Reportes avanzados',
-  has_multicompany:        'Multiempresa',
+  has_branch:               'Multisede',
   priority_support:        'Soporte prioritario',
   has_integrations:        'Integraciones',
   bulk_import:             'Importación masiva',
@@ -263,6 +264,11 @@ const FEATURE_LABELS: Record<string, string> = {
         @case ('pos') {
           <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
             <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
+          </svg>
+        }
+        @case ('branches') {
+          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"/>
           </svg>
         }
         @case ('settings') {

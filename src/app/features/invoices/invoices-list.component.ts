@@ -1262,6 +1262,9 @@ export class InvoicesListComponent implements OnInit {
   private readonly API      = `${environment.apiUrl}/invoices`;
   private readonly CUST_API = `${environment.apiUrl}/customers`;
   private readonly PROD_API = `${environment.apiUrl}/products`;
+  private readonly COMP_API = `${environment.apiUrl}/companies/me`;
+
+  companyPrefix = signal('FV');
 
   invoices     = signal<Invoice[]>([]);
   customers    = signal<Customer[]>([]);
@@ -1306,6 +1309,7 @@ export class InvoicesListComponent implements OnInit {
 
   lines: InvoiceLine[] = [this.newLine()];
   newInvoice = { type:'VENTA', prefix:'FV', issueDate:new Date().toISOString().slice(0,10), dueDate:'', customerId:'', notes:'' };
+  // prefix se sobreescribe en openNewInvoice() con el valor real de la empresa
 
   search = ''; filterStatus = ''; filterType = ''; filterFrom = ''; filterTo = '';
   private searchTimer: any;
@@ -1323,7 +1327,17 @@ export class InvoicesListComponent implements OnInit {
     private sanitizer: DomSanitizer
   ) {}
 
-  ngOnInit() { this.load(); this.loadCustomers(); this.loadProducts(); }
+  ngOnInit() { this.load(); this.loadCustomers(); this.loadProducts(); this.loadCompanyPrefix(); }
+
+  loadCompanyPrefix() {
+    this.http.get<any>(this.COMP_API).subscribe({
+      next: r => {
+        const prefix = (r?.data ?? r)?.dianPrefijo;
+        if (prefix) this.companyPrefix.set(prefix);
+      },
+      error: () => {},
+    });
+  }
 
   load() {
     this.loading.set(true);
@@ -1365,7 +1379,7 @@ export class InvoicesListComponent implements OnInit {
 
   openNewInvoice() {
     this.lines = [this.newLine()];
-    this.newInvoice = { type:'VENTA', prefix:'FV', issueDate:new Date().toISOString().slice(0,10), dueDate:'', customerId:'', notes:'' };
+    this.newInvoice = { type:'VENTA', prefix: this.companyPrefix(), issueDate:new Date().toISOString().slice(0,10), dueDate:'', customerId:'', notes:'' };
     this.showModal.set(true);
   }
   @HostListener('document:keydown.escape')

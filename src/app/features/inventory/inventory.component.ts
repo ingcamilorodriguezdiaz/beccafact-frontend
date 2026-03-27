@@ -23,9 +23,13 @@ interface Product {
   status: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
   barcode?: string;
   imageUrl?: string;
+  branchId?: string;
+  branch?: { id: string; name: string };
 }
 
 interface Category { id: string; name: string; }
+
+interface Branch { id: string; name: string; isMain: boolean; isActive: boolean; }
 
 interface ProductForm {
   categoryId: string;
@@ -41,6 +45,7 @@ interface ProductForm {
   taxType: string;
   barcode: string;
   status: string;
+  branchId: string;
 }
 
 /** Estructura de cada unidad de medida tal como viene en el JSON del parámetro */
@@ -99,6 +104,12 @@ interface UnitMeasure { name: string; usage: string; }
           <option value="INACTIVE">Inactivos</option>
           <option value="OUT_OF_STOCK">Sin stock</option>
         </select>
+        <select [(ngModel)]="filterBranch" (ngModelChange)="load()" class="filter-select">
+          <option value="">Todas las sucursales</option>
+          @for (b of branches(); track b.id) {
+            <option [value]="b.id">{{ b.name }}</option>
+          }
+        </select>
         <div class="view-toggle">
           <button [class.active]="viewMode() === 'table'" (click)="viewMode.set('table')" title="Vista tabla">
             <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z"/></svg>
@@ -154,7 +165,12 @@ interface UnitMeasure { name: string; usage: string; }
                           <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/><path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/></svg>
                         </div>
                         <div>
-                          <div class="prod-name">{{ p.name }}</div>
+                          <div class="prod-name">
+                            {{ p.name }}
+                            @if (p.branch) {
+                              <span class="branch-badge">{{ p.branch.name }}</span>
+                            }
+                          </div>
                           @if (p.description) { <div class="prod-desc">{{ p.description | slice:0:50 }}{{ p.description.length > 50 ? '…' : '' }}</div> }
                         </div>
                       </div>
@@ -234,7 +250,12 @@ interface UnitMeasure { name: string; usage: string; }
                   <div class="pc-icon" [class.low]="p.stock <= p.minStock">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="22"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/><path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/></svg>
                   </div>
-                  <div class="pc-name">{{ p.name }}</div>
+                  <div class="pc-name">
+                    {{ p.name }}
+                    @if (p.branch) {
+                      <span class="branch-badge">{{ p.branch.name }}</span>
+                    }
+                  </div>
                   <code class="sku-badge">{{ p.sku }}</code>
                 </div>
                 <div class="pc-info">
@@ -426,6 +447,16 @@ interface UnitMeasure { name: string; usage: string; }
                   <option value="">Sin categoría</option>
                   @for (cat of categories(); track cat.id) {
                     <option [value]="cat.id">{{ cat.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Sucursal</label>
+                <select [(ngModel)]="form.branchId" name="branchId" class="form-control">
+                  <option value="">Sin sucursal (catálogo general)</option>
+                  @for (b of branches(); track b.id) {
+                    <option [value]="b.id">{{ b.name }}</option>
                   }
                 </select>
               </div>
@@ -673,6 +704,8 @@ interface UnitMeasure { name: string; usage: string; }
     .form-control:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,.08); }
     .form-control:disabled { background:#f8fafc; color:#9ca3af; cursor:not-allowed; }
     textarea.form-control { resize:vertical; }
+    /* Branch badge */
+    .branch-badge { display:inline-block; font-size:10px; font-weight:600; background:#e8f0fb; color:#153568; padding:1px 6px; border-radius:9999px; margin-left:4px; vertical-align:middle; }
     /* Hint de uso de la unidad */
     .unit-hint { display:flex; align-items:flex-start; gap:5px; margin-top:5px; font-size:11.5px; color:#6b7280; line-height:1.4; }
     .unit-hint svg { color:#9ca3af; flex-shrink:0; margin-top:1px; }
@@ -737,6 +770,9 @@ export class InventoryComponent implements OnInit {
   viewMode      = signal<'table' | 'grid'>('table');
   detailProduct = signal<Product | null>(null);
 
+  branches     = signal<Branch[]>([]);
+  filterBranch = '';
+
   search         = '';
   filterCategory = '';
   filterStatus   = '';
@@ -789,6 +825,7 @@ export class InventoryComponent implements OnInit {
   ngOnInit() {
     this.loadUnitMeasures();
     this.loadCategories();
+    this.loadBranches();
     this.load();
   }
 
@@ -839,12 +876,20 @@ export class InventoryComponent implements OnInit {
     });
   }
 
+  loadBranches() {
+    this.http.get<any>(`${environment.apiUrl}/branches`).subscribe({
+      next: r => this.branches.set(r.data ?? r),
+      error: () => {},
+    });
+  }
+
   load() {
     this.loading.set(true);
     const params: any = { page: this.page(), limit: 20 };
     if (this.search)         params.search     = this.search;
     if (this.filterCategory) params.categoryId = this.filterCategory;
     if (this.filterStatus && this.filterStatus !== 'low') params.status = this.filterStatus;
+    if (this.filterBranch)   params.branchId   = this.filterBranch;
 
     this.http.get<any>(this.API, { params }).subscribe({
       next: r => {
@@ -891,6 +936,7 @@ export class InventoryComponent implements OnInit {
         taxType:     p.taxType,
         barcode:     p.barcode     ?? '',
         status:      p.status,
+        branchId:    p.branchId    ?? '',
       };
     } else {
       this.editingId.set(null);
@@ -913,7 +959,11 @@ export class InventoryComponent implements OnInit {
       return;
     }
     this.saving.set(true);
-    const body = { ...this.form, categoryId: this.form.categoryId || undefined };
+    const body = {
+      ...this.form,
+      categoryId: this.form.categoryId || undefined,
+      branchId:   this.form.branchId   || undefined,
+    };
     const req = this.editingId()
       ? this.http.patch(`${this.API}/${this.editingId()}`, body)
       : this.http.post(this.API, body);
@@ -963,6 +1013,7 @@ export class InventoryComponent implements OnInit {
       categoryId: '', sku: '', name: '', description: '',
       price: null, cost: null, stock: 0, minStock: 5,
       unit: 'EA', taxRate: 19, taxType: 'IVA', barcode: '', status: 'ACTIVE',
+      branchId: '',
     };
   }
 }

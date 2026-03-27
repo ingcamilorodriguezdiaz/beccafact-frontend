@@ -84,6 +84,13 @@ export const routes: Routes = [
           import('./features/pos/pos.routes').then((m) => m.POS_ROUTES),
       },
       {
+        path: 'sucursales',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER'] },
+        loadChildren: () =>
+          import('./features/branches/branches.routes').then((m) => m.BRANCHES_ROUTES),
+      },
+      {
         path: 'settings',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN'] },
