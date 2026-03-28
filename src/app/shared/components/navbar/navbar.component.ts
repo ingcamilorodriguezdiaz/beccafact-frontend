@@ -1,7 +1,7 @@
-import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { AuthService, User } from '../../../core/auth/auth.service';
+import { AuthService, User, UserBranch } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-navbar',
@@ -24,6 +24,21 @@ import { AuthService, User } from '../../../core/auth/auth.service';
       </div>
 
       <div class="navbar-right">
+        <!-- Active branch chip (hidden for SuperAdmin and single-branch users) -->
+        @if (activeBranch) {
+          <button class="branch-chip" (click)="switchBranch()" type="button"
+                  [title]="'Sucursal activa: ' + activeBranch.branch.name">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12">
+              <path fill-rule="evenodd"
+                d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"/>
+            </svg>
+            <span class="branch-chip-name">{{ activeBranch.branch.name }}</span>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12" class="branch-chip-arrow">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+            </svg>
+          </button>
+        }
+
         <!-- Upgrade pill -->
         @if (showUpgradeBanner()) {
           <a routerLink="/settings/billing" class="upgrade-pill">
@@ -202,14 +217,41 @@ import { AuthService, User } from '../../../core/auth/auth.service';
     @media (max-width: 480px) {
       .hide-mobile-sm { display: none; }
     }
+
+    /* Branch chip */
+    .branch-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border-radius: 9999px;
+      background: #eef4fb; border: 1px solid #c0d4e8;
+      color: #1a407e; font-size: 12.5px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .branch-chip:hover { background: #dce8f8; border-color: #1a407e; }
+    .branch-chip-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+    .branch-chip-arrow { opacity: 0.6; }
+    @media (max-width: 640px) {
+      .branch-chip-name { max-width: 80px; }
+    }
+    @media (max-width: 480px) {
+      .branch-chip { padding: 5px 8px; }
+      .branch-chip-name { display: none; }
+    }
   `],
 })
 export class NavbarComponent {
   @Input() user!: User;
+  @Input() activeBranch: UserBranch | null = null;
   @Output() toggleMobileSidebar = new EventEmitter<void>();
   menuOpen = signal(false);
 
-  constructor(private auth: AuthService) {}
+  private auth = inject(AuthService);
+
+  switchBranch(): void {
+    const branches = this.auth.user()?.userBranches ?? [];
+    if (branches.length > 1) {
+      this.auth.clearBranchSelection();
+    }
+  }
 
   toggleMenu() { this.menuOpen.update(v => !v); }
 

@@ -4,6 +4,12 @@ import { Router } from '@angular/router';
 import { tap, catchError, EMPTY } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export interface UserBranch {
+  id: string;
+  branchId: string;
+  branch: { id: string; name: string; isMain: boolean; isActive: boolean };
+}
+
 export interface User {
   id: string;
   email: string;
@@ -13,6 +19,7 @@ export interface User {
   hasSeenTour: boolean;
   companyId: string | null;
   roles: string[];
+  userBranches?: UserBranch[];
   company?: {
     id: string;
     name: string;
@@ -38,16 +45,34 @@ export interface AuthTokens {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly API = `${environment.apiUrl}/auth`;
+  private static readonly BRANCH_KEY = 'active_branch_id';
 
-  private _user        = signal<User | null>(null);
-  private _isLoading   = signal(false);
-  private _authChecked = signal(false);
+  private _user          = signal<User | null>(null);
+  private _isLoading     = signal(false);
+  private _authChecked   = signal(false);
+  private _activeBranchId = signal<string | null>(null);
 
   readonly user            = this._user.asReadonly();
   readonly isLoading       = this._isLoading.asReadonly();
   readonly authChecked     = this._authChecked.asReadonly();
   readonly isAuthenticated = computed(() => !!this._user());
   readonly isSuperAdmin    = computed(() => this._user()?.isSuperAdmin ?? false);
+  readonly activeBranchId  = this._activeBranchId.asReadonly();
+
+  /** True when user has multiple branches and hasn't selected one yet */
+  readonly needsBranchSelection = computed(() => {
+    const u = this._user();
+    if (!u || u.isSuperAdmin || !u.companyId) return false;
+    const branches = u.userBranches ?? [];
+    return branches.length > 1 && this._activeBranchId() === null;
+  });
+
+  readonly activeBranch = computed((): UserBranch | null => {
+    const u = this._user();
+    const id = this._activeBranchId();
+    if (!id || !u?.userBranches) return null;
+    return u.userBranches.find(ub => ub.branch.id === id) ?? null;
+  });
 
   readonly currentPlan = computed(() => {
     const subs = this._user()?.company?.subscriptions;
@@ -87,14 +112,15 @@ export class AuthService {
 
     return new Promise<void>((resolve) => {
       this.loadProfile().subscribe({
-        next: () => {
+        next: (user) => {
+          this._applyBranchDefaults(user);
           this._authChecked.set(true);
           resolve();
         },
         error: (err) => {
           console.warn('Session init failed:', err?.status);
           this.clearSession();
-          resolve(); // siempre resolver para no bloquear el arranque
+          resolve();
         },
       });
     });
@@ -106,6 +132,7 @@ export class AuthService {
       tap(({ accessToken, refreshToken, user }) => {
         this.saveTokens(accessToken, refreshToken);
         this._user.set(user);
+        this._applyBranchDefaults(user);
         this._authChecked.set(true);
         this._isLoading.set(false);
         if (user.isSuperAdmin) {
@@ -119,6 +146,17 @@ export class AuthService {
         throw err;
       }),
     );
+  }
+
+  selectBranch(branchId: string): void {
+    this._activeBranchId.set(branchId);
+    localStorage.setItem(AuthService.BRANCH_KEY, branchId);
+  }
+
+  /** Clears the active branch so the selector modal re-appears */
+  clearBranchSelection(): void {
+    this._activeBranchId.set(null);
+    localStorage.removeItem(AuthService.BRANCH_KEY);
   }
 
   logout() {
@@ -170,8 +208,35 @@ export class AuthService {
   private clearSession() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem(AuthService.BRANCH_KEY);
     this._user.set(null);
+    this._activeBranchId.set(null);
     this._authChecked.set(true);
+  }
+
+  /** Auto-selects branch on login/session restore:
+   *  - If stored in localStorage and still valid → restore it
+   *  - If user has exactly 1 branch → auto-select it
+   *  - Otherwise → leave null so needsBranchSelection triggers the modal
+   */
+  private _applyBranchDefaults(user: User): void {
+    if (user.isSuperAdmin || !user.companyId) return;
+
+    const branches = user.userBranches ?? [];
+    const stored = localStorage.getItem(AuthService.BRANCH_KEY);
+
+    if (stored && branches.some(ub => ub.branch.id === stored)) {
+      this._activeBranchId.set(stored);
+      return;
+    }
+
+    if (branches.length === 1) {
+      this.selectBranch(branches[0].branch.id);
+      return;
+    }
+
+    // Multiple branches with no stored selection: show modal
+    this._activeBranchId.set(null);
   }
 
   private getUserIdFromToken(): string | null {

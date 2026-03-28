@@ -6,6 +6,7 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
 import { NavbarComponent } from '../navbar/navbar.component';
 import { ToastComponent } from '../toast/toast.component';
 import { GlobalLoaderComponent } from '../global-loader/global-loader.component';
+import { BranchSelectorModalComponent } from '../branch-selector/branch-selector-modal.component';
 import { TourService } from '../../../core/services/tour.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
@@ -23,11 +24,16 @@ interface UsageData {
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, SidebarComponent, NavbarComponent, ToastComponent, GlobalLoaderComponent],
+  imports: [RouterOutlet, CommonModule, SidebarComponent, NavbarComponent, ToastComponent, GlobalLoaderComponent, BranchSelectorModalComponent],
   template: `
     <div class="layout">
       <app-global-loader />
       @if (auth.user()) {
+        <!-- Branch selector modal: blocks access until branch is chosen -->
+        @if (auth.needsBranchSelection()) {
+          <app-branch-selector-modal />
+        }
+
         <!-- Overlay para cerrar sidebar en móvil -->
         @if (mobileSidebarOpen()) {
           <div class="sidebar-overlay" (click)="mobileSidebarOpen.set(false)"></div>
@@ -44,6 +50,7 @@ interface UsageData {
         <div class="main-area">
           <app-navbar
             [user]="auth.user()!"
+            [activeBranch]="auth.activeBranch()"
             (toggleMobileSidebar)="toggleMobileSidebar()"
           />
           <main class="content">
@@ -89,7 +96,6 @@ export class LayoutComponent {
   constructor() {
     effect(() => {
       const user = this.auth.user();
-      console.log("validar usuarios:",user);
       if (user && !user.isSuperAdmin && !user.hasSeenTour) {
         this.tourService.start(user.firstName);
       }
