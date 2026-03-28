@@ -94,6 +94,18 @@ export class AuthService {
       return val !== undefined && val !== 'false' && val !== '0';
     });
 
+  readonly isAdmin    = computed(() => this._user()?.roles?.includes('ADMIN') ?? false);
+  readonly isManager  = computed(() => this._user()?.roles?.includes('MANAGER') ?? false);
+  readonly isOperator = computed(() => this._user()?.roles?.includes('OPERATOR') ?? false);
+  readonly isCajero   = computed(() => this._user()?.roles?.includes('CAJERO') ?? false);
+  readonly isContador = computed(() => this._user()?.roles?.includes('CONTADOR') ?? false);
+  readonly isViewer   = computed(() => this._user()?.roles?.includes('VIEWER') ?? false);
+
+  /** Can manage (create/update/delete) — ADMIN or MANAGER */
+  readonly canManage  = computed(() => this.isAdmin() || this.isManager() || this.isSuperAdmin());
+  /** Can operate (create invoices, POS, basic ops) */
+  readonly canOperate = computed(() => this.isAdmin() || this.isManager() || this.isOperator() || this.isCajero() || this.isSuperAdmin());
+
   // ── CONSTRUCTOR LIMPIO: sin HttpClient ──────────────────────
   // La inicialización de sesión ocurre en APP_INITIALIZER (app.config.ts)
   // para evitar la dependencia circular con authInterceptor.

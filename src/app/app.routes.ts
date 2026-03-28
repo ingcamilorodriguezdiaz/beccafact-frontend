@@ -30,28 +30,28 @@ export const routes: Routes = [
       {
         path: 'invoices',
         canActivate: [planGuard, roleGuard],
-        data: { feature: 'has_invoices', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
+        data: { feature: 'has_invoices', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO', 'CONTADOR', 'VIEWER'] },
         loadChildren: () =>
           import('./features/invoices/invoices.routes').then((m) => m.INVOICE_ROUTES),
       },
       {
         path: 'inventory',
         canActivate: [planGuard, roleGuard],
-        data: { feature: 'has_inventory', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+        data: { feature: 'has_inventory', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER'] },
         loadChildren: () =>
           import('./features/inventory/inventory.routes').then((m) => m.INVENTORY_ROUTES),
       },
       {
         path: 'customers',
         canActivate: [roleGuard],
-        data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
+        data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO', 'CONTADOR', 'VIEWER'] },
         loadChildren: () =>
           import('./features/customers/customers.routes').then((m) => m.CUSTOMER_ROUTES),
       },
       {
         path: 'reports',
         canActivate: [planGuard, roleGuard],
-        data: { feature: 'has_reports', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
+        data: { feature: 'has_reports', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR', 'VIEWER'] },
         loadChildren: () =>
           import('./features/reports/reports.routes').then((m) => m.REPORTS_ROUTES),
       },
@@ -65,28 +65,28 @@ export const routes: Routes = [
       {
         path: 'cartera',
         canActivate: [planGuard, roleGuard],
-        data: { feature: 'has_cartera', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+        data: { feature: 'has_cartera', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
         loadChildren: () =>
           import('./features/cartera/cartera.routes').then((m) => m.CARTERA_ROUTES),
       },
       {
         path: 'payroll',
         canActivate: [planGuard, roleGuard],
-        data: { feature: 'has_payroll', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
+        data: { feature: 'has_payroll', roles: ['ADMIN', 'MANAGER', 'CONTADOR'] },
         loadChildren: () =>
           import('./features/payroll/payroll.routes').then((m) => m.PAYROLL_ROUTES),
       },
       {
         path: 'pos',
         canActivate: [planGuard, roleGuard],
-        data: { feature: 'has_pos', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+        data: { feature: 'has_pos', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO'] },
         loadChildren: () =>
           import('./features/pos/pos.routes').then((m) => m.POS_ROUTES),
       },
       {
         path: 'sucursales',
         canActivate: [roleGuard],
-        data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER'] },
+        data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO', 'VIEWER'] },
         loadChildren: () =>
           import('./features/branches/branches.routes').then((m) => m.BRANCHES_ROUTES),
       },

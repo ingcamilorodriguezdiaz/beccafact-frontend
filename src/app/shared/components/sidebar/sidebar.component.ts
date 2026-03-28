@@ -33,18 +33,18 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard',      iconId: 'dashboard', route: '/dashboard',    section: 'VISIÓN GENERAL' },
 
   // ── OPERACIÓN ───────────────────────────────────────────────
-  { label: 'Punto de Venta', iconId: 'pos',       route: '/pos',          feature: 'has_pos',       roles: ['ADMIN','MANAGER','OPERATOR'],                section: 'OPERACIÓN' },
-  { label: 'Facturación',    iconId: 'invoice',   route: '/invoices',     feature: 'has_invoices',  roles: ['ADMIN','MANAGER','OPERATOR','CONTADOR'],     section: 'OPERACIÓN' },
-  { label: 'Clientes',       iconId: 'customers', route: '/customers',                              roles: ['ADMIN','MANAGER','OPERATOR','CONTADOR'],     section: 'OPERACIÓN' },
-  { label: 'Cartera',        iconId: 'cartera',   route: '/cartera',      feature: 'has_cartera',   roles: ['ADMIN','MANAGER','OPERATOR'],                section: 'OPERACIÓN' },
+  { label: 'Punto de Venta', iconId: 'pos',       route: '/pos',          feature: 'has_pos',       roles: ['ADMIN','MANAGER','OPERATOR','CAJERO'],               section: 'OPERACIÓN' },
+  { label: 'Facturación',    iconId: 'invoice',   route: '/invoices',     feature: 'has_invoices',  roles: ['ADMIN','MANAGER','OPERATOR','CAJERO','CONTADOR'],    section: 'OPERACIÓN' },
+  { label: 'Clientes',       iconId: 'customers', route: '/customers',                              roles: ['ADMIN','MANAGER','OPERATOR','CAJERO','CONTADOR'],    section: 'OPERACIÓN' },
+  { label: 'Cartera',        iconId: 'cartera',   route: '/cartera',      feature: 'has_cartera',   roles: ['ADMIN','MANAGER','OPERATOR','CONTADOR'],             section: 'OPERACIÓN' },
 
   // ── INVENTARIO ──────────────────────────────────────────────
-  { label: 'Inventario',     iconId: 'inventory', route: '/inventory',    feature: 'has_inventory', roles: ['ADMIN','MANAGER','OPERATOR'],                section: 'INVENTARIO' },
-  { label: 'Sucursales',     iconId: 'branches',  route: '/sucursales',                             roles: ['ADMIN','MANAGER','OPERATOR','VIEWER'],       section: 'INVENTARIO' },
+  { label: 'Inventario',     iconId: 'inventory', route: '/inventory',    feature: 'has_inventory', roles: ['ADMIN','MANAGER','OPERATOR'],                        section: 'INVENTARIO' },
+  { label: 'Sucursales',     iconId: 'branches',  route: '/sucursales',                             roles: ['ADMIN','MANAGER','OPERATOR','CAJERO','VIEWER'],      section: 'INVENTARIO' },
 
   // ── GESTIÓN ─────────────────────────────────────────────────
-  { label: 'Nómina',         iconId: 'payroll',   route: '/payroll',      feature: 'has_payroll',   roles: ['ADMIN','MANAGER','OPERATOR','CONTADOR'],     section: 'GESTIÓN' },
-  { label: 'Reportes',       iconId: 'reports',   route: '/reports',      feature: 'has_reports',   roles: ['ADMIN','MANAGER','OPERATOR','CONTADOR'],     section: 'GESTIÓN' },
+  { label: 'Nómina',         iconId: 'payroll',   route: '/payroll',      feature: 'has_payroll',   roles: ['ADMIN','MANAGER','CONTADOR'],                        section: 'GESTIÓN' },
+  { label: 'Reportes',       iconId: 'reports',   route: '/reports',      feature: 'has_reports',   roles: ['ADMIN','MANAGER','OPERATOR','CONTADOR'],             section: 'GESTIÓN' },
   { label: 'Importar',       iconId: 'import',    route: '/import',       feature: 'bulk_import',   roles: ['ADMIN','MANAGER'],                          section: 'GESTIÓN' },
 
   // ── ADMIN ───────────────────────────────────────────────────
