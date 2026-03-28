@@ -8,6 +8,7 @@ import { debounceTime, distinctUntilChanged, Subject, switchMap, of } from 'rxjs
 import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { environment } from '../../../environments/environment';
+import { ApiResponse } from '../../model/api-response.model';
 
 // ── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -27,10 +28,13 @@ interface Branch {
 
 interface BranchStock {
   id: string;
-  productId: string;
+  name: string;
+  sku: string;
+  unit: string;
   stock: number;
   minStock: number;
-  product: { id: string; name: string; sku: string; unit: string };
+  status: string;
+  category?: { id: string; name: string };
 }
 
 interface Country      { code: string; name: string; }
@@ -45,6 +49,20 @@ interface BranchForm {
 
 interface StockEditState { productId: string; stock: number; minStock: number; }
 interface TransferForm   { targetBranchId: string; productId: string; quantity: number | null; }
+
+interface BranchUserAssignment {
+  id: string;
+  userId: string;
+  user: { id: string; firstName: string; lastName: string; email: string; isActive: boolean };
+}
+interface CompanyUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  isActive: boolean;
+  roles: string[];
+}
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -264,6 +282,28 @@ interface TransferForm   { targetBranchId: string; productId: string; quantity: 
           }
         </div>
 
+        <!-- Tab bar -->
+        <div class="brf-tabs">
+          <button class="brf-tab" [class.brf-tab--active]="detailTab() === 'inventory'"
+                  (click)="detailTab.set('inventory')">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="14">
+              <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>
+              <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+            </svg>
+            Inventario
+          </button>
+          <button class="brf-tab" [class.brf-tab--active]="detailTab() === 'users'"
+                  (click)="detailTab.set('users'); loadBranchUsers(selectedBranch()!.id); loadCompanyUsers()">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="14">
+              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+            </svg>
+            Usuarios
+            <span class="brf-tab-badge">{{ branchUsers().length }}</span>
+          </button>
+        </div>
+
+        @if (detailTab() === 'inventory') {
+
         <div class="brf-toolbar">
           <div class="brf-search-wrap">
             <svg viewBox="0 0 20 20" fill="currentColor" width="16">
@@ -309,7 +349,7 @@ interface TransferForm   { targetBranchId: string; productId: string; quantity: 
                 <select [(ngModel)]="transferForm.productId" class="brf-form-control">
                   <option value="">Seleccionar producto...</option>
                   @for (s of stocks(); track s.id) {
-                    <option [value]="s.productId">{{ s.product.name }} (stock: {{ s.stock }})</option>
+                    <option [value]="s.id">{{ s.name }} (stock: {{ s.stock }})</option>
                   }
                 </select>
               </div>
@@ -376,13 +416,13 @@ interface TransferForm   { targetBranchId: string; productId: string; quantity: 
                             <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
                           </svg>
                         </div>
-                        <span class="brf-prod-name">{{ s.product.name }}</span>
+                        <span class="brf-prod-name">{{ s.name }}</span>
                       </div>
                     </td>
-                    <td><code class="brf-sku">{{ s.product.sku }}</code></td>
-                    <td class="brf-muted">{{ s.product.unit }}</td>
+                    <td><code class="brf-sku">{{ s.sku }}</code></td>
+                    <td class="brf-muted">{{ s.unit }}</td>
                     <td>
-                      @if (editingStock()?.productId === s.productId) {
+                      @if (editingStock()?.productId === s.id) {
                         <input type="number" [(ngModel)]="editingStockData.stock"
                                class="brf-inline-input" min="0" style="width:70px"/>
                       } @else {
@@ -390,7 +430,7 @@ interface TransferForm   { targetBranchId: string; productId: string; quantity: 
                       }
                     </td>
                     <td>
-                      @if (editingStock()?.productId === s.productId) {
+                      @if (editingStock()?.productId === s.id) {
                         <input type="number" [(ngModel)]="editingStockData.minStock"
                                class="brf-inline-input" min="0" style="width:70px"/>
                       } @else { {{ s.minStock }} }
@@ -409,7 +449,7 @@ interface TransferForm   { targetBranchId: string; productId: string; quantity: 
                     </td>
                     @if (isAdmin()) {
                       <td class="brf-actions-cell">
-                        @if (editingStock()?.productId === s.productId) {
+                        @if (editingStock()?.productId === s.id) {
                           <button class="brf-btn-icon brf-btn-icon--success" title="Guardar"
                                   (click)="saveStock()" [disabled]="saving()">
                             <svg viewBox="0 0 20 20" fill="currentColor" width="14">
@@ -436,6 +476,114 @@ interface TransferForm   { targetBranchId: string; productId: string; quantity: 
             </table>
           }
         </div>
+
+        } <!-- end @if detailTab() === 'inventory' -->
+
+        <!-- ── USERS TAB ── -->
+        @if (detailTab() === 'users') {
+
+          <!-- Assign panel (admin only) -->
+          @if (isAdmin()) {
+            <div class="brf-assign-panel">
+              <div class="brf-assign-header">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                  <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/>
+                </svg>
+                <span>Agregar usuario a la sucursal</span>
+              </div>
+              <div class="brf-assign-body">
+                <select [(ngModel)]="assignUserId" class="brf-form-control brf-assign-select">
+                  <option value="">— Seleccionar usuario —</option>
+                  @for (u of companyUsers(); track u.id) {
+                    @if (!isUserAssigned(u.id)) {
+                      <option [value]="u.id">{{ u.firstName }} {{ u.lastName }} · {{ u.email }}</option>
+                    }
+                  }
+                </select>
+                <button class="brf-btn brf-btn-primary brf-btn-sm"
+                        [disabled]="!assignUserId || assigningUser()"
+                        (click)="assignUser()">
+                  {{ assigningUser() ? 'Asignando...' : 'Agregar' }}
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- Users list -->
+          <div class="brf-table-card">
+            @if (loadingUsers()) {
+              <div class="brf-table-loading">
+                @for (i of [1,2,3]; track i) {
+                  <div class="brf-sk-row">
+                    <div class="brf-sk" style="width:36px;height:36px;border-radius:50%;flex-shrink:0"></div>
+                    <div class="brf-sk" style="width:180px"></div>
+                    <div class="brf-sk" style="width:140px"></div>
+                    <div class="brf-sk" style="width:60px"></div>
+                    <div class="brf-sk" style="width:40px"></div>
+                  </div>
+                }
+              </div>
+            } @else if (branchUsers().length === 0) {
+              <div class="brf-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="44" height="44">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>
+                </svg>
+                <p>No hay usuarios asignados a esta sucursal</p>
+              </div>
+            } @else {
+              <table class="brf-table">
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Estado</th>
+                    @if (isAdmin()) { <th></th> }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (bu of branchUsers(); track bu.id) {
+                    <tr>
+                      <td>
+                        <div class="brf-user-cell">
+                          <div class="brf-user-avatar">{{ userInitials(bu.user) }}</div>
+                          <div>
+                            <div class="brf-user-name">{{ bu.user.firstName }} {{ bu.user.lastName }}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="brf-muted">{{ bu.user.email }}</td>
+                      <td>
+                        <span class="brf-badge" [class.brf-badge--active]="bu.user.isActive" [class.brf-badge--inactive]="!bu.user.isActive">
+                          {{ bu.user.isActive ? 'Activo' : 'Inactivo' }}
+                        </span>
+                      </td>
+                      @if (isAdmin()) {
+                        <td class="brf-actions-cell">
+                          @if (removeConfirmId() === bu.userId) {
+                            <span class="brf-remove-confirm">
+                              ¿Quitar?
+                              <button class="brf-btn brf-btn-danger brf-btn-sm" (click)="removeUser(bu.userId)" [disabled]="saving()">Sí</button>
+                              <button class="brf-btn brf-btn-secondary brf-btn-sm" (click)="removeConfirmId.set(null)">No</button>
+                            </span>
+                          } @else {
+                            <button class="brf-btn-icon brf-btn-icon--danger" title="Quitar de la sucursal"
+                                    (click)="removeConfirmId.set(bu.userId)">
+                              <svg viewBox="0 0 20 20" fill="currentColor" width="14">
+                                <path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524L13.477 14.89zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z"/>
+                              </svg>
+                            </button>
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+
+        } <!-- end @if detailTab() === 'users' -->
+
       }
 
     </div>
@@ -846,6 +994,28 @@ interface TransferForm   { targetBranchId: string; productId: string; quantity: 
     .brf-divipola-hint { display:inline-flex; align-items:center; gap:4px; margin-top:5px; font-size:11.5px; color:#065f46; }
     .brf-divipola-hint svg { color:#059669; }
 
+    /* ── Tabs ── */
+    .brf-tabs       { display:flex; gap:2px; border-bottom:2px solid #f0f4f8; margin-bottom:16px; }
+    .brf-tab        { display:inline-flex; align-items:center; gap:6px; padding:10px 16px; background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px; font-size:13.5px; font-weight:600; color:#9ca3af; cursor:pointer; transition:all .15s; border-radius:6px 6px 0 0; }
+    .brf-tab:hover  { color:#1a407e; background:#f8fafc; }
+    .brf-tab--active { color:#1a407e; border-bottom-color:#1a407e; background:none; }
+    .brf-tab-badge  { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; background:#e8eef8; color:#1a407e; font-size:10px; font-weight:700; border-radius:9999px; }
+    .brf-tab--active .brf-tab-badge { background:#1a407e; color:#fff; }
+
+    /* ── Assign panel ── */
+    .brf-assign-panel  { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:14px 18px; margin-bottom:14px; }
+    .brf-assign-header { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:#065f46; margin-bottom:12px; }
+    .brf-assign-body   { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .brf-assign-select { flex:1; min-width:200px; }
+
+    /* ── User table cells ── */
+    .brf-user-cell   { display:flex; align-items:center; gap:10px; }
+    .brf-user-avatar { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#1a407e,#00c6a0); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:'Sora',sans-serif; }
+    .brf-user-name   { font-weight:600; color:#0c1c35; font-size:13.5px; }
+
+    /* ── Remove confirm inline ── */
+    .brf-remove-confirm { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:#dc2626; font-weight:600; }
+
     /* ── Responsive ── */
     @media (max-width: 768px) {
       .brf-page-header   { flex-direction:column; align-items:stretch; gap:10px; }
@@ -871,7 +1041,8 @@ export class BranchesComponent implements OnInit {
   private readonly http   = inject(HttpClient);
   private readonly notify = inject(NotificationService);
   private readonly auth   = inject(AuthService);
-  private readonly API    = `${environment.apiUrl}/branches`;
+  private readonly API      = `${environment.apiUrl}/branches`;
+  private readonly USERS_API = `${environment.apiUrl}/users`;
 
   // ── State ──────────────────────────────────────────────────────────────────
   branches       = signal<Branch[]>([]);
@@ -894,6 +1065,15 @@ export class BranchesComponent implements OnInit {
 
   deleteTarget  = signal<Branch | null>(null);
   formSubmitted = false;
+
+  detailTab           = signal<'inventory' | 'users'>('inventory');
+  branchUsers         = signal<BranchUserAssignment[]>([]);
+  loadingUsers        = signal(false);
+  companyUsers        = signal<CompanyUser[]>([]);
+  loadingCompanyUsers = signal(false);
+  assignUserId        = '';
+  assigningUser       = signal(false);
+  removeConfirmId     = signal<string | null>(null);
 
   branchForm: BranchForm = this.emptyBranchForm();
 
@@ -923,8 +1103,8 @@ export class BranchesComponent implements OnInit {
     const q = this.stockSearch().toLowerCase().trim();
     if (!q) return this.stocks();
     return this.stocks().filter(s =>
-      s.product.name.toLowerCase().includes(q) ||
-      s.product.sku.toLowerCase().includes(q)
+      s.name.toLowerCase().includes(q) ||
+      s.sku.toLowerCase().includes(q)
     );
   });
 
@@ -1104,12 +1284,15 @@ export class BranchesComponent implements OnInit {
   goBack(): void {
     this.view.set('list'); this.selectedBranch.set(null);
     this.stocks.set([]); this.transferMode.set(false); this.editingStock.set(null);
+    this.detailTab.set('inventory');
+    this.branchUsers.set([]);
+    this.removeConfirmId.set(null);
   }
 
   loadStocks(branchId: string): void {
     this.loadingStocks.set(true);
-    this.http.get<any>(`${this.API}/${branchId}/stocks`).subscribe({
-      next: res => { this.stocks.set(res.data ?? res); this.loadingStocks.set(false); },
+    this.http.get<ApiResponse<any>>(`${this.API}/${branchId}/stocks`).subscribe({
+      next: ({data}) => { this.stocks.set(data ?? []); this.loadingStocks.set(false); },
       error: ()  => { this.notify.error('Error al cargar inventario'); this.loadingStocks.set(false); },
     });
   }
@@ -1124,7 +1307,7 @@ export class BranchesComponent implements OnInit {
 
   // ── Inline stock edit ──────────────────────────────────────────────────────
   startEditStock(s: BranchStock): void {
-    this.editingStockData = { productId: s.productId, stock: s.stock, minStock: s.minStock };
+    this.editingStockData = { productId: s.id, stock: s.stock, minStock: s.minStock };
     this.editingStock.set(this.editingStockData);
   }
 
@@ -1166,5 +1349,61 @@ export class BranchesComponent implements OnInit {
     });
   }
 
+  // ── Branch users ───────────────────────────────────────────────────────────
+  loadBranchUsers(branchId: string): void {
+    this.loadingUsers.set(true);
+    this.http.get<any>(`${this.API}/${branchId}/users`).subscribe({
+      next: res => { this.branchUsers.set(res.data ?? res); this.loadingUsers.set(false); },
+      error: ()  => { this.notify.error('Error al cargar usuarios'); this.loadingUsers.set(false); },
+    });
+  }
+
+  loadCompanyUsers(): void {
+    if (this.companyUsers().length > 0) return;
+    this.loadingCompanyUsers.set(true);
+    this.http.get<any>(this.USERS_API).subscribe({
+      next: res => { this.companyUsers.set(res.data ?? res); this.loadingCompanyUsers.set(false); },
+      error: ()  => { this.loadingCompanyUsers.set(false); },
+    });
+  }
+
+  assignUser(): void {
+    const branch = this.selectedBranch();
+    if (!branch || !this.assignUserId) return;
+    this.assigningUser.set(true);
+    this.http.post<any>(`${this.API}/${branch.id}/users`, { userId: this.assignUserId }).subscribe({
+      next: () => {
+        this.notify.success('Usuario asignado a la sucursal');
+        this.assignUserId = '';
+        this.assigningUser.set(false);
+        this.loadBranchUsers(branch.id);
+      },
+      error: err => { this.notify.error(err?.error?.message ?? 'Error al asignar usuario'); this.assigningUser.set(false); },
+    });
+  }
+
+  removeUser(userId: string): void {
+    const branch = this.selectedBranch();
+    if (!branch) return;
+    this.saving.set(true);
+    this.http.delete<any>(`${this.API}/${branch.id}/users/${userId}`).subscribe({
+      next: () => {
+        this.notify.success('Usuario removido de la sucursal');
+        this.saving.set(false);
+        this.removeConfirmId.set(null);
+        this.loadBranchUsers(branch.id);
+      },
+      error: err => { this.notify.error(err?.error?.message ?? 'Error al remover usuario'); this.saving.set(false); },
+    });
+  }
+
+  userInitials(u: { firstName: string; lastName: string }): string {
+    return ((u.firstName?.[0] ?? '') + (u.lastName?.[0] ?? '')).toUpperCase();
+  }
+
   nonEmpty = (v: any) => Boolean(v);
+
+  isUserAssigned(userId: string): boolean {
+    return this.branchUsers()?.some(bu => bu.userId === userId) ?? false;
+  }
 }
