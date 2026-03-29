@@ -32,48 +32,67 @@ interface DianCertificateConfig {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div>
-      <div class="section-header">
+    <div class="settings-page">
+      <section class="page-hero">
         <div>
-          <h3 class="section-title">Integraciones DIAN</h3>
-          <p class="section-sub">Estado de las integraciones con la DIAN configuradas para tu empresa</p>
+          <p class="page-kicker">Integraciones</p>
+          <h2>Estado de tus conexiones con la DIAN</h2>
+          <p>Consulta de forma clara que servicios estan activos, en que ambiente operan y si la base de certificacion ya esta lista.</p>
         </div>
+
         <div class="managed-badge">
           <svg viewBox="0 0 20 20" fill="currentColor" width="13">
             <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
           </svg>
           Administrado por BeccaFact
         </div>
+      </section>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span>Integraciones activas</span>
+          <strong>{{ activeIntegrationsCount() }}</strong>
+          <small>Servicios habilitados para tu empresa</small>
+        </div>
+        <div class="stat-card stat-card--accent">
+          <span>Certificado</span>
+          <strong>{{ certificate().hasCertificate ? 'Listo' : 'Pendiente' }}</strong>
+          <small>Estado del certificado digital DIAN</small>
+        </div>
+        <div class="stat-card">
+          <span>Ambiente</span>
+          <strong>{{ facturacion().ambiente === 'produccion' ? 'Produccion' : 'Habilitacion' }}</strong>
+          <small>Solo aplica si facturacion esta activa</small>
+        </div>
       </div>
 
       @if (loading()) {
-        <div class="intg-list">
+        <div class="cards-grid">
           @for (i of [1, 2]; track i) {
-            <div class="intg-row">
-              <div class="sk" style="width:36px;height:36px;border-radius:10px;flex-shrink:0"></div>
-              <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-                <div class="sk" style="height:14px;width:200px;border-radius:6px"></div>
-                <div class="sk" style="height:12px;width:280px;border-radius:6px"></div>
+            <div class="integration-card">
+              <div class="skeleton-head">
+                <div class="sk sk-logo"></div>
+                <div class="sk sk-title"></div>
               </div>
+              <div class="sk sk-text"></div>
+              <div class="sk sk-chip-row"></div>
             </div>
           }
         </div>
+      } @else if (!facturacion().enabled && !nomina().enabled) {
+        <div class="empty-state">
+          <svg viewBox="0 0 48 48" fill="none" width="44" height="44">
+            <rect width="48" height="48" rx="12" fill="#f0f4f8"/>
+            <path d="M24 14v10M24 30v2" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <p>No hay integraciones DIAN activas para tu empresa.</p>
+          <span>Contacta al administrador de BeccaFact para habilitarlas.</span>
+        </div>
       } @else {
-        @if (!facturacion().enabled && !nomina().enabled) {
-          <div class="empty-state">
-            <svg viewBox="0 0 48 48" fill="none" width="44" height="44">
-              <rect width="48" height="48" rx="12" fill="#f0f4f8"/>
-              <path d="M24 14v10M24 30v2" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
-            <p>No hay integraciones DIAN activas para tu empresa.</p>
-            <span>Contacta al administrador de BeccaFact para habilitarlas.</span>
-          </div>
-        } @else {
-          <div class="intg-list">
-
-            <!-- DIAN Facturación Electrónica -->
-            @if (facturacion().enabled) {
-              <div class="intg-row">
+        <div class="cards-grid">
+          @if (facturacion().enabled) {
+            <article class="integration-card integration-card--primary">
+              <div class="integration-head">
                 <div class="intg-logo">
                   <svg viewBox="0 0 48 48" fill="none" width="36" height="36">
                     <rect width="48" height="48" rx="10" fill="#003366"/>
@@ -81,136 +100,341 @@ interface DianCertificateConfig {
                           fill="#FFD700" font-size="13" font-weight="800" font-family="Arial,sans-serif">DIAN</text>
                   </svg>
                 </div>
-                <div class="intg-info">
-                  <div class="intg-name">
-                    DIAN — Facturación Electrónica
-                    <span class="connected-badge">
-                      <svg viewBox="0 0 20 20" fill="currentColor" width="10">
-                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
-                      </svg>
-                      Activa
-                    </span>
-                    <span class="env-badge env-{{ facturacion().ambiente }}">
-                      {{ facturacion().ambiente === 'produccion' ? 'Producción' : 'Habilitación' }}
-                    </span>
-                  </div>
-                  <div class="intg-desc">Emisión de facturas electrónicas ante la DIAN — Resolución 000042 de 2020</div>
-                  <div class="intg-meta">
-                    @if (facturacion().resolucion) {
-                      <span class="meta-item">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="11"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/></svg>
-                        Res. {{ facturacion().resolucion }}
-                      </span>
-                    }
-                    @if (facturacion().prefijo) {
-                      <span class="meta-item">Prefijo: <strong>{{ facturacion().prefijo }}</strong></span>
-                    }
-                    @if (facturacion().rangoDesde && facturacion().rangoHasta) {
-                      <span class="meta-item">Rango: {{ facturacion().rangoDesde }} – {{ facturacion().rangoHasta }}</span>
-                    }
-                    @if (facturacion().vigenciaHasta) {
-                      <span class="meta-item">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="11"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"/></svg>
-                        Vigente hasta {{ facturacion().vigenciaHasta }}
-                      </span>
-                    }
-                    @if (certificate().hasCertificate) {
-                      <span class="meta-item">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="11"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"/></svg>
-                        Certificado configurado
-                      </span>
-                    }
-                  </div>
+                <div class="integration-title-wrap">
+                  <div class="integration-title">Facturacion Electronica</div>
+                  <div class="integration-sub">Emision de comprobantes hacia la DIAN</div>
+                </div>
+                <div class="status-stack">
+                  <span class="connected-badge">Activa</span>
+                  <span class="env-badge env-{{ facturacion().ambiente }}">
+                    {{ facturacion().ambiente === 'produccion' ? 'Produccion' : 'Habilitacion' }}
+                  </span>
                 </div>
               </div>
-            }
 
-            <!-- DIAN Nómina Electrónica -->
-            @if (nomina().enabled) {
-              @if (facturacion().enabled) {
-                <div class="intg-divider"></div>
-              }
-              <div class="intg-row">
+              <div class="meta-grid">
+                @if (facturacion().resolucion) {
+                  <div class="meta-item">Resolucion <strong>{{ facturacion().resolucion }}</strong></div>
+                }
+                @if (facturacion().prefijo) {
+                  <div class="meta-item">Prefijo <strong>{{ facturacion().prefijo }}</strong></div>
+                }
+                @if (facturacion().rangoDesde && facturacion().rangoHasta) {
+                  <div class="meta-item">Rango <strong>{{ facturacion().rangoDesde }} - {{ facturacion().rangoHasta }}</strong></div>
+                }
+                @if (facturacion().vigenciaHasta) {
+                  <div class="meta-item">Vigencia <strong>{{ facturacion().vigenciaHasta }}</strong></div>
+                }
+                @if (certificate().hasCertificate) {
+                  <div class="meta-item">Certificado <strong>Configurado</strong></div>
+                }
+              </div>
+            </article>
+          }
+
+          @if (nomina().enabled) {
+            <article class="integration-card">
+              <div class="integration-head">
                 <div class="intg-logo">
                   <svg viewBox="0 0 48 48" fill="none" width="36" height="36">
                     <rect width="48" height="48" rx="10" fill="#1a407e"/>
                     <text x="50%" y="42%" dominant-baseline="middle" text-anchor="middle"
                           fill="#FFD700" font-size="9" font-weight="800" font-family="Arial,sans-serif">DIAN</text>
                     <text x="50%" y="68%" dominant-baseline="middle" text-anchor="middle"
-                          fill="#ffffff" font-size="8" font-weight="700" font-family="Arial,sans-serif">NÓM</text>
+                          fill="#ffffff" font-size="8" font-weight="700" font-family="Arial,sans-serif">NOM</text>
                   </svg>
                 </div>
-                <div class="intg-info">
-                  <div class="intg-name">
-                    DIAN — Nómina Electrónica
-                    <span class="connected-badge">
-                      <svg viewBox="0 0 20 20" fill="currentColor" width="10">
-                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
-                      </svg>
-                      Activa
-                    </span>
-                  </div>
-                  <div class="intg-desc">Transmisión de nómina electrónica ante la DIAN — Resolución 000013 de 2021</div>
-                  <div class="intg-meta">
-                    @if (nomina().softwareId) {
-                      <span class="meta-item">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="11"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z"/></svg>
-                        Software registrado
-                      </span>
-                    }
-                    @if (certificate().hasCertificate) {
-                      <span class="meta-item">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="11"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"/></svg>
-                        Certificado configurado
-                      </span>
-                    }
-                  </div>
+                <div class="integration-title-wrap">
+                  <div class="integration-title">Nomina Electronica</div>
+                  <div class="integration-sub">Transmision de eventos y comprobantes de nomina</div>
                 </div>
+                <span class="connected-badge">Activa</span>
               </div>
-            }
 
-          </div>
-        }
+              <div class="meta-grid">
+                @if (nomina().softwareId) {
+                  <div class="meta-item">Software <strong>Registrado</strong></div>
+                }
+                @if (certificate().hasCertificate) {
+                  <div class="meta-item">Certificado <strong>Configurado</strong></div>
+                }
+              </div>
+            </article>
+          }
+        </div>
       }
 
       <div class="info-banner">
         <svg viewBox="0 0 20 20" fill="currentColor" width="15">
           <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"/>
         </svg>
-        La configuración de integraciones DIAN es gestionada por el equipo de BeccaFact. Para modificarla, contacta al soporte.
+        La configuracion de integraciones DIAN es gestionada por el equipo de BeccaFact. Para modificarla, contacta al soporte.
       </div>
     </div>
   `,
   styles: [`
-    .section-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; gap:12px; flex-wrap:wrap; }
-    .section-title { font-family:'Sora',sans-serif; font-size:17px; font-weight:700; color:#0c1c35; margin:0 0 4px; }
-    .section-sub { font-size:13px; color:#9ca3af; margin:0; }
-    .managed-badge { display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:8px; background:#f0fdf4; border:1px solid #bbf7d0; font-size:12.5px; font-weight:600; color:#166534; }
+    .settings-page { display:grid; gap:18px; }
 
-    .intg-list { background:#fff; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; }
-    .intg-divider { border:none; border-top:1px solid #f0f4f8; margin:0; }
-    .intg-row { display:flex; align-items:flex-start; gap:14px; padding:16px 20px; }
+    .page-hero {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      padding:22px;
+      border-radius:24px;
+      background:
+        radial-gradient(circle at top right, rgba(0, 198, 160, 0.16), transparent 30%),
+        linear-gradient(135deg, #0d2344 0%, #163a6f 54%, #0d8b74 100%);
+      color:#fff;
+      box-shadow:0 22px 38px rgba(12, 28, 53, 0.14);
+    }
+
+    .page-kicker {
+      margin:0 0 8px;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:#8bf3cb;
+    }
+
+    .page-hero h2 {
+      margin:0;
+      font-family:var(--font-d, 'Sora', sans-serif);
+      font-size:28px;
+      line-height:1.04;
+      letter-spacing:-.05em;
+      color:#fff;
+      max-width:16ch;
+    }
+
+    .page-hero p:last-child {
+      margin:10px 0 0;
+      max-width:58ch;
+      line-height:1.7;
+      color:rgba(236, 244, 255, 0.8);
+      font-size:13px;
+    }
+
+    .managed-badge {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255, 255, 255, 0.12);
+      border:1px solid rgba(255, 255, 255, 0.12);
+      font-size:11.5px;
+      font-weight:700;
+      color:#d1fae5;
+      white-space:nowrap;
+    }
+
+    .stats-grid {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:14px;
+    }
+
+    .stat-card {
+      display:grid;
+      gap:4px;
+      padding:16px 18px;
+      border-radius:20px;
+      background:#fff;
+      border:1px solid #dce6f0;
+      box-shadow:0 14px 28px rgba(12, 28, 53, 0.05);
+    }
+
+    .stat-card span {
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      color:#8aa0b8;
+    }
+
+    .stat-card strong {
+      font-size:18px;
+      font-weight:800;
+      color:#0c1c35;
+    }
+
+    .stat-card small {
+      font-size:12px;
+      line-height:1.55;
+      color:#7a90aa;
+    }
+
+    .stat-card--accent {
+      background:linear-gradient(135deg, #eef9ff, #f2fffb);
+      border-color:#bfe4f0;
+    }
+
+    .cards-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+      gap:16px;
+    }
+
+    .integration-card {
+      display:grid;
+      gap:16px;
+      padding:20px;
+      border-radius:24px;
+      background:#fff;
+      border:1px solid #dce6f0;
+      box-shadow:0 18px 32px rgba(12, 28, 53, 0.06);
+    }
+
+    .integration-card--primary {
+      background:linear-gradient(180deg, #fbfdff 0%, #f5fbff 100%);
+      border-color:#bfdbfe;
+    }
+
+    .integration-head {
+      display:grid;
+      grid-template-columns:auto minmax(0, 1fr) auto;
+      gap:12px;
+      align-items:start;
+    }
+
     .intg-logo { flex-shrink:0; }
-    .intg-info { flex:1; min-width:0; }
-    .intg-name { font-size:14px; font-weight:700; color:#0c1c35; display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:3px; }
-    .intg-desc { font-size:12px; color:#9ca3af; }
-    .intg-meta { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
-    .meta-item { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; color:#374151; background:#f8fafc; border:1px solid #e2e8f0; padding:3px 9px; border-radius:6px; }
-    .meta-item strong { font-weight:700; color:#0c1c35; }
 
-    .connected-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:99px; }
-    .env-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px; }
-    .env-produccion  { background:#dbeafe; color:#1d4ed8; }
+    .integration-title {
+      font-size:18px;
+      font-weight:800;
+      color:#0c1c35;
+    }
+
+    .integration-sub {
+      margin-top:4px;
+      font-size:12px;
+      line-height:1.6;
+      color:#6f859f;
+    }
+
+    .status-stack {
+      display:grid;
+      gap:6px;
+      justify-items:end;
+    }
+
+    .connected-badge,
+    .env-badge {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:5px 10px;
+      border-radius:999px;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      white-space:nowrap;
+    }
+
+    .connected-badge {
+      background:#dcfce7;
+      color:#166534;
+    }
+
+    .env-produccion { background:#dbeafe; color:#1d4ed8; }
     .env-habilitacion { background:#fef3c7; color:#92400e; }
 
-    .empty-state { display:flex; flex-direction:column; align-items:center; padding:40px 20px; text-align:center; background:#fff; border:1px solid #dce6f0; border-radius:12px; gap:8px; }
-    .empty-state p { font-size:14px; font-weight:600; color:#374151; margin:0; }
-    .empty-state span { font-size:12.5px; color:#9ca3af; }
+    .meta-grid {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
 
-    .info-banner { display:flex; align-items:center; gap:8px; margin-top:14px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; font-size:13px; color:#1e40af; }
+    .meta-item {
+      padding:8px 10px;
+      border-radius:14px;
+      background:#f8fbff;
+      border:1px solid #dce6f0;
+      font-size:12px;
+      color:#475569;
+    }
 
-    .sk { background:linear-gradient(90deg,#f0f4f8 25%,#e8eef8 50%,#f0f4f8 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; display:block; }
-    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .meta-item strong {
+      color:#0c1c35;
+      font-weight:800;
+    }
+
+    .empty-state {
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+      text-align:center;
+      padding:40px 20px;
+      border-radius:24px;
+      background:#fff;
+      border:1px solid #dce6f0;
+      box-shadow:0 16px 28px rgba(12, 28, 53, 0.05);
+    }
+
+    .empty-state p {
+      margin:0;
+      font-size:15px;
+      font-weight:700;
+      color:#374151;
+    }
+
+    .empty-state span {
+      font-size:12.5px;
+      color:#9ca3af;
+    }
+
+    .info-banner {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:12px 14px;
+      border-radius:16px;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      font-size:13px;
+      color:#1e40af;
+    }
+
+    .skeleton-head {
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .sk {
+      display:block;
+      border-radius:8px;
+      background:linear-gradient(90deg, #f0f4f8 25%, #e8eef8 50%, #f0f4f8 75%);
+      background-size:200% 100%;
+      animation:shimmer 1.5s infinite;
+    }
+    .sk-logo { width:36px; height:36px; border-radius:12px; }
+    .sk-title { width:180px; height:16px; }
+    .sk-text { width:100%; height:44px; }
+    .sk-chip-row { width:75%; height:36px; border-radius:14px; }
+    @keyframes shimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
+
+    @media (max-width: 980px) {
+      .page-hero { flex-direction:column; align-items:flex-start; }
+      .stats-grid { grid-template-columns:1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .page-hero,
+      .integration-card,
+      .empty-state { padding:18px; }
+      .integration-head {
+        grid-template-columns:auto 1fr;
+      }
+      .status-stack {
+        grid-column:1 / -1;
+        justify-items:start;
+      }
+    }
   `]
 })
 export class SettingsIntegrationsComponent implements OnInit {
@@ -225,6 +449,13 @@ export class SettingsIntegrationsComponent implements OnInit {
   facturacion  = signal<DianFacturacionConfig>({ enabled: false, ambiente: 'habilitacion', softwareId: '', resolucion: '', prefijo: '', rangoDesde: null, rangoHasta: null, vigenciaDesde: '', vigenciaHasta: '', hasCertificate: false });
   nomina       = signal<DianNominaConfig>({ enabled: false, softwareId: '' });
   certificate  = signal<DianCertificateConfig>({ hasCertificate: false });
+
+  activeIntegrationsCount(): number {
+    let total = 0;
+    if (this.facturacion().enabled) total += 1;
+    if (this.nomina().enabled) total += 1;
+    return total;
+  }
 
   ngOnInit() {
     Promise.all([

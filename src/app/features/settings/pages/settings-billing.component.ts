@@ -12,11 +12,12 @@ interface Plan { id:string; name:string; displayName:string; price:number; descr
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div>
-      <div class="section-header">
+    <div class="settings-page">
+      <section class="page-hero">
         <div>
-          <h3 class="section-title">Plan y facturación</h3>
-          <p class="section-sub">Gestiona tu suscripción y límites de uso</p>
+          <p class="page-kicker">Plan y facturacion</p>
+          <h2>Gestiona tu suscripcion y escala tu operacion</h2>
+          <p>Compara planes, revisa el estado actual de tu empresa y prepara el siguiente nivel de crecimiento.</p>
         </div>
 
         @if (!canManage()) {
@@ -27,64 +28,101 @@ interface Plan { id:string; name:string; displayName:string; price:number; descr
             Solo lectura
           </div>
         }
+      </section>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span>Plan actual</span>
+          <strong>{{ auth.currentPlan()?.displayName ?? 'Sin plan activo' }}</strong>
+          <small>Base actual de modulos disponibles</small>
+        </div>
+        <div class="stat-card stat-card--accent">
+          <span>Planes</span>
+          <strong>{{ loading() ? '...' : plans().length }}</strong>
+          <small>Opciones visibles para tu empresa</small>
+        </div>
+        <div class="stat-card">
+          <span>Gestion</span>
+          <strong>{{ canManage() ? 'Habilitada' : 'Restringida' }}</strong>
+          <small>Cambio de plan segun permisos del usuario</small>
+        </div>
       </div>
 
-      <!-- Plan activo -->
-      <div class="current-plan-card">
+      <section class="current-plan-card">
         @if (loading()) {
-          <div class="sk" style="width:140px;height:20px;margin-bottom:6px"></div>
-          <div class="sk" style="width:80px;height:13px"></div>
+          <div class="sk sk-title"></div>
+          <div class="sk sk-sub"></div>
         } @else {
           <div class="cp-header">
             <div>
+              <p class="section-kicker">Suscripcion activa</p>
               <div class="cp-name">{{ auth.currentPlan()?.displayName ?? 'Sin plan activo' }}</div>
-              <div class="cp-sub">Plan actual de tu empresa</div>
+              <div class="cp-sub">Plan actualmente asignado a tu empresa</div>
             </div>
-            <span class="status-active">ACTIVO</span>
+            <span class="status-active">Activo</span>
           </div>
         }
-      </div>
+      </section>
 
-      <!-- Planes disponibles -->
-      <h4 class="plans-heading">Planes disponibles</h4>
-      <div class="plans-grid">
-        @if (loading()) {
-          @for (i of [1,2,3]; track i) {
-            <div class="plan-card">
-              <div class="sk" style="width:80px;height:18px;margin-bottom:10px"></div>
-              <div class="sk" style="width:110px;height:28px;margin-bottom:8px"></div>
-              <div class="sk" style="width:100%;height:36px;border-radius:8px;margin-top:16px"></div>
-            </div>
-          }
-        } @else {
-          @for (plan of plans(); track plan.id) {
-            <div class="plan-card" [class.plan-card--current]="plan.name === auth.currentPlan()?.name">
-              @if (plan.name === auth.currentPlan()?.name) {
-                <div class="current-badge">Plan actual</div>
-              }
-              <div class="plan-title">{{ plan.displayName }}</div>
-              <div class="plan-price">
-                {{ plan.price | currency:'COP':'symbol':'1.0-0' }}<span>/mes</span>
+      <section class="plans-section">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Escalamiento</p>
+            <h3>Planes disponibles</h3>
+          </div>
+          <span class="section-note">Comparativo visual de suscripcion</span>
+        </div>
+
+        <div class="plans-grid">
+          @if (loading()) {
+            @for (i of [1,2,3]; track i) {
+              <div class="plan-card">
+                <div class="sk sk-line"></div>
+                <div class="sk sk-price"></div>
+                <div class="sk sk-box"></div>
               </div>
-              @if (plan.description) {
-                <div class="plan-desc">{{ plan.description }}</div>
-              }
-              @if (plan.name !== auth.currentPlan()?.name) {
-                @if (canManage()) {
-                  <button class="btn btn-primary btn--full">Actualizar a este plan</button>
-                } @else {
-                  <div class="locked-action">
-                    <svg viewBox="0 0 20 20" fill="currentColor" width="13">
-                      <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"/>
-                    </svg>
-                    Requiere Administrador
+            }
+          } @else {
+            @for (plan of plans(); track plan.id) {
+              <div class="plan-card" [class.plan-card--current]="plan.name === auth.currentPlan()?.name">
+                @if (plan.name === auth.currentPlan()?.name) {
+                  <div class="current-badge">Plan actual</div>
+                }
+
+                <div class="plan-title">{{ plan.displayName }}</div>
+                <div class="plan-price">
+                  {{ plan.price | currency:'COP':'symbol':'1.0-0' }}<span>/mes</span>
+                </div>
+
+                @if (plan.description) {
+                  <div class="plan-desc">{{ plan.description }}</div>
+                }
+
+                @if (plan.features.length > 0) {
+                  <div class="plan-features">
+                    @for (feature of plan.features.slice(0, 4); track feature.key) {
+                      <div class="plan-feature">{{ feature.key }}</div>
+                    }
                   </div>
                 }
-              }
-            </div>
+
+                @if (plan.name !== auth.currentPlan()?.name) {
+                  @if (canManage()) {
+                    <button class="btn btn-primary btn--full">Actualizar a este plan</button>
+                  } @else {
+                    <div class="locked-action">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="13">
+                        <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"/>
+                      </svg>
+                      Requiere administrador
+                    </div>
+                  }
+                }
+              </div>
+            }
           }
-        }
-      </div>
+        </div>
+      </section>
 
       @if (!canManage()) {
         <div class="info-banner">
@@ -97,54 +135,344 @@ interface Plan { id:string; name:string; displayName:string; price:number; descr
     </div>
   `,
   styles: [`
-    .section-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; gap:12px; flex-wrap:wrap; }
-    .section-title { font-family:'Sora',sans-serif; font-size:17px; font-weight:700; color:#0c1c35; margin:0 0 4px; }
-    .section-sub { font-size:13px; color:#9ca3af; margin:0; }
+    .settings-page { display:grid; gap:18px; }
 
-    .readonly-badge {
-      display:inline-flex; align-items:center; gap:6px;
-      padding:7px 13px; border-radius:8px;
-      background:#f8fafc; border:1px solid #dce6f0;
-      font-size:12.5px; font-weight:600; color:#9ca3af;
+    .page-hero,
+    .current-plan-card,
+    .plans-section {
+      border-radius:24px;
+      border:1px solid #dce6f0;
+      background:#fff;
+      box-shadow:0 18px 32px rgba(12, 28, 53, 0.06);
     }
 
-    .current-plan-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; padding:20px 24px; margin-bottom:8px; }
-    .cp-header { display:flex; align-items:center; justify-content:space-between; }
-    .cp-name { font-size:18px; font-weight:700; color:#0c1c35; }
-    .cp-sub { font-size:13px; color:#64748b; margin-top:4px; }
-    .status-active { background:#dcfce7; color:#166534; padding:4px 12px; border-radius:9999px; font-size:12px; font-weight:700; }
+    .page-hero {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      padding:22px;
+      background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.14), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(0, 198, 160, 0.12), transparent 30%),
+        linear-gradient(135deg, #ffffff 0%, #f6fbff 100%);
+    }
 
-    .plans-heading { font-size:15px; font-weight:700; color:#0c1c35; margin:24px 0 14px; }
-    .plans-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
+    .page-kicker,
+    .section-kicker {
+      margin:0 0 8px;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:#00a084;
+    }
 
-    .plan-card { background:#fff; border:2px solid #dce6f0; border-radius:12px; padding:24px; position:relative; }
-    .plan-card--current { border-color:#3b82f6; }
-    .current-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#3b82f6; color:#fff; padding:3px 12px; border-radius:9999px; font-size:12px; font-weight:700; white-space:nowrap; }
-    .plan-title { font-size:16px; font-weight:700; color:#0c1c35; margin-bottom:8px; }
-    .plan-price { font-size:24px; font-weight:800; color:#0f172a; margin-bottom:8px; }
-    .plan-price span { font-size:14px; font-weight:500; color:#64748b; }
-    .plan-desc { font-size:13px; color:#64748b; margin-bottom:16px; }
+    .page-hero h2,
+    .section-head h3 {
+      margin:0;
+      font-family:var(--font-d, 'Sora', sans-serif);
+      font-size:28px;
+      line-height:1.04;
+      letter-spacing:-.05em;
+      color:#0c1c35;
+      max-width:15ch;
+    }
 
-    .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; }
-    .btn-primary { background:#1a407e; color:#fff; }
-    .btn-primary:hover { background:#15336a; }
+    .page-hero p:last-child {
+      margin:10px 0 0;
+      max-width:58ch;
+      line-height:1.7;
+      color:#6f859f;
+      font-size:13px;
+    }
+
+    .readonly-badge {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:#f8fbff;
+      border:1px solid #dce6f0;
+      font-size:11.5px;
+      font-weight:700;
+      color:#6f859f;
+      white-space:nowrap;
+    }
+
+    .stats-grid {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:14px;
+    }
+
+    .stat-card {
+      display:grid;
+      gap:4px;
+      padding:16px 18px;
+      border-radius:20px;
+      background:#fff;
+      border:1px solid #dce6f0;
+      box-shadow:0 14px 28px rgba(12, 28, 53, 0.05);
+    }
+
+    .stat-card span {
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      color:#8aa0b8;
+    }
+
+    .stat-card strong {
+      font-size:18px;
+      font-weight:800;
+      color:#0c1c35;
+    }
+
+    .stat-card small {
+      font-size:12px;
+      color:#7a90aa;
+      line-height:1.5;
+    }
+
+    .stat-card--accent {
+      background:linear-gradient(135deg, #eef9ff, #f2fffb);
+      border-color:#bfe4f0;
+    }
+
+    .current-plan-card {
+      padding:22px;
+      background:
+        radial-gradient(circle at top right, rgba(0, 198, 160, 0.12), transparent 28%),
+        linear-gradient(135deg, #0d2344 0%, #153a70 52%, #0d8b74 100%);
+      color:#fff;
+      border-color:transparent;
+      box-shadow:0 24px 40px rgba(12, 28, 53, 0.14);
+    }
+
+    .cp-header {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+    }
+
+    .cp-name {
+      font-size:28px;
+      font-weight:800;
+      line-height:1.05;
+      letter-spacing:-.06em;
+      color:#fff;
+      font-family:var(--font-d, 'Sora', sans-serif);
+    }
+
+    .cp-sub {
+      margin-top:8px;
+      font-size:13px;
+      color:rgba(236, 244, 255, 0.78);
+    }
+
+    .status-active {
+      padding:6px 12px;
+      border-radius:999px;
+      background:rgba(255, 255, 255, 0.14);
+      border:1px solid rgba(255, 255, 255, 0.12);
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#8bf3cb;
+      white-space:nowrap;
+    }
+
+    .plans-section { padding:22px; }
+
+    .section-head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:18px;
+    }
+
+    .section-head h3 {
+      font-size:20px;
+      max-width:none;
+    }
+
+    .section-note {
+      padding:7px 11px;
+      border-radius:999px;
+      background:#f8fbff;
+      border:1px solid #dce6f0;
+      font-size:11px;
+      font-weight:700;
+      color:#6f859f;
+      white-space:nowrap;
+    }
+
+    .plans-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(230px, 1fr));
+      gap:16px;
+    }
+
+    .plan-card {
+      position:relative;
+      display:grid;
+      gap:10px;
+      padding:22px;
+      border-radius:22px;
+      background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      border:1px solid #dce6f0;
+      box-shadow:0 14px 26px rgba(12, 28, 53, 0.05);
+    }
+
+    .plan-card--current {
+      border-color:#93c5fd;
+      box-shadow:0 20px 30px rgba(37, 99, 235, 0.12);
+      background:linear-gradient(180deg, #f8fbff 0%, #f2fffb 100%);
+    }
+
+    .current-badge {
+      position:absolute;
+      top:14px;
+      right:14px;
+      padding:5px 10px;
+      border-radius:999px;
+      background:#dbeafe;
+      color:#1d4ed8;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .plan-title {
+      font-size:18px;
+      font-weight:800;
+      color:#0c1c35;
+      margin-top:8px;
+    }
+
+    .plan-price {
+      font-family:var(--font-d, 'Sora', sans-serif);
+      font-size:30px;
+      font-weight:800;
+      line-height:1;
+      letter-spacing:-.06em;
+      color:#0f172a;
+    }
+
+    .plan-price span {
+      margin-left:4px;
+      font-size:13px;
+      font-weight:600;
+      color:#64748b;
+      letter-spacing:0;
+    }
+
+    .plan-desc {
+      font-size:13px;
+      line-height:1.65;
+      color:#64748b;
+      min-height:42px;
+    }
+
+    .plan-features {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:2px;
+    }
+
+    .plan-feature {
+      padding:5px 9px;
+      border-radius:999px;
+      background:#f8fbff;
+      border:1px solid #dce6f0;
+      font-size:11px;
+      color:#4b6079;
+    }
+
+    .btn {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:11px 18px;
+      border-radius:14px;
+      font-size:14px;
+      font-weight:700;
+      cursor:pointer;
+      border:none;
+    }
+
+    .btn-primary {
+      background:linear-gradient(135deg, #1a407e, #2563eb);
+      color:#fff;
+      box-shadow:0 14px 24px rgba(26, 64, 126, 0.18);
+    }
+
     .btn--full { width:100%; }
+
     .locked-action {
-      display:flex; align-items:center; justify-content:center; gap:6px;
-      padding:9px; border-radius:8px;
-      background:#f8fafc; border:1px solid #dce6f0;
-      font-size:12.5px; font-weight:600; color:#9ca3af;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:11px;
+      border-radius:14px;
+      background:#f8fbff;
+      border:1px solid #dce6f0;
+      font-size:12px;
+      font-weight:700;
+      color:#6f859f;
     }
 
     .info-banner {
-      display:flex; align-items:center; gap:8px;
-      margin-top:14px; padding:10px 14px;
-      background:#eff6ff; border:1px solid #bfdbfe;
-      border-radius:10px; font-size:13px; color:#1e40af;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:12px 14px;
+      border-radius:16px;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      font-size:13px;
+      color:#1e40af;
     }
 
-    .sk { background:linear-gradient(90deg,#f0f4f8 25%,#e8eef8 50%,#f0f4f8 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:6px; display:block; }
-    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .sk {
+      display:block;
+      border-radius:8px;
+      background:linear-gradient(90deg, #f0f4f8 25%, #e8eef8 50%, #f0f4f8 75%);
+      background-size:200% 100%;
+      animation:shimmer 1.5s infinite;
+    }
+    .sk-title { width:160px; height:20px; }
+    .sk-sub { width:96px; height:14px; margin-top:8px; }
+    .sk-line { width:90px; height:16px; }
+    .sk-price { width:120px; height:30px; }
+    .sk-box { width:100%; height:42px; margin-top:8px; border-radius:14px; }
+    @keyframes shimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
+
+    @media (max-width: 980px) {
+      .page-hero,
+      .cp-header,
+      .section-head { flex-direction:column; align-items:flex-start; }
+      .stats-grid { grid-template-columns:1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .page-hero,
+      .current-plan-card,
+      .plans-section,
+      .plan-card { padding:18px; }
+      .page-hero h2,
+      .cp-name { font-size:24px; }
+    }
   `]
 })
 export class SettingsBillingComponent implements OnInit {
