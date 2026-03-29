@@ -62,6 +62,7 @@ export class AuthService {
   /** True when user has multiple branches and hasn't selected one yet */
   readonly needsBranchSelection = computed(() => {
     const u = this._user();
+    console.log("validar sucursales:",u);
     if (!u || u.isSuperAdmin || !u.companyId) return false;
     const branches = u.userBranches ?? [];
     return branches.length > 1 && this._activeBranchId() === null;
@@ -143,6 +144,10 @@ export class AuthService {
     return this.http.post<AuthTokens>(`${this.API}/login`, { email, password }).pipe(
       tap(({ accessToken, refreshToken, user }) => {
         this.saveTokens(accessToken, refreshToken);
+        if (user && user.userBranches?.length === 1) {
+          const onlyBranch = user.userBranches[0];
+          this.selectBranch(onlyBranch.branch.id);
+        }
         this._user.set(user);
         this._applyBranchDefaults(user);
         this._authChecked.set(true);

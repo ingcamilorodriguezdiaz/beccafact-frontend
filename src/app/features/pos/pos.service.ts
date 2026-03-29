@@ -47,7 +47,10 @@ export interface PosSale {
   paymentMethod: 'CASH' | 'CARD' | 'TRANSFER' | 'MIXED';
   amountPaid: number;
   change: number;
-  status: 'COMPLETED' | 'CANCELLED' | 'REFUNDED';
+  status: 'COMPLETED' | 'CANCELLED' | 'REFUNDED' | 'ADVANCE';
+  advanceAmount: number;
+  remainingAmount: number;
+  deliveryStatus: 'PENDING' | 'DELIVERED';
   notes?: string;
   createdAt: string;
   invoiceId?: string;
@@ -138,6 +141,14 @@ export class PosApiService {
 
   generateInvoiceFromSale(saleId: string): Observable<any> {
     return this.http.post(`${this.base}/sales/${saleId}/invoice`, {});
+  }
+
+  addPayment(saleId: string, dto: { amountPaid: number; paymentMethod: string; notes?: string }): Observable<PosSale> {
+    return this.http.patch<PosSale>(`${this.base}/sales/${saleId}/pay`, dto);
+  }
+
+  markDelivered(saleId: string, dto: { notes?: string; generateInvoice?: boolean }): Observable<PosSale & { invoice?: any }> {
+    return this.http.patch<PosSale & { invoice?: any }>(`${this.base}/sales/${saleId}/deliver`, dto);
   }
 
   refundSale(saleId: string, reason?: string): Observable<PosSale> {

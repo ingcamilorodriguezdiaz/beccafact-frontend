@@ -14,6 +14,7 @@ import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { loadingInterceptor } from './core/interceptors/loading.interceptor';
 import { apiResponseInterceptor } from './core/interceptors/api.interceptor';
+import { branchInterceptor } from './core/interceptors/branch.interceptor';
 import { AuthService } from './core/auth/auth.service';
 
 registerLocaleData(localeEsCO);       // ← ejecuta antes del bootstrap
@@ -23,7 +24,7 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes, withComponentInputBinding(), withViewTransitions()),
     provideHttpClient(
-      withInterceptors([authInterceptor, errorInterceptor, loadingInterceptor, apiResponseInterceptor]),
+      withInterceptors([authInterceptor, errorInterceptor, loadingInterceptor, apiResponseInterceptor, branchInterceptor]),
     ),
     provideAnimations(),
     { provide: LOCALE_ID, useValue: 'es-CO' },   // ← registra el locale

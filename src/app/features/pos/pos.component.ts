@@ -491,7 +491,14 @@ interface Customer {
                         <svg viewBox="0 0 12 12" fill="currentColor" width="9"><path fill-rule="evenodd" d="M10 6a4 4 0 11-8 0 4 4 0 018 0zm-3.78-1.28a.75.75 0 00-1.06 1.06l1.5 1.5a.75.75 0 001.06 0l2.5-2.5a.75.75 0 00-1.06-1.06L6.25 5.69l-.97-.97z"/></svg>
                         Vinculada
                       </span>
-                    } @else if (sale.status === 'COMPLETED' && sale.customer) {
+                    } @else if (sale.status === 'ADVANCE') {
+                      <div class="advance-actions">
+                        <button class="link-btn adv-pay-btn" (click)="openAddPaymentModal(sale)">+Pago</button>
+                        @if (sale.deliveryStatus === 'PENDING') {
+                          <button class="link-btn adv-dlv-btn" (click)="openDeliverModal(sale)">Entregar</button>
+                        }
+                      </div>
+                    } @else if (sale.status === 'COMPLETED' && sale.customer && sale.deliveryStatus === 'DELIVERED') {
                       <button class="link-btn" (click)="generateInvoiceForSale(sale)">Generar</button>
                     } @else {
                       <span class="td-dash">—</span>
@@ -502,7 +509,7 @@ interface Customer {
                       <button class="tda-btn" (click)="printReceipt(sale.id)" title="Imprimir tirilla">
                         <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M2.5 8a.5.5 0 100-1 .5.5 0 000 1z"/><path d="M5 1a2 2 0 00-2 2v2H2a2 2 0 00-2 2v3a2 2 0 002 2h1v1a2 2 0 002 2h6a2 2 0 002-2v-1h1a2 2 0 002-2V7a2 2 0 00-2-2h-1V3a2 2 0 00-2-2H5zM4 3a1 1 0 011-1h6a1 1 0 011 1v2H4V3zm1 5a2 2 0 00-2 2v1H2a1 1 0 01-1-1V7a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-1 1h-1v-1a2 2 0 00-2-2H5zm7 2v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3a1 1 0 011-1h6a1 1 0 011 1z"/></svg>
                       </button>
-                      @if (sale.status === 'COMPLETED') {
+                      @if (sale.status === 'COMPLETED' || sale.status === 'ADVANCE') {
                         <button class="tda-btn danger" (click)="cancelSale(sale.id)" title="Cancelar venta">
                           <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z"/></svg>
                         </button>
@@ -743,8 +750,22 @@ interface Customer {
             </div>
           }
 
+          <!-- Toggle anticipo -->
+          <div class="advance-toggle">
+            <label class="adv-toggle-label">
+              <input type="checkbox" [ngModel]="isAdvancePayment()" (ngModelChange)="isAdvancePayment.set($event); amountPaid.set(0)" />
+              <span class="adv-toggle-text">Registrar como anticipo (pago parcial)</span>
+            </label>
+            @if (isAdvancePayment()) {
+              <div class="adv-notice">
+                <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path d="M8 15A7 7 0 108 1a7 7 0 000 14zm0 1A8 8 0 108 0a8 8 0 000 16z"/><path d="M5.255 5.786a.237.237 0 00.241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 00.25.246h.811a.25.25 0 00.25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/></svg>
+                No se generará factura hasta entregar y completar el pago total.
+              </div>
+            }
+          </div>
+
           <!-- Aviso de factura -->
-          @if (selectedCustomer() && generateInvoice()) {
+          @if (selectedCustomer() && generateInvoice() && !isAdvancePayment()) {
             <div class="pay-invoice-notice">
               <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
               Se generará una factura electrónica DRAFT para <strong>{{ selectedCustomer()!.name }}</strong>
@@ -753,9 +774,12 @@ interface Customer {
         </div>
         <div class="modal-footer">
           <button class="btn-modal-sec" (click)="showPaymentModal.set(false)">Cancelar</button>
-          <button class="btn-modal-pri btn-modal-lg" (click)="processSale()" [disabled]="processing() || !isPaymentValid()">
+          <button class="btn-modal-pri btn-modal-lg" [class.btn-advance]="isAdvancePayment()" (click)="processSale()" [disabled]="processing() || !isPaymentValid()">
             @if (processing()) {
               <span class="spinner-sm"></span> Procesando...
+            } @else if (isAdvancePayment()) {
+              <svg viewBox="0 0 16 16" fill="currentColor" width="14"><path d="M8 1a5 5 0 00-5 5v1h1a1 1 0 011 1v3a1 1 0 01-1 1H3a1 1 0 01-1-1V6a6 6 0 1112 0v6a2.5 2.5 0 01-2.5 2.5H9.366a1 1 0 01-.866.5h-1a1 1 0 110-2h1a1 1 0 01.866.5H11.5A1.5 1.5 0 0013 12h-1a1 1 0 01-1-1V8a1 1 0 011-1h1V6a5 5 0 00-5-5z"/></svg>
+              Registrar Anticipo
             } @else {
               <svg viewBox="0 0 16 16" fill="currentColor" width="14" aria-hidden="true"><path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/></svg>
               Confirmar Venta
@@ -783,19 +807,27 @@ interface Customer {
         </div>
 
         <!-- Título -->
-        <div class="success-title" id="success-title">¡Venta registrada!</div>
+        <div class="success-title" id="success-title">
+          {{ completedSale()!.status === 'ADVANCE' ? '¡Anticipo registrado!' : '¡Venta registrada!' }}
+        </div>
         <div class="success-sale-num">{{ completedSale()!.saleNumber }}</div>
 
         <!-- Totales -->
         <div class="success-amounts">
           <div class="sa-row">
-            <span>Total cobrado</span>
+            <span>Total</span>
             <strong>{{ fmtCOP(completedSale()!.total) }}</strong>
           </div>
           <div class="sa-row">
-            <span>Recibido</span>
+            <span>{{ completedSale()!.status === 'ADVANCE' ? 'Anticipo recibido' : 'Recibido' }}</span>
             <strong>{{ fmtCOP(completedSale()!.amountPaid) }}</strong>
           </div>
+          @if (completedSale()!.status === 'ADVANCE') {
+            <div class="sa-row sa-pending">
+              <span>Saldo pendiente</span>
+              <strong>{{ fmtCOP(completedSale()!.remainingAmount) }}</strong>
+            </div>
+          }
         </div>
 
         <!-- Cambio prominente (solo efectivo con cambio > 0) -->
@@ -826,7 +858,16 @@ interface Customer {
             <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path d="M2.5 8a.5.5 0 100-1 .5.5 0 000 1z"/><path d="M5 1a2 2 0 00-2 2v2H2a2 2 0 00-2 2v3a2 2 0 002 2h1v1a2 2 0 002 2h6a2 2 0 002-2v-1h1a2 2 0 002-2V7a2 2 0 00-2-2h-1V3a2 2 0 00-2-2H5z"/></svg>
             Imprimir recibo
           </button>
-          @if (!completedSale()!.invoiceId && completedSale()!.customer) {
+          @if (completedSale()!.status === 'ADVANCE') {
+            <button class="sa-btn" (click)="openAddPaymentModal(completedSale()!); dismissSuccessOverlay()">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M8 1a5 5 0 00-5 5v1h1a1 1 0 011 1v3a1 1 0 01-1 1H3a1 1 0 01-1-1V6a6 6 0 1112 0v6a2.5 2.5 0 01-2.5 2.5H9.366a1 1 0 01-.866.5h-1a1 1 0 110-2h1a1 1 0 01.866.5H11.5A1.5 1.5 0 0013 12h-1a1 1 0 01-1-1V8a1 1 0 011-1h1V6a5 5 0 00-5-5z"/></svg>
+              Agregar pago
+            </button>
+            <button class="sa-btn" (click)="openDeliverModal(completedSale()!); dismissSuccessOverlay()">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M0 3.5A1.5 1.5 0 011.5 2h9A1.5 1.5 0 0112 3.5V5h1.02a1.5 1.5 0 011.17.563l1.481 1.85a1.5 1.5 0 01.329.938V10.5a1.5 1.5 0 01-1.5 1.5H14a2 2 0 11-4 0H5a2 2 0 11-3.998-.085A1.5 1.5 0 010 10.5v-7z"/></svg>
+              Marcar entregado
+            </button>
+          } @else if (!completedSale()!.invoiceId && completedSale()!.customer && completedSale()!.deliveryStatus === 'DELIVERED') {
             <button class="sa-btn" (click)="generateInvoiceForSale(completedSale()!)">
               <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
               Generar factura
@@ -838,6 +879,103 @@ interface Customer {
           </button>
         </div>
 
+      </div>
+    </div>
+  }
+
+  <!-- Add Payment Modal -->
+  @if (showAddPaymentModal()) {
+    <div class="overlay" role="dialog" aria-modal="true" (click)="showAddPaymentModal.set(false)">
+      <div class="modal modal-adv" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-header-icon amber">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/></svg>
+          </div>
+          <div>
+            <div class="modal-title">Agregar Pago a Anticipo</div>
+            <div class="modal-subtitle">{{ selectedAdvanceSale()?.saleNumber }}</div>
+          </div>
+          <button class="modal-close-btn" (click)="showAddPaymentModal.set(false)">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="14"><path d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="adv-summary-row">
+            <span>Total venta</span><strong>{{ fmtCOP(selectedAdvanceSale()?.total ?? 0) }}</strong>
+          </div>
+          <div class="adv-summary-row">
+            <span>Ya pagado</span><strong>{{ fmtCOP(selectedAdvanceSale()?.amountPaid ?? 0) }}</strong>
+          </div>
+          <div class="adv-summary-row pending">
+            <span>Saldo pendiente</span><strong>{{ fmtCOP(selectedAdvanceSale()?.remainingAmount ?? 0) }}</strong>
+          </div>
+          <div class="field-group" style="margin-top:12px">
+            <label>Monto a pagar (COP)</label>
+            <input type="number" [(ngModel)]="addPaymentAmount" min="0.01" [max]="selectedAdvanceSale()?.remainingAmount ?? 0" class="field-input" />
+          </div>
+          <div class="field-group">
+            <label>Método de pago</label>
+            <select [(ngModel)]="addPaymentMethod" class="field-input">
+              @for (m of paymentMethods; track m.value) {
+                <option [value]="m.value">{{ m.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="field-group">
+            <label>Notas (opcional)</label>
+            <input type="text" [(ngModel)]="addPaymentNotes" class="field-input" placeholder="Ej: Saldo final en efectivo" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-modal-sec" (click)="showAddPaymentModal.set(false)">Cancelar</button>
+          <button class="btn-modal-pri" (click)="submitAddPayment()" [disabled]="processingAdvance() || addPaymentAmount <= 0">
+            @if (processingAdvance()) { <span class="spinner-sm"></span> Procesando... } @else { Registrar Pago }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Deliver Modal -->
+  @if (showDeliverModal()) {
+    <div class="overlay" role="dialog" aria-modal="true" (click)="showDeliverModal.set(false)">
+      <div class="modal modal-adv" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-header-icon teal">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path d="M0 3.5A1.5 1.5 0 011.5 2h9A1.5 1.5 0 0112 3.5V5h1.02a1.5 1.5 0 011.17.563l1.481 1.85a1.5 1.5 0 01.329.938V10.5a1.5 1.5 0 01-1.5 1.5H14a2 2 0 11-4 0H5a2 2 0 11-3.998-.085A1.5 1.5 0 010 10.5v-7z"/></svg>
+          </div>
+          <div>
+            <div class="modal-title">Marcar como Entregado</div>
+            <div class="modal-subtitle">{{ selectedAdvanceSale()?.saleNumber }}</div>
+          </div>
+          <button class="modal-close-btn" (click)="showDeliverModal.set(false)">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="14"><path d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          @if (selectedAdvanceSale() && +(selectedAdvanceSale()!.remainingAmount) > 0) {
+            <div class="adv-warn">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M7.938 2.016A.13.13 0 018.002 2a.13.13 0 01.063.016.146.146 0 01.054.057l6.857 11.667c.036.06.035.124.002.183a.163.163 0 01-.054.06.116.116 0 01-.066.017H1.146a.115.115 0 01-.066-.017.163.163 0 01-.054-.06.176.176 0 01.002-.183L7.884 2.073a.147.147 0 01.054-.057z"/></svg>
+              Saldo pendiente: <strong>{{ fmtCOP(selectedAdvanceSale()!.remainingAmount) }}</strong>. La venta quedará entregada pero aún se debe el saldo.
+            </div>
+          }
+          <div class="field-group" style="margin-top:10px">
+            <label>Notas de entrega (opcional)</label>
+            <input type="text" [(ngModel)]="deliverNotes" class="field-input" placeholder="Ej: Entregado en bodega" />
+          </div>
+          @if (selectedAdvanceSale()?.customer && +(selectedAdvanceSale()?.remainingAmount ?? 1) <= 0) {
+            <label class="adv-toggle-label" style="margin-top:10px">
+              <input type="checkbox" [(ngModel)]="deliverGenerateInv" />
+              <span class="adv-toggle-text">Generar factura electrónica al entregar</span>
+            </label>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn-modal-sec" (click)="showDeliverModal.set(false)">Cancelar</button>
+          <button class="btn-modal-pri" (click)="submitDeliver()" [disabled]="processingAdvance()">
+            @if (processingAdvance()) { <span class="spinner-sm"></span> Procesando... } @else { Confirmar Entrega }
+          </button>
+        </div>
       </div>
     </div>
   }
@@ -1236,6 +1374,7 @@ interface Customer {
     .status-chip.status-completed { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
     .status-chip.status-cancelled { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
     .status-chip.status-refunded { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+    .status-chip.status-advance { background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
     .inv-chip { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
 
     .td-actions { display:flex; align-items:center; justify-content:center; gap:5px; }
@@ -1337,6 +1476,44 @@ interface Customer {
       border-radius:9px; font-size:12px; color:#1e40af;
     }
     .pay-invoice-notice strong { color:#1a407e; }
+
+    /* Advance payment */
+    .advance-toggle { margin-top:14px; }
+    .adv-toggle-label { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12.5px; color:#374151; }
+    .adv-toggle-label input[type=checkbox] { width:15px; height:15px; cursor:pointer; accent-color:#f59e0b; }
+    .adv-toggle-text { font-weight:500; }
+    .adv-notice {
+      display:flex; align-items:center; gap:7px; margin-top:8px;
+      padding:9px 12px; background:#fff7ed; border:1px solid #fed7aa;
+      border-radius:8px; font-size:11.5px; color:#c2410c;
+    }
+    .btn-advance { background:#f59e0b !important; }
+    .btn-advance:hover:not(:disabled) { background:#d97706 !important; }
+
+    /* Advance sale actions in history */
+    .advance-actions { display:flex; gap:5px; }
+    .adv-pay-btn { color:#d97706 !important; }
+    .adv-dlv-btn { color:#059669 !important; }
+
+    /* Advance modal */
+    .modal-adv { width:min(420px,94vw); }
+    .modal-header-icon.amber { background:#fff7ed; color:#d97706; border:1px solid #fed7aa; }
+    .adv-summary-row {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:6px 0; font-size:13px; border-bottom:1px solid #f3f4f6; color:#374151;
+    }
+    .adv-summary-row.pending { color:#c2410c; font-weight:600; border-bottom:none; }
+    .adv-summary-row strong { font-weight:700; }
+    .adv-warn {
+      display:flex; align-items:flex-start; gap:8px; padding:10px 12px;
+      background:#fff7ed; border:1px solid #fed7aa; border-radius:8px;
+      font-size:12px; color:#92400e;
+    }
+    .adv-warn strong { font-weight:700; }
+
+    /* Success pending amount */
+    .sa-pending { color:#c2410c !important; }
+    .sa-pending strong { color:#c2410c !important; }
 
     /* Modal buttons */
     .btn-modal-sec { padding:9px 18px; border-radius:8px; background:#fff; border:1px solid #dce6f0; color:#374151; font-size:13px; cursor:pointer; transition:all .14s; }
@@ -1696,8 +1873,20 @@ export class PosComponent implements OnInit, OnDestroy {
   cart           = signal<CartItem[]>([]);
   amountPaid     = signal(0);
   selectedPaymentMethod = signal<'CASH' | 'CARD' | 'TRANSFER' | 'MIXED'>('CASH');
-  generateInvoice = signal(false);
-  cartDiscountPct = signal(0);
+  generateInvoice    = signal(false);
+  isAdvancePayment   = signal(false);
+  cartDiscountPct    = signal(0);
+
+  // Advance payment modals
+  showAddPaymentModal  = signal(false);
+  showDeliverModal     = signal(false);
+  selectedAdvanceSale  = signal<PosSale | null>(null);
+  addPaymentAmount     = 0;
+  addPaymentMethod: 'CASH' | 'CARD' | 'TRANSFER' | 'MIXED' = 'CASH';
+  addPaymentNotes      = '';
+  deliverNotes         = '';
+  deliverGenerateInv   = false;
+  processingAdvance    = signal(false);
 
   sessionSales   = signal<PosSale[]>([]);
   loadingHistory = signal(false);
@@ -1741,6 +1930,7 @@ export class PosComponent implements OnInit, OnDestroy {
   );
   isPaymentValid = computed(() => {
     if (this.cart().length === 0) return false;
+    if (this.isAdvancePayment()) return this.amountPaid() > 0 && this.amountPaid() < this.cartTotal();
     if (this.selectedPaymentMethod() === 'CASH') return this.amountPaid() >= this.cartTotal();
     return this.amountPaid() > 0;
   });
@@ -1953,19 +2143,32 @@ export class PosComponent implements OnInit, OnDestroy {
   processSale() {
     const session = this.activeSession(); if (!session || !this.isPaymentValid()) return;
     this.processing.set(true);
-    const dto = { sessionId:session.id, customerId:this.selectedCustomer()?.id, items:this.cart().map(i => ({ productId:i.productId, description:i.description, quantity:i.quantity, unitPrice:i.unitPrice, taxRate:i.taxRate, discount:i.discount })), paymentMethod:this.selectedPaymentMethod(), amountPaid:this.amountPaid(), generateInvoice:this.generateInvoice() && !!this.selectedCustomer(), cartDiscountPct:this.cartDiscountPct() || undefined };
+    const isAdv = this.isAdvancePayment();
+    const dto = {
+      sessionId: session.id,
+      customerId: this.selectedCustomer()?.id,
+      items: this.cart().map(i => ({ productId:i.productId, description:i.description, quantity:i.quantity, unitPrice:i.unitPrice, taxRate:i.taxRate, discount:i.discount })),
+      paymentMethod: this.selectedPaymentMethod(),
+      amountPaid: this.amountPaid(),
+      generateInvoice: !isAdv && this.generateInvoice() && !!this.selectedCustomer(),
+      isAdvancePayment: isAdv || undefined,
+      cartDiscountPct: this.cartDiscountPct() || undefined,
+    };
     this.pos.createSale(dto).subscribe({
       next: (sale: any) => {
         this.completedSale.set(sale);
         this.cart.set([]);
         this.clearSelectedCustomer();
         this.generateInvoice.set(false);
+        this.isAdvancePayment.set(false);
         this.showPaymentModal.set(false);
         this.processing.set(false);
-        const s = this.activeSession()!;
-        this.activeSession.set({ ...s, totalSales: Number(s.totalSales) + Number(sale.total), totalTransactions: s.totalTransactions + 1 });
+        // Solo actualizar totales en sesión si la venta quedó COMPLETED
+        if (sale.status === 'COMPLETED') {
+          const s = this.activeSession()!;
+          this.activeSession.set({ ...s, totalSales: Number(s.totalSales) + Number(sale.total), totalTransactions: s.totalTransactions + 1 });
+        }
         if (this.showHistory()) this.loadSessionSales();
-        // Auto-cerrar overlay de éxito a los 8 segundos
         clearTimeout(this.successAutoCloseTimer);
         this.successAutoCloseTimer = setTimeout(() => this.dismissSuccessOverlay(), 8_000);
         this.cdr.markForCheck();
@@ -2011,6 +2214,8 @@ export class PosComponent implements OnInit, OnDestroy {
 
   generateInvoiceForSale(sale: PosSale) {
     if (!sale.customer) { this.notify.error('La venta no tiene cliente asignado'); return; }
+    if (sale.status === 'ADVANCE') { this.notify.error('Primero completa el pago y marca el pedido como entregado'); return; }
+    if (sale.deliveryStatus === 'PENDING') { this.notify.error('El pedido aún no ha sido entregado'); return; }
     this.pos.generateInvoiceFromSale(sale.id).subscribe({
       next: (inv: any) => {
         this.notify.success(`Factura ${inv.invoiceNumber} generada exitosamente`);
@@ -2021,18 +2226,76 @@ export class PosComponent implements OnInit, OnDestroy {
     });
   }
 
+  openAddPaymentModal(sale: PosSale) {
+    this.selectedAdvanceSale.set(sale);
+    this.addPaymentAmount = Number(sale.remainingAmount);
+    this.addPaymentMethod = 'CASH';
+    this.addPaymentNotes = '';
+    this.showAddPaymentModal.set(true);
+  }
+
+  submitAddPayment() {
+    const sale = this.selectedAdvanceSale();
+    if (!sale || this.addPaymentAmount <= 0) return;
+    this.processingAdvance.set(true);
+    this.pos.addPayment(sale.id, { amountPaid: this.addPaymentAmount, paymentMethod: this.addPaymentMethod, notes: this.addPaymentNotes || undefined }).subscribe({
+      next: (updated: any) => {
+        this.processingAdvance.set(false);
+        this.showAddPaymentModal.set(false);
+        this.notify.success(updated.status === 'COMPLETED' ? 'Pago completado. Venta finalizada.' : 'Pago parcial registrado');
+        if (updated.status === 'COMPLETED') {
+          const s = this.activeSession();
+          if (s) this.activeSession.set({ ...s, totalSales: Number(s.totalSales) + Number(updated.total), totalTransactions: s.totalTransactions + 1 });
+        }
+        this.loadSessionSales();
+      },
+      error: (err: any) => { this.processingAdvance.set(false); this.notify.error(err?.error?.message ?? 'Error al registrar el pago'); },
+    });
+  }
+
+  openDeliverModal(sale: PosSale) {
+    this.selectedAdvanceSale.set(sale);
+    this.deliverNotes = '';
+    this.deliverGenerateInv = !!sale.customer && Number(sale.remainingAmount) <= 0;
+    this.showDeliverModal.set(true);
+  }
+
+  submitDeliver() {
+    const sale = this.selectedAdvanceSale();
+    if (!sale) return;
+    this.processingAdvance.set(true);
+    this.pos.markDelivered(sale.id, { notes: this.deliverNotes || undefined, generateInvoice: this.deliverGenerateInv }).subscribe({
+      next: (updated: any) => {
+        this.processingAdvance.set(false);
+        this.showDeliverModal.set(false);
+        if (updated.invoice) {
+          this.notify.success(`Pedido entregado y factura ${updated.invoice.invoiceNumber} generada`);
+        } else {
+          this.notify.success('Pedido marcado como entregado');
+        }
+        if (updated.status === 'COMPLETED' && sale.status !== 'COMPLETED') {
+          const s = this.activeSession();
+          if (s) this.activeSession.set({ ...s, totalSales: Number(s.totalSales) + Number(updated.total), totalTransactions: s.totalTransactions + 1 });
+        }
+        this.loadSessionSales();
+      },
+      error: (err: any) => { this.processingAdvance.set(false); this.notify.error(err?.error?.message ?? 'Error al marcar entregado'); },
+    });
+  }
+
   dismissSuccessOverlay() {
     clearTimeout(this.successAutoCloseTimer);
     this.completedSale.set(null);
     this.cartDiscountPct.set(0);
     this.amountPaid.set(0);
     this.selectedPaymentMethod.set('CASH');
+    this.isAdvancePayment.set(false);
     setTimeout(() => this.productSearchInputRef?.nativeElement?.focus(), 100);
     this.cdr.markForCheck();
   }
 
   getPaymentLabel(m: string): string { return this.paymentMethods.find(x => x.value === m)?.label ?? m; }
-  getStatusLabel(s: string): string { return ({ COMPLETED:'Completada', CANCELLED:'Cancelada', REFUNDED:'Reembolsada' } as any)[s] ?? s; }
+  getStatusLabel(s: string): string { return ({ COMPLETED:'Completada', CANCELLED:'Cancelada', REFUNDED:'Reembolsada', ADVANCE:'Anticipo' } as any)[s] ?? s; }
 
   fmtCOP(n: number | string | null | undefined): string {
     return new Intl.NumberFormat('es-CO', {

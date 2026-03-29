@@ -1261,7 +1261,7 @@ interface InvoiceLine {
 export class InvoicesListComponent implements OnInit {
   private readonly API      = `${environment.apiUrl}/invoices`;
   private readonly CUST_API = `${environment.apiUrl}/customers`;
-  private readonly PROD_API = `${environment.apiUrl}/products`;
+  private readonly PROD_API = `${environment.apiUrl}/invoices/products`;
   private readonly COMP_API = `${environment.apiUrl}/companies/me`;
 
   companyPrefix = signal('FV');
