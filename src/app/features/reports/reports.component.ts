@@ -177,39 +177,54 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
     <div class="page animate-in">
 
       <!-- ── Page header ─────────────────────────────────────────────── -->
-      <div class="page-header" id="tour-reports-header">
-        <div>
-          <h2 class="page-title">Reportes y Análisis</h2>
-          <p class="page-subtitle">Métricas de negocio en tiempo real</p>
-        </div>
-        @if (activeTab() === 'dashboard') {
-          <div class="header-actions">
-            <select [(ngModel)]="selectedYear" (ngModelChange)="loadAll()" class="filter-select">
-              @for (y of years; track y) { <option [value]="y">{{ y }}</option> }
-            </select>
-            <select [(ngModel)]="selectedMonth" (ngModelChange)="loadKpis()" class="filter-select">
-              @for (m of monthOptions; track m.value) {
-                <option [value]="m.value">{{ m.label }}</option>
-              }
-            </select>
-            <button class="btn-excel" (click)="downloadXlsx('dashboard')"
-                    [disabled]="dashboardDownloading()" [class.loading]="dashboardDownloading()">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
-              </svg>
-              {{ dashboardDownloading() ? 'Descargando...' : 'Excel' }}
-            </button>
-            <button class="btn-pdf" (click)="printReport()">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a1 1 0 001 1h8a1 1 0 001-1v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1zm2 0h6v3H7V4zm-1 9H5v-1h1v1zm7 0h1v-1h-1v1zm-7 2v-1h8v1H6z"/>
-              </svg>
-              PDF
-            </button>
+      <section class="reports-hero" id="tour-reports-header">
+        <div class="page-header">
+          <div class="hero-copy">
+            <p class="hero-kicker">Centro analítico</p>
+            <h2 class="page-title">{{ activeTabTitle() }}</h2>
+            <p class="page-subtitle">{{ activeTabSubtitle() }}</p>
+            <div class="hero-pills">
+              <span class="hero-pill">{{ monthName(selectedMonth) }} {{ selectedYear }}</span>
+              <span class="hero-pill hero-pill--muted">{{ activeTabPillLabel() }}</span>
+            </div>
           </div>
-        }
-      </div>
+          <div class="hero-side">
+            <div class="hero-metric-card">
+              <span class="hero-metric-label">{{ activeTabMetricLabel() }}</span>
+              <strong>{{ activeTabMetricValue() }}</strong>
+              <small>{{ activeTabSupportLabel() }}</small>
+            </div>
+            @if (activeTab() === 'dashboard') {
+              <div class="header-actions">
+                <select [(ngModel)]="selectedYear" (ngModelChange)="loadAll()" class="filter-select filter-select--hero">
+                  @for (y of years; track y) { <option [value]="y">{{ y }}</option> }
+                </select>
+                <select [(ngModel)]="selectedMonth" (ngModelChange)="loadKpis()" class="filter-select filter-select--hero">
+                  @for (m of monthOptions; track m.value) {
+                    <option [value]="m.value">{{ m.label }}</option>
+                  }
+                </select>
+                <button class="btn-excel" (click)="downloadXlsx('dashboard')"
+                        [disabled]="dashboardDownloading()" [class.loading]="dashboardDownloading()">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
+                  </svg>
+                  {{ dashboardDownloading() ? 'Descargando...' : 'Excel' }}
+                </button>
+                <button class="btn-pdf" (click)="printReport()">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                    <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a1 1 0 001 1h8a1 1 0 001-1v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a1 1 0 00-1-1H6a1 1 0 00-1 1zm2 0h6v3H7V4zm-1 9H5v-1h1v1zm7 0h1v-1h-1v1zm-7 2v-1h8v1H6z"/>
+                  </svg>
+                  PDF
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
 
       <!-- ── Tab navigation ──────────────────────────────────────────── -->
+      <div class="report-tabs-shell">
       <div class="report-tabs">
         <button class="tab-btn" [class.active]="activeTab() === 'dashboard'" (click)="setTab('dashboard')">
           <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
@@ -243,6 +258,7 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
           </svg>
           Cartera
         </button>
+      </div>
       </div>
 
       <!-- ════════════════════════════════════════════════════════════ -->
@@ -1177,15 +1193,90 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
   styles: [`
     /* ── Base ──────────────────────────────────────────────────────── */
     .page { max-width: 1280px; }
-    .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
-    .page-title { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700; color: #0c1c35; margin: 0 0 4px; }
-    .page-subtitle { font-size: 13px; color: #7ea3cc; margin: 0; }
-    .header-actions { display: flex; gap: 10px; }
+    .reports-hero {
+      margin-bottom: 18px;
+      padding: 22px 24px;
+      border-radius: 28px;
+      border: 1px solid rgba(148, 163, 184, .16);
+      background:
+        radial-gradient(circle at top left, rgba(45, 212, 191, .16), transparent 30%),
+        radial-gradient(circle at top right, rgba(96, 165, 250, .16), transparent 34%),
+        linear-gradient(135deg, #0d2344 0%, #16386a 58%, #0d7d73 100%);
+      box-shadow: 0 26px 44px rgba(12, 28, 53, .14);
+    }
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 0; }
+    .hero-copy { max-width: 700px; }
+    .hero-kicker {
+      margin: 0 0 10px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      color: #86efdc;
+    }
+    .page-title { font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 700; color: #fff; letter-spacing: -.05em; margin: 0 0 10px; }
+    .page-subtitle { font-size: 14px; line-height: 1.6; color: rgba(226, 232, 240, .82); margin: 0; }
+    .hero-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    .hero-pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.12);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .hero-pill--muted { color: #99f6e4; }
+    .hero-side {
+      min-width: 320px;
+      display: grid;
+      gap: 12px;
+      justify-items: end;
+    }
+    .hero-metric-card {
+      width: min(100%, 320px);
+      padding: 18px 18px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.12);
+      backdrop-filter: blur(12px);
+      color: #fff;
+      box-shadow: 0 18px 28px rgba(7, 16, 32, .16);
+    }
+    .hero-metric-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: #a7f3d0;
+    }
+    .hero-metric-card strong {
+      display: block;
+      margin-top: 8px;
+      font-family: 'Sora', sans-serif;
+      font-size: 32px;
+      line-height: 1;
+      letter-spacing: -.06em;
+    }
+    .hero-metric-card small {
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+      color: rgba(226, 232, 240, .78);
+      line-height: 1.5;
+    }
+    .header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
     .filter-select { padding: 8px 12px; border: 1px solid #dce6f0; border-radius: 8px; font-size: 13.5px; outline: none; background: #fff; }
+    .filter-select--hero {
+      background: rgba(255,255,255,.96);
+      border-color: rgba(255,255,255,.25);
+      min-width: 108px;
+    }
 
     /* ── KPI ───────────────────────────────────────────────────────── */
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
-    .kpi-card { background: #fff; border: 1px solid #dce6f0; border-radius: 12px; padding: 18px; display: flex; align-items: flex-start; gap: 14px; }
+    .kpi-card { background: rgba(255,255,255,.9); border: 1px solid #dce6f0; border-radius: 22px; padding: 18px; display: flex; align-items: flex-start; gap: 14px; box-shadow: 0 18px 34px rgba(12, 28, 53, .06); backdrop-filter: blur(10px); }
     .kpi-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .kpi-icon-green { background: #d1fae5; color: #065f46; }
     .kpi-icon-blue { background: #dbeafe; color: #1e40af; }
@@ -1204,7 +1295,7 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
 
     /* ── Charts ────────────────────────────────────────────────────── */
     .charts-row { display: grid; grid-template-columns: 1fr 380px; gap: 14px; margin-bottom: 20px; }
-    .chart-card { background: #fff; border: 1px solid #dce6f0; border-radius: 12px; padding: 18px; }
+    .chart-card { background: rgba(255,255,255,.9); border: 1px solid #dce6f0; border-radius: 22px; padding: 18px; box-shadow: 0 18px 34px rgba(12, 28, 53, .06); }
     /* chart-header definido arriba */
     .chart-skeleton { height: 140px; background: linear-gradient(90deg, #f0f4f8 25%, #e8eef8 50%, #f0f4f8 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
     @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
@@ -1230,7 +1321,7 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
 
     /* ── Tables (dashboard) ────────────────────────────────────────── */
     .tables-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .rank-card { background: #fff; border: 1px solid #dce6f0; border-radius: 12px; padding: 18px; }
+    .rank-card { background: rgba(255,255,255,.9); border: 1px solid #dce6f0; border-radius: 22px; padding: 18px; box-shadow: 0 18px 34px rgba(12, 28, 53, .06); }
     .rank-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
     .rank-header h3 { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: #0c1c35; margin: 0; }
     .rank-sub { font-size: 12px; color: #9ca3af; }
@@ -1261,12 +1352,21 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
     .header-actions .btn-pdf { padding: 8px 14px; }
 
     /* ── Tab navigation ────────────────────────────────────────────── */
+    .report-tabs-shell {
+      margin-bottom: 20px;
+      padding: 10px;
+      border-radius: 22px;
+      background: rgba(255,255,255,.84);
+      border: 1px solid #dce6f0;
+      box-shadow: 0 18px 34px rgba(12, 28, 53, .06);
+      backdrop-filter: blur(12px);
+    }
     .report-tabs {
       display: flex;
       gap: 4px;
-      margin-bottom: 20px;
-      background: #f4f7fb;
-      border-radius: 12px;
+      margin-bottom: 0;
+      background: linear-gradient(180deg, #f6f9fc 0%, #eff4f9 100%);
+      border-radius: 16px;
       padding: 4px;
       border: 1px solid #dce6f0;
       flex-wrap: wrap;
@@ -1302,11 +1402,12 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
       display: flex;
       align-items: flex-end;
       gap: 12px;
-      background: #fff;
+      background: rgba(255,255,255,.9);
       border: 1px solid #dce6f0;
-      border-radius: 12px;
+      border-radius: 22px;
       padding: 16px 20px;
       flex-wrap: wrap;
+      box-shadow: 0 18px 34px rgba(12, 28, 53, .06);
     }
     .filter-group { display: flex; flex-direction: column; gap: 4px; }
     .filter-label { font-size: 11.5px; font-weight: 600; color: #7ea3cc; text-transform: uppercase; letter-spacing: .4px; }
@@ -1383,11 +1484,12 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
     .summary-row-5 { grid-template-columns: repeat(5, 1fr); }
 
     .summary-mini-card {
-      background: #fff;
+      background: rgba(255,255,255,.92);
       border: 1px solid #dce6f0;
-      border-radius: 10px;
+      border-radius: 18px;
       padding: 14px 16px;
       border-left: 4px solid #dce6f0;
+      box-shadow: 0 12px 24px rgba(12, 28, 53, .05);
     }
     .summary-mini-card.smc-primary { border-left-color: #1a407e; }
     .summary-mini-card.smc-accent { border-left-color: #00c6a0; }
@@ -1401,9 +1503,9 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
 
     /* ── Loading skeleton ──────────────────────────────────────────── */
     .table-skeleton {
-      background: #fff;
+      background: rgba(255,255,255,.9);
       border: 1px solid #dce6f0;
-      border-radius: 12px;
+      border-radius: 22px;
       padding: 16px;
       display: flex;
       flex-direction: column;
@@ -1424,10 +1526,11 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
 
     /* ── Report table wrap ─────────────────────────────────────────── */
     .report-table-wrap {
-      background: #fff;
+      background: rgba(255,255,255,.92);
       border: 1px solid #dce6f0;
-      border-radius: 12px;
+      border-radius: 22px;
       overflow: hidden;
+      box-shadow: 0 18px 34px rgba(12, 28, 53, .06);
     }
     .print-header { display: none; }
 
@@ -1532,6 +1635,9 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
       .summary-row-5 { grid-template-columns: repeat(3, 1fr); }
     }
     @media (max-width: 900px) {
+      .reports-hero { padding: 18px; }
+      .page-header { flex-direction: column; align-items: stretch; }
+      .hero-side { min-width: 0; justify-items: stretch; }
       .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
       .charts-row { grid-template-columns: 1fr !important; }
       .tables-row { grid-template-columns: 1fr !important; }
@@ -1541,6 +1647,7 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
     }
     @media (max-width: 640px) {
       .page-header { flex-direction: column; align-items: stretch; gap: 10px; }
+      .page-title { font-size: 25px; }
       .kpi-grid { grid-template-columns: 1fr 1fr !important; gap: 10px; }
       .report-filters { flex-direction: column; align-items: stretch; }
       .export-btns { margin-left: 0; }
@@ -1558,7 +1665,7 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
       @page { size: A4 landscape; margin: 8mm 10mm 10mm; }
       :host { display: block; }
 
-      .report-tabs, .report-filters, .export-btns, .page-header,
+      .report-tabs-shell, .report-tabs, .report-filters, .export-btns, .page-header, .reports-hero,
       .kpi-grid, .charts-row, .tables-row, .btn-consultar,
       .tab-content > .chart-card, .empty-state-idle { display: none !important; }
 
@@ -1944,6 +2051,76 @@ export class ReportsComponent implements OnInit {
 
   monthName(m: number): string {
     return MONTHS[m - 1] ?? '';
+  }
+
+  activeTabTitle(): string {
+    return ({
+      dashboard: 'Reportes y análisis',
+      invoices: 'Reporte de facturación',
+      payroll: 'Reporte de nómina',
+      pos: 'Reporte de POS',
+      collections: 'Reporte de cartera',
+    } as Record<TabId, string>)[this.activeTab()];
+  }
+
+  activeTabSubtitle(): string {
+    return ({
+      dashboard: 'Métricas ejecutivas y señales operativas para seguir el pulso financiero del negocio.',
+      invoices: 'Consulta estados, montos y comportamiento de la facturación electrónica en un solo flujo.',
+      payroll: 'Revisa liquidaciones, netos, devengados y deducciones con una vista más clara y accionable.',
+      pos: 'Monitorea sesiones, ventas de caja y desempeño operativo del punto de venta.',
+      collections: 'Analiza vencimientos, saldos pendientes y concentración de cartera por cliente.',
+    } as Record<TabId, string>)[this.activeTab()];
+  }
+
+  activeTabPillLabel(): string {
+    return ({
+      dashboard: 'Vista consolidada',
+      invoices: 'Detalle documental',
+      payroll: 'Control laboral',
+      pos: 'Operacion retail',
+      collections: 'Seguimiento de recaudo',
+    } as Record<TabId, string>)[this.activeTab()];
+  }
+
+  activeTabMetricLabel(): string {
+    return ({
+      dashboard: 'Ingreso visible',
+      invoices: 'Facturas en vista',
+      payroll: 'Neto visible',
+      pos: 'Ventas visibles',
+      collections: 'Saldo visible',
+    } as Record<TabId, string>)[this.activeTab()];
+  }
+
+  activeTabMetricValue(): string {
+    switch (this.activeTab()) {
+      case 'invoices':
+        return this.invoicesData() ? this.fmtCOP(this.invoicesData()!.summary.total) : '—';
+      case 'payroll':
+        return this.payrollData() ? this.fmtCOP(this.payrollData()!.summary.totalNet) : '—';
+      case 'pos':
+        return this.posData() ? this.fmtCOP(this.posData()!.summary.totalSales) : '—';
+      case 'collections':
+        return this.collectionsData() ? this.fmtCOP(this.collectionsData()!.summary.totalBalance) : '—';
+      default:
+        return this.fmtCOP(this.kpi()?.revenue?.current ?? 0);
+    }
+  }
+
+  activeTabSupportLabel(): string {
+    switch (this.activeTab()) {
+      case 'invoices':
+        return `${this.invoicesData()?.summary.count ?? 0} documentos en el período`;
+      case 'payroll':
+        return `${this.payrollData()?.summary.count ?? 0} liquidaciones consultadas`;
+      case 'pos':
+        return `${this.posData()?.summary.transactions ?? 0} transacciones registradas`;
+      case 'collections':
+        return `${this.collectionsData()?.items.length ?? 0} documentos con saldo`;
+      default:
+        return `${this.kpi()?.invoices?.current ?? 0} facturas durante ${this.monthName(this.selectedMonth)}`;
+    }
   }
 
   // ── Formatting helpers ────────────────────────────────────────────────

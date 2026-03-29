@@ -61,70 +61,123 @@ interface InvoiceLine {
     <div class="page animate-in">
 
       <!-- Header -->
-      <div class="page-header" id="tour-invoice-header">
-        <div>
-          <h2 class="page-title">Facturación Electrónica</h2>
-          <p class="page-subtitle">{{ total() }} facturas · DIAN certificada</p>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <!-- Vista tabla / cuadrícula -->
-          <div class="view-toggle">
-            <button class="view-btn" [class.view-btn-active]="viewMode()==='table'" title="Vista tabla" (click)="viewMode.set('table')">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg>
+      <section class="hero-shell" id="tour-invoice-header">
+        <div class="hero-main">
+          <div class="hero-copy">
+            <p class="hero-kicker">Facturacion DIAN</p>
+            <h2 class="page-title">Centro de facturacion electronica</h2>
+            <p class="page-subtitle">Controla ventas, estados DIAN y seguimiento de cartera desde una vista mas clara y ejecutiva.</p>
+          </div>
+
+          <div class="hero-actions">
+            <div class="view-toggle">
+              <button class="view-btn" [class.view-btn-active]="viewMode()==='table'" title="Vista tabla" (click)="viewMode.set('table')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg>
+                Lista
+              </button>
+              <button class="view-btn" [class.view-btn-active]="viewMode()==='grid'" title="Vista cuadrícula" (click)="viewMode.set('grid')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Tarjetas
+              </button>
+            </div>
+            <button class="btn btn-outline btn-sm" (click)="load()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/></svg>
+              Actualizar
             </button>
-            <button class="view-btn" [class.view-btn-active]="viewMode()==='grid'" title="Vista cuadrícula" (click)="viewMode.set('grid')">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+            <button class="btn btn-primary btn-sm" id="tour-new-invoice" (click)="openNewInvoice()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+              Nueva factura
             </button>
           </div>
-          <button class="btn btn-outline btn-sm" (click)="load()">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/></svg>
-            Actualizar
-          </button>
-          <button class="btn btn-primary btn-sm" id="tour-new-invoice" (click)="openNewInvoice()">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
-            Nueva factura
-          </button>
         </div>
-      </div>
+
+        <div class="hero-aside">
+          <div class="hero-highlight">
+            <span class="hero-highlight-label">Total visible</span>
+            <strong>{{ total() }}</strong>
+            <small>{{ viewMode() === 'table' ? 'Vista operativa en tabla' : 'Vista ejecutiva en tarjetas' }}</small>
+          </div>
+          <div class="hero-summary-list">
+            <div class="hero-summary-pill">
+              <span class="dot dot-success"></span>
+              {{ acceptedCount() }} aceptadas
+            </div>
+            <div class="hero-summary-pill">
+              <span class="dot dot-warn"></span>
+              {{ pendingCount() }} pendientes
+            </div>
+            <div class="hero-summary-pill">
+              <span class="dot dot-danger"></span>
+              {{ rejectedCount() }} rechazadas
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- KPI strip -->
-      <div class="kpi-strip">
+      <section class="kpi-strip">
         @for (k of kpis; track k.label) {
-          <div class="kpi-card">
-            <div class="kpi-value">{{ k.value }}</div>
-            <div class="kpi-label">{{ k.label }}</div>
-          </div>
+          <article class="kpi-card">
+            <div class="kpi-icon">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path d="M4 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm6 4a1 1 0 00-1 1v8a1 1 0 102 0V8a1 1 0 00-1-1zm5-3a1 1 0 00-1 1v11a1 1 0 102 0V5a1 1 0 00-1-1z"/></svg>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-value">{{ k.value }}</div>
+              <div class="kpi-label">{{ k.label }}</div>
+            </div>
+          </article>
         }
-      </div>
+      </section>
 
       <!-- Filters -->
-      <div class="filters-bar" id="tour-invoice-filters">
-        <div class="search-wrap">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
-          <input type="text" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Buscar por número o cliente..." class="search-input"/>
+      <section class="filters-card" id="tour-invoice-filters">
+        <div class="filters-head">
+          <div>
+            <p class="filters-kicker">Exploracion</p>
+            <h3>Busca y segmenta tus comprobantes</h3>
+          </div>
+          <div class="results-pill">{{ total() }} resultados</div>
         </div>
-        <select [(ngModel)]="filterStatus" (ngModelChange)="load()" class="filter-select">
-          <option value="">Todos los estados</option>
-          <option value="DRAFT">Borrador</option>
-          <option value="SENT_DIAN">Enviada DIAN</option>
-          <option value="ACCEPTED_DIAN">Aceptada DIAN</option>
-          <option value="REJECTED_DIAN">Rechazada</option>
-          <option value="PAID">Pagada</option>
-          <option value="OVERDUE">Vencida</option>
-          <option value="CANCELLED">Anulada</option>
-        </select>
-        <select [(ngModel)]="filterType" (ngModelChange)="load()" class="filter-select">
-          <option value="">Todos los tipos</option>
-          <option value="VENTA">Factura venta</option>
-          <option value="NOTA_CREDITO">Nota crédito</option>
-          <option value="NOTA_DEBITO">Nota débito</option>
-        </select>
-        <input type="date" [(ngModel)]="filterFrom" (ngModelChange)="load()" class="filter-date" title="Desde"/>
-        <input type="date" [(ngModel)]="filterTo" (ngModelChange)="load()" class="filter-date" title="Hasta"/>
-      </div>
+        <div class="filters-bar">
+          <div class="search-wrap search-wrap-wide">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
+            <input type="text" [(ngModel)]="search" (ngModelChange)="onSearch()" placeholder="Buscar por numero, prefijo o cliente..." class="search-input"/>
+          </div>
+          <select [(ngModel)]="filterStatus" (ngModelChange)="load()" class="filter-select">
+            <option value="">Todos los estados</option>
+            <option value="DRAFT">Borrador</option>
+            <option value="SENT_DIAN">Enviada DIAN</option>
+            <option value="ACCEPTED_DIAN">Aceptada DIAN</option>
+            <option value="REJECTED_DIAN">Rechazada</option>
+            <option value="PAID">Pagada</option>
+            <option value="OVERDUE">Vencida</option>
+            <option value="CANCELLED">Anulada</option>
+          </select>
+          <select [(ngModel)]="filterType" (ngModelChange)="load()" class="filter-select">
+            <option value="">Todos los tipos</option>
+            <option value="VENTA">Factura venta</option>
+            <option value="NOTA_CREDITO">Nota crédito</option>
+            <option value="NOTA_DEBITO">Nota débito</option>
+          </select>
+          <input type="date" [(ngModel)]="filterFrom" (ngModelChange)="load()" class="filter-date" title="Desde"/>
+          <input type="date" [(ngModel)]="filterTo" (ngModelChange)="load()" class="filter-date" title="Hasta"/>
+        </div>
+      </section>
 
-      <!-- Table -->
-      <div class="table-card" id="tour-invoice-table">
+      <!-- Table / Grid -->
+      @if (viewMode() === 'table') {
+      <section class="table-shell" id="tour-invoice-table">
+        <div class="table-shell-head">
+          <div>
+            <p class="table-kicker">Listado</p>
+            <h3>Operacion detallada de facturas</h3>
+          </div>
+          <div class="table-shell-meta">
+            <span class="meta-chip">DIAN</span>
+            <span class="meta-chip meta-chip-soft">{{ page() }}/{{ totalPages() || 1 }}</span>
+          </div>
+        </div>
+        <div class="table-card">
         @if (loading()) {
           <div class="table-loading">
             @for (i of [1,2,3,4,5]; track i) {
@@ -143,7 +196,7 @@ interface InvoiceLine {
             <p>No hay facturas con los filtros actuales</p>
             <button class="btn btn-primary btn-sm" (click)="openNewInvoice()">Crear primera factura</button>
           </div>
-        } @else if (viewMode() === 'table') {
+        } @else {
           <table class="data-table">
             <thead>
               <tr>
@@ -234,8 +287,33 @@ interface InvoiceLine {
               </div>
             </div>
           }
+        }
+        </div>
+      </section>
+      } @else {
+        @if (loading()) {
+          <div class="table-card">
+            <div class="table-loading">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="skeleton-row">
+                  <div class="sk sk-line" style="width:100px"></div>
+                  <div class="sk sk-line" style="width:180px"></div>
+                  <div class="sk sk-line" style="width:90px"></div>
+                  <div class="sk sk-line" style="width:100px"></div>
+                  <div class="sk sk-line" style="width:80px"></div>
+                </div>
+              }
+            </div>
+          </div>
+        } @else if (invoices().length === 0) {
+          <div class="table-card">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path stroke-linecap="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path stroke-linecap="round" d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+              <p>No hay facturas con los filtros actuales</p>
+              <button class="btn btn-primary btn-sm" (click)="openNewInvoice()">Crear primera factura</button>
+            </div>
+          </div>
         } @else {
-          <!-- ── Vista cuadrícula ── -->
           <div class="inv-grid">
             @for (inv of invoices(); track inv.id) {
               <div class="inv-card" (click)="viewDetail(inv)">
@@ -284,7 +362,7 @@ interface InvoiceLine {
           </div>
 
           @if (totalPages() > 1) {
-            <div class="pagination">
+            <div class="pagination pagination--standalone">
               <span class="pagination-info">{{ (page()-1)*20+1 }}–{{ min(page()*20, total()) }} de {{ total() }}</span>
               <div class="pagination-btns">
                 <button class="btn-page" [disabled]="page()===1" (click)="setPage(page()-1)">‹</button>
@@ -296,7 +374,7 @@ interface InvoiceLine {
             </div>
           }
         }
-      </div>
+      }
     </div>
 
     <!-- ═══════════════════════════════════════════════════════
@@ -960,52 +1038,294 @@ interface InvoiceLine {
     }
   `,
   styles: [`
-    .page { max-width:1300px; }
-    .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; }
-    .page-title { font-family:'Sora',sans-serif; font-size:22px; font-weight:700; color:#0c1c35; margin:0 0 4px; }
-    .page-subtitle { font-size:13px; color:#7ea3cc; margin:0; }
+    .page {
+      max-width:1340px;
+      padding:4px 0 24px;
+    }
+    .hero-shell {
+      display:grid;
+      grid-template-columns:minmax(0, 1.35fr) minmax(280px, .65fr);
+      gap:18px;
+      margin-bottom:18px;
+      padding:22px;
+      border-radius:28px;
+      background:
+        radial-gradient(circle at top left, rgba(10, 201, 168, .16), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(59, 130, 246, .16), transparent 28%),
+        linear-gradient(135deg, #0d2344 0%, #16386a 52%, #0f7a72 100%);
+      color:#fff;
+      box-shadow:0 24px 48px rgba(12,28,53,.16);
+    }
+    .hero-main {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:18px;
+    }
+    .hero-copy { max-width:640px; }
+    .hero-kicker {
+      margin:0 0 10px;
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.16em;
+      color:#89f3d1;
+    }
+    .page-title {
+      font-family:'Sora',sans-serif;
+      font-size:32px;
+      line-height:1.02;
+      font-weight:800;
+      letter-spacing:-.05em;
+      color:#fff;
+      margin:0 0 10px;
+    }
+    .page-subtitle {
+      font-size:14px;
+      line-height:1.6;
+      color:rgba(236,244,255,.82);
+      margin:0;
+      max-width:60ch;
+    }
+    .hero-actions {
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      gap:8px;
+      align-items:center;
+      flex-shrink:0;
+    }
+    .hero-aside {
+      display:grid;
+      gap:12px;
+      align-content:start;
+    }
+    .hero-highlight {
+      padding:18px;
+      border-radius:20px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter:blur(10px);
+    }
+    .hero-highlight-label {
+      display:block;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:#a7f3d0;
+      margin-bottom:8px;
+    }
+    .hero-highlight strong {
+      display:block;
+      font-family:'Sora',sans-serif;
+      font-size:40px;
+      line-height:1;
+      letter-spacing:-.06em;
+      margin-bottom:8px;
+    }
+    .hero-highlight small {
+      display:block;
+      color:rgba(236,244,255,.72);
+      font-size:12px;
+      line-height:1.5;
+    }
+    .hero-summary-list {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:10px;
+    }
+    .hero-summary-pill {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:12px 14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.12);
+      font-size:12px;
+      font-weight:700;
+      color:#f8fbff;
+    }
+    .dot {
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      flex-shrink:0;
+    }
+    .dot-success { background:#34d399; box-shadow:0 0 0 4px rgba(52,211,153,.16); }
+    .dot-warn { background:#fbbf24; box-shadow:0 0 0 4px rgba(251,191,36,.14); }
+    .dot-danger { background:#fb7185; box-shadow:0 0 0 4px rgba(251,113,133,.14); }
 
     /* KPI strip */
-    .kpi-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
-    .kpi-card { background:#fff; border:1px solid #dce6f0; border-radius:10px; padding:14px 16px; }
-    .kpi-value { font-family:'Sora',sans-serif; font-size:20px; font-weight:700; color:#0c1c35; }
-    .kpi-label { font-size:12px; color:#9ca3af; margin-top:3px; }
+    .kpi-strip {
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:14px;
+      margin-bottom:18px;
+    }
+    .kpi-card {
+      display:flex;
+      align-items:flex-start;
+      gap:14px;
+      background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      border:1px solid #dce6f0;
+      border-radius:20px;
+      padding:16px 18px;
+      box-shadow:0 16px 28px rgba(12,28,53,.05);
+    }
+    .kpi-icon {
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(135deg, #e0efff, #eefaf7);
+      color:#1a407e;
+      flex-shrink:0;
+    }
+    .kpi-body { min-width:0; }
+    .kpi-value { font-family:'Sora',sans-serif; font-size:22px; font-weight:800; color:#0c1c35; letter-spacing:-.05em; }
+    .kpi-label { font-size:12px; color:#7a8ea7; margin-top:4px; }
 
     /* Filters */
-    .filters-bar { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
-    .search-wrap { flex:1; min-width:200px; max-width:320px; position:relative; }
+    .filters-card {
+      margin-bottom:18px;
+      padding:18px;
+      border-radius:24px;
+      background:rgba(255,255,255,.84);
+      border:1px solid #dce6f0;
+      box-shadow:0 16px 30px rgba(12,28,53,.05);
+      backdrop-filter:blur(10px);
+    }
+    .filters-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .filters-kicker {
+      margin:0 0 6px;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#00a084;
+    }
+    .filters-head h3 {
+      margin:0;
+      font-family:'Sora',sans-serif;
+      font-size:18px;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+    }
+    .results-pill {
+      padding:8px 12px;
+      border-radius:999px;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      color:#1d4ed8;
+      font-size:12px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .filters-bar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .search-wrap { flex:1; min-width:220px; max-width:320px; position:relative; }
+    .search-wrap-wide { max-width:420px; }
     .search-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; }
-    .search-input { width:100%; padding:8px 12px 8px 36px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; }
+    .search-input,
+    .filter-select,
+    .filter-date {
+      min-height:42px;
+      box-shadow:0 8px 20px rgba(12,28,53,.03);
+    }
+    .search-input { width:100%; padding:8px 12px 8px 36px; border:1px solid #dce6f0; border-radius:12px; font-size:14px; outline:none; }
     .search-input:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,.08); }
-    .filter-select { padding:8px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:13.5px; outline:none; background:#fff; }
-    .filter-date { padding:8px 10px; border:1px solid #dce6f0; border-radius:8px; font-size:13.5px; outline:none; color:#374151; }
+    .filter-select { padding:8px 12px; border:1px solid #dce6f0; border-radius:12px; font-size:13.5px; outline:none; background:#fff; }
+    .filter-date { padding:8px 10px; border:1px solid #dce6f0; border-radius:12px; font-size:13.5px; outline:none; color:#374151; background:#fff; }
 
     /* Table */
-    .table-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; }
+    .table-shell {
+      border-radius:26px;
+      background:rgba(255,255,255,.72);
+      border:1px solid #dce6f0;
+      box-shadow:0 18px 32px rgba(12,28,53,.05);
+      overflow:hidden;
+    }
+    .table-shell-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:18px 20px 16px;
+      border-bottom:1px solid #e9eef5;
+      background:
+        radial-gradient(circle at top right, rgba(37,99,235,.08), transparent 24%),
+        linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
+    }
+    .table-kicker {
+      margin:0 0 5px;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#00a084;
+    }
+    .table-shell-head h3 {
+      margin:0;
+      font-family:'Sora',sans-serif;
+      font-size:18px;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+    }
+    .table-shell-meta {
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .meta-chip {
+      padding:7px 11px;
+      border-radius:999px;
+      background:#0f274b;
+      color:#fff;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .meta-chip-soft {
+      background:#edf5ff;
+      color:#1a407e;
+      border:1px solid #bfdbfe;
+    }
+    .table-card { background:#fff; overflow:hidden; }
     .data-table { width:100%; border-collapse:collapse; }
-    .data-table th { padding:11px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; background:#f8fafc; border-bottom:1px solid #dce6f0; text-align:left; }
-    .data-table td { padding:11px 14px; font-size:13.5px; color:#374151; border-bottom:1px solid #f0f4f8; vertical-align:middle; }
+    .data-table th { padding:12px 16px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#8aa0b8; background:#f8fbff; border-bottom:1px solid #dce6f0; text-align:left; }
+    .data-table td { padding:14px 16px; font-size:13.5px; color:#374151; border-bottom:1px solid #f0f4f8; vertical-align:middle; }
     .data-table tr:last-child td { border-bottom:none; }
-    .data-table tr:hover td { background:#fafcff; }
-    .inv-number { font-family:monospace; font-weight:700; color:#1a407e; cursor:pointer; }
+    .data-table tr:hover td { background:#f9fbff; }
+    .inv-number { font-family:monospace; font-weight:800; color:#1a407e; cursor:pointer; font-size:13px; }
     .inv-number:hover { text-decoration:underline; }
-    .cufe-badge { font-size:10px; color:#065f46; background:#d1fae5; padding:1px 6px; border-radius:4px; margin-top:2px; display:inline-block; }
+    .cufe-badge { font-size:10px; color:#065f46; background:#d1fae5; padding:2px 7px; border-radius:999px; margin-top:5px; display:inline-block; font-weight:700; }
     .client-name { display:block; font-weight:600; color:#0c1c35; font-size:13.5px; }
-    .client-doc { font-size:11.5px; color:#9ca3af; }
+    .client-doc { font-size:11.5px; color:#9ca3af; margin-top:3px; }
     .text-muted { color:#9ca3af; }
     .overdue-cell { color:#dc2626; font-weight:600; }
     .inv-total { color:#0c1c35; }
-    .type-badge { padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700; }
+    .type-badge { padding:4px 9px; border-radius:999px; font-size:11px; font-weight:800; }
     .type-venta { background:#dbeafe; color:#1e40af; }
     .type-nota_credito { background:#fce7f3; color:#9d174d; }
     .type-nota_debito { background:#fef3c7; color:#92400e; }
-    .dian-badge { padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:700; }
+    .dian-badge { padding:4px 8px; border-radius:999px; font-size:10.5px; font-weight:800; }
     .dian-pendiente,.dian-undefined,.dian-pending { background:#f3f4f6; color:#6b7280; }
     .dian-aceptado,.dian-accepted_dian { background:#d1fae5; color:#065f46; }
     .dian-rechazado,.dian-rejected_dian { background:#fee2e2; color:#991b1b; }
     .dian-sent,.dian-enviada,.dian-issued { background:#dbeafe; color:#1e40af; }
     .dian-error { background:#fee2e2; color:#991b1b; }
-    .status-pill { padding:3px 9px; border-radius:9999px; font-size:11px; font-weight:700; white-space:nowrap; }
+    .status-pill { padding:4px 10px; border-radius:9999px; font-size:11px; font-weight:800; white-space:nowrap; }
     .status-draft { background:#f3f4f6; color:#6b7280; }
     .status-sent_dian,.status-issued { background:#dbeafe; color:#1e40af; }
     .status-accepted_dian { background:#d1fae5; color:#065f46; }
@@ -1014,38 +1334,38 @@ interface InvoiceLine {
     .status-overdue { background:#fee2e2; color:#991b1b; }
     .status-cancelled { background:#f3f4f6; color:#6b7280; }
     .actions-cell { text-align:right; white-space:nowrap; }
-    .btn-icon { background:none; border:none; padding:5px; border-radius:6px; cursor:pointer; color:#9ca3af; transition:all .15s; display:inline-flex; align-items:center; }
-    .btn-icon:hover:not(:disabled) { background:#f0f4f9; color:#1a407e; }
+    .btn-icon { background:#fff; border:1px solid #dce6f0; padding:7px; border-radius:10px; cursor:pointer; color:#8ca0b7; transition:all .15s; display:inline-flex; align-items:center; box-shadow:0 6px 16px rgba(12,28,53,.03); }
+    .btn-icon:hover:not(:disabled) { background:#f0f6ff; color:#1a407e; border-color:#93c5fd; }
     .btn-icon:disabled { opacity:.4; cursor:default; }
     .btn-icon-success:hover:not(:disabled) { background:#d1fae5; color:#065f46; }
     .btn-icon-blue:hover:not(:disabled) { background:#dbeafe; color:#1e40af; }
     .btn-icon-nc:hover:not(:disabled) { background:#fce7f3; color:#9d174d; }
     .btn-icon-nd:hover:not(:disabled) { background:#fef3c7; color:#92400e; }
     /* View toggle */
-    .view-toggle { display:flex; border:1px solid #dce6f0; border-radius:8px; overflow:hidden; }
-    .view-btn { background:#fff; border:none; padding:7px 10px; cursor:pointer; color:#9ca3af; transition:all .15s; display:inline-flex; align-items:center; }
-    .view-btn:hover { background:#f0f4f9; color:#374151; }
-    .view-btn-active { background:#1a407e; color:#fff !important; }
+    .view-toggle { display:flex; border:1px solid rgba(255,255,255,.18); border-radius:12px; overflow:hidden; background:rgba(255,255,255,.1); backdrop-filter:blur(8px); }
+    .view-btn { background:transparent; border:none; padding:9px 12px; cursor:pointer; color:rgba(236,244,255,.74); transition:all .15s; display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:700; }
+    .view-btn:hover { background:rgba(255,255,255,.1); color:#fff; }
+    .view-btn-active { background:#fff; color:#123f7b !important; }
     /* Grid view */
-    .inv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; padding:16px; }
-    .inv-card { background:#fff; border:1px solid #dce6f0; border-radius:10px; padding:16px; cursor:pointer; transition:box-shadow .15s,border-color .15s; display:flex; flex-direction:column; gap:8px; }
-    .inv-card:hover { border-color:#93c5fd; box-shadow:0 4px 12px rgba(26,64,126,.08); }
+    .inv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; padding:0; }
+    .inv-card { background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); border:1px solid #dce6f0; border-radius:20px; padding:18px; cursor:pointer; transition:box-shadow .16s,border-color .16s, transform .16s; display:flex; flex-direction:column; gap:10px; box-shadow:0 12px 26px rgba(12,28,53,.04); }
+    .inv-card:hover { border-color:#93c5fd; box-shadow:0 18px 32px rgba(26,64,126,.1); transform:translateY(-3px); }
     .inv-card-top { display:flex; align-items:center; justify-content:space-between; }
-    .inv-card-number { font-family:monospace; font-weight:700; color:#1a407e; font-size:14px; }
+    .inv-card-number { font-family:monospace; font-weight:800; color:#1a407e; font-size:14px; }
     .inv-card-type { display:flex; align-items:center; gap:6px; }
-    .inv-card-client { font-weight:600; color:#0c1c35; font-size:13.5px; }
+    .inv-card-client { font-weight:700; color:#0c1c35; font-size:14px; }
     .inv-card-doc { font-size:11.5px; color:#9ca3af; }
-    .inv-card-total { font-size:16px; font-weight:700; color:#0c1c35; }
+    .inv-card-total { font-size:18px; font-weight:800; color:#0c1c35; font-family:'Sora',sans-serif; }
     .inv-card-meta { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:#9ca3af; }
-    .inv-card-actions { display:flex; gap:4px; padding-top:4px; border-top:1px solid #f0f4f8; }
-    .pagination { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid #f0f4f8; }
+    .inv-card-actions { display:flex; gap:6px; padding-top:8px; border-top:1px solid #f0f4f8; }
+    .pagination { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-top:1px solid #f0f4f8; background:#fbfdff; }
     .pagination-info { font-size:13px; color:#9ca3af; }
     .pagination-btns { display:flex; gap:4px; }
-    .btn-page { padding:5px 10px; border:1px solid #dce6f0; border-radius:6px; background:#fff; font-size:13px; cursor:pointer; color:#374151; min-width:32px; }
+    .btn-page { padding:6px 10px; border:1px solid #dce6f0; border-radius:10px; background:#fff; font-size:13px; cursor:pointer; color:#374151; min-width:34px; box-shadow:0 6px 16px rgba(12,28,53,.03); }
     .btn-page:hover:not(:disabled) { background:#f0f4f9; border-color:#1a407e; color:#1a407e; }
     .btn-page.active { background:#1a407e; border-color:#1a407e; color:#fff; }
     .btn-page:disabled { opacity:.4; cursor:default; }
-    .empty-state { padding:64px 24px; text-align:center; color:#9ca3af; }
+    .empty-state { padding:72px 24px; text-align:center; color:#9ca3af; }
     .empty-state p { margin:16px 0; font-size:14px; }
     .table-loading { padding:12px 16px; }
     .skeleton-row { display:flex; align-items:center; gap:16px; padding:12px 0; border-bottom:1px solid #f0f4f8; }
@@ -1200,14 +1520,81 @@ interface InvoiceLine {
     @media (min-width:601px) { .line-cell { display:flex; flex-direction:column; } }
 
     /* Responsive */
+    @media (max-width:1024px) {
+      .hero-shell {
+        grid-template-columns:1fr;
+      }
+      .hero-main {
+        flex-direction:column;
+      }
+      .hero-actions {
+        justify-content:flex-start;
+      }
+      .hero-summary-list {
+        grid-template-columns:repeat(3, minmax(0, 1fr));
+      }
+      .kpi-strip {
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+    }
     @media (max-width:768px) {
+      .hero-shell {
+        padding:18px;
+        border-radius:24px;
+      }
+      .page-title {
+        font-size:26px;
+      }
+      .filters-card,
+      .table-shell-head {
+        padding-left:16px;
+        padding-right:16px;
+      }
+      .filters-head,
+      .table-shell-head {
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .results-pill,
+      .table-shell-meta {
+        align-self:flex-start;
+      }
       .kpi-strip { grid-template-columns:1fr 1fr; }
       .modal-invoice { max-width:100% !important; }
       .modal-body { padding:16px 18px; } .modal-header { padding:14px 18px; } .modal-footer { padding:12px 18px; gap:8px; }
       .form-row-3 { grid-template-columns:1fr 1fr !important; gap:10px; }
     }
     @media (max-width:600px) {
-      .kpi-strip { grid-template-columns:1fr 1fr; }
+      .hero-shell {
+        padding:16px;
+        gap:14px;
+      }
+      .hero-actions {
+        width:100%;
+      }
+      .hero-actions .btn,
+      .hero-actions .view-toggle {
+        width:100%;
+      }
+      .view-toggle {
+        justify-content:stretch;
+      }
+      .view-btn {
+        flex:1;
+        justify-content:center;
+      }
+      .hero-summary-list,
+      .kpi-strip {
+        grid-template-columns:1fr;
+      }
+      .filters-bar {
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .search-wrap,
+      .search-wrap-wide {
+        max-width:none;
+      }
       .modal-invoice-overlay { align-items:flex-end !important; padding:0 !important; }
       .modal-invoice { border-radius:20px 20px 0 0 !important; max-height:96vh !important; max-width:100% !important; width:100% !important; }
       .modal-header { padding:14px 16px 12px; } .modal-header h3 { font-size:15px; }
@@ -1369,6 +1756,10 @@ export class InvoicesListComponent implements OnInit {
       { label:'Pagadas',         value:String(data.filter(i=>i.status==='PAID').length) },
     ];
   }
+
+  acceptedCount() { return this.invoices().filter(i => i.status === 'ACCEPTED_DIAN' || i.status === 'PAID').length; }
+  pendingCount()  { return this.invoices().filter(i => ['DRAFT', 'SENT_DIAN', 'ISSUED'].includes(i.status)).length; }
+  rejectedCount() { return this.invoices().filter(i => i.status === 'REJECTED_DIAN').length; }
 
   loadCustomers() { this.http.get<any>(`${this.CUST_API}?limit=200`).subscribe({ next: r => this.customers.set(r.data ?? r), error: ()=>{} }); }
   loadProducts()  { this.http.get<any>(`${this.PROD_API}?limit=100&status=ACTIVE`).subscribe({ next: r => this.lineProducts.set(r.data ?? r), error: ()=>{} }); }

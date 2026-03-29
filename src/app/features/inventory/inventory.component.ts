@@ -59,22 +59,86 @@ interface UnitMeasure { name: string; usage: string; }
     <div class="page animate-in">
 
       <!-- Header -->
-      <div class="page-header" id="tour-inventory-header">
-        <div>
-          <h2 class="page-title">Inventario</h2>
-          <p class="page-subtitle">{{ total() }} productos · {{ lowStockCount() }} con stock bajo</p>
+      <section class="hero-shell" id="tour-inventory-header">
+        <div class="page-header">
+          <div class="hero-copy">
+            <p class="hero-kicker">Operacion de inventario</p>
+            <h2 class="page-title">Inventario</h2>
+            <p class="page-subtitle">Controla productos, stock, precios y catálogo por sucursal desde una vista más clara y moderna.</p>
+          </div>
+          <div class="header-actions">
+            <a routerLink="/import" class="btn btn-secondary">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+              Importar CSV
+            </a>
+            <button class="btn btn-primary" id="tour-new-product" (click)="openModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+              Nuevo producto
+            </button>
+          </div>
         </div>
-        <div class="header-actions">
-          <a routerLink="/import" class="btn btn-secondary">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-            Importar CSV
-          </a>
-          <button class="btn btn-primary" id="tour-new-product" (click)="openModal()">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
-            Nuevo producto
-          </button>
+        <div class="hero-aside">
+          <div class="hero-highlight">
+            <span class="hero-highlight-label">Catalogo visible</span>
+            <strong>{{ total() }}</strong>
+            <small>{{ viewMode() === 'table' ? 'Vista operativa detallada' : 'Vista visual por tarjetas' }}</small>
+          </div>
+          <div class="hero-mini-grid">
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Stock bajo</span>
+              <strong>{{ lowStockValue() }}</strong>
+            </div>
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Activos</span>
+              <strong>{{ activeProductsCount() }}</strong>
+            </div>
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Sin stock</span>
+              <strong>{{ outOfStockProductsCount() }}</strong>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <!-- KPI strip -->
+      <section class="kpi-strip">
+        <article class="kpi-card">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/><path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/></svg>
+          </div>
+          <div>
+            <span class="kpi-card__label">Activos</span>
+            <strong class="kpi-card__value">{{ activeProductsCount() }}</strong>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/></svg>
+          </div>
+          <div>
+            <span class="kpi-card__label">Valor inventario</span>
+            <strong class="kpi-card__value">{{ fmtCOP(totalInventoryValue()) }}</strong>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+          </div>
+          <div>
+            <span class="kpi-card__label">Stock bajo</span>
+            <strong class="kpi-card__value">{{ lowStockValue() }}</strong>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+          </div>
+          <div>
+            <span class="kpi-card__label">Sin stock</span>
+            <strong class="kpi-card__value">{{ outOfStockProductsCount() }}</strong>
+          </div>
+        </article>
+      </section>
 
       <!-- Low stock alert -->
       @if (lowStockCount() > 0) {
@@ -86,6 +150,14 @@ interface UnitMeasure { name: string; usage: string; }
       }
 
       <!-- Filters + View Toggle -->
+      <section class="filters-shell">
+      <div class="filters-head">
+        <div>
+          <p class="filters-kicker">Exploracion</p>
+          <h3>Filtra, compara y organiza el catálogo</h3>
+        </div>
+        <div class="results-pill">{{ total() }} resultados</div>
+      </div>
       <div class="filters-bar">
         <div class="search-wrap">
           <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
@@ -119,6 +191,7 @@ interface UnitMeasure { name: string; usage: string; }
           </button>
         </div>
       </div>
+      </section>
 
       <!-- ══ TABLE VIEW ══ -->
       @if (viewMode() === 'table') {
@@ -574,25 +647,219 @@ interface UnitMeasure { name: string; usage: string; }
     }
   `,
   styles: [`
-    .page { max-width:1200px; }
-    .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; }
-    .page-title { font-family:'Sora',sans-serif; font-size:22px; font-weight:700; color:#0c1c35; margin:0 0 4px; }
-    .page-subtitle { font-size:13px; color:#7ea3cc; margin:0; }
-    .header-actions { display:flex; gap:10px; }
-    .alert-bar { display:flex; align-items:center; gap:10px; background:#fef3c7; border:1px solid #fcd34d; border-radius:10px; padding:10px 16px; margin-bottom:14px; font-size:13.5px; color:#92400e; }
+    .page {
+      max-width: 1280px;
+      padding: 0 4px 24px;
+    }
+    .hero-shell {
+      display:grid;
+      grid-template-columns:minmax(0, 1.35fr) minmax(320px, .9fr);
+      gap:18px;
+      padding:22px 24px;
+      margin-bottom:16px;
+      border-radius:28px;
+      border:1px solid rgba(148, 163, 184, .18);
+      background:
+        radial-gradient(circle at top left, rgba(45, 212, 191, .18), transparent 30%),
+        radial-gradient(circle at top right, rgba(59, 130, 246, .16), transparent 36%),
+        linear-gradient(135deg, #0d2344 0%, #19407a 60%, #0f7f73 100%);
+      box-shadow:0 26px 44px rgba(12, 28, 53, .14);
+    }
+    .page-header {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:18px;
+      margin-bottom:0;
+    }
+    .hero-copy { max-width: 640px; }
+    .hero-kicker {
+      margin:0 0 10px;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:#82f3d1;
+    }
+    .page-title {
+      font-family:'Sora',sans-serif;
+      font-size:30px;
+      line-height:1;
+      letter-spacing:-.05em;
+      font-weight:700;
+      color:#fff;
+      margin:0 0 10px;
+    }
+    .page-subtitle {
+      font-size:14px;
+      line-height:1.6;
+      color:rgba(226, 232, 240, .84);
+      margin:0;
+      max-width:58ch;
+    }
+    .header-actions {
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .hero-aside {
+      display:grid;
+      gap:12px;
+      align-content:start;
+    }
+    .hero-highlight,
+    .hero-mini-card {
+      border-radius:20px;
+      border:1px solid rgba(255, 255, 255, .12);
+      background:rgba(255, 255, 255, .12);
+      backdrop-filter:blur(12px);
+      color:#fff;
+    }
+    .hero-highlight {
+      padding:18px 18px 16px;
+      box-shadow:0 18px 28px rgba(7, 16, 32, .16);
+    }
+    .hero-highlight-label,
+    .hero-mini-card__label {
+      display:block;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+    }
+    .hero-highlight-label { color:#a7f3d0; }
+    .hero-highlight strong {
+      display:block;
+      margin-top:8px;
+      font-family:'Sora',sans-serif;
+      font-size:36px;
+      line-height:1;
+      letter-spacing:-.06em;
+    }
+    .hero-highlight small {
+      display:block;
+      margin-top:8px;
+      font-size:12px;
+      color:rgba(226, 232, 240, .78);
+      line-height:1.5;
+    }
+    .hero-mini-grid {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:12px;
+    }
+    .hero-mini-card {
+      padding:14px 14px 12px;
+    }
+    .hero-mini-card__label { color:rgba(226, 232, 240, .7); }
+    .hero-mini-card strong {
+      display:block;
+      margin-top:8px;
+      font-family:'Sora',sans-serif;
+      font-size:22px;
+      letter-spacing:-.04em;
+    }
+    .kpi-strip {
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:14px;
+      margin-bottom:16px;
+    }
+    .kpi-card {
+      display:flex;
+      align-items:center;
+      gap:14px;
+      padding:16px 18px;
+      border-radius:22px;
+      background:rgba(255, 255, 255, .85);
+      border:1px solid #dce6f0;
+      box-shadow:0 18px 34px rgba(12, 28, 53, .06);
+      backdrop-filter:blur(10px);
+    }
+    .kpi-card__icon {
+      width:44px;
+      height:44px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#0f4b8a;
+      background:linear-gradient(135deg, #e0f2fe, #dbeafe);
+      box-shadow:inset 0 0 0 1px rgba(147, 197, 253, .72);
+      flex-shrink:0;
+    }
+    .kpi-card__label {
+      display:block;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      color:#8aa0b8;
+      margin-bottom:4px;
+    }
+    .kpi-card__value {
+      display:block;
+      font-family:'Sora',sans-serif;
+      font-size:19px;
+      letter-spacing:-.05em;
+      color:#0c1c35;
+    }
+    .alert-bar { display:flex; align-items:center; gap:10px; background:#fef3c7; border:1px solid #fcd34d; border-radius:14px; padding:12px 16px; margin-bottom:14px; font-size:13.5px; color:#92400e; box-shadow:0 12px 22px rgba(217, 119, 6, .08); }
     .alert-bar svg { color:#d97706; flex-shrink:0; }
     .alert-link { margin-left:auto; background:none; border:none; cursor:pointer; font-size:13px; font-weight:700; color:#d97706; text-decoration:underline; }
-    .filters-bar { display:flex; gap:10px; margin-bottom:16px; align-items:center; flex-wrap:wrap; }
+    .filters-shell {
+      margin-bottom:16px;
+      padding:18px;
+      border-radius:24px;
+      background:rgba(255, 255, 255, .84);
+      border:1px solid #dce6f0;
+      box-shadow:0 18px 34px rgba(12, 28, 53, .06);
+      backdrop-filter:blur(12px);
+    }
+    .filters-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .filters-head h3 {
+      margin:4px 0 0;
+      font-size:18px;
+      font-family:'Sora',sans-serif;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+    }
+    .filters-kicker {
+      margin:0;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:#00a084;
+    }
+    .results-pill {
+      padding:8px 12px;
+      border-radius:999px;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      color:#1d4ed8;
+      font-size:12px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .filters-bar { display:flex; gap:10px; margin-bottom:0; align-items:center; flex-wrap:wrap; }
     .search-wrap { flex:1; min-width:200px; max-width:360px; position:relative; }
     .search-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; }
-    .search-input { width:100%; padding:8px 12px 8px 36px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; }
+    .search-input { width:100%; padding:11px 12px 11px 36px; border:1px solid #dce6f0; border-radius:12px; font-size:14px; outline:none; background:#fff; }
     .search-input:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,.08); }
-    .filter-select { padding:8px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:13.5px; outline:none; background:#fff; color:#374151; }
-    .view-toggle { display:flex; gap:2px; border:1px solid #dce6f0; border-radius:8px; overflow:hidden; margin-left:auto; flex-shrink:0; }
-    .view-toggle button { padding:7px 10px; background:#fff; border:none; cursor:pointer; color:#9ca3af; transition:all .15s; }
+    .filter-select { padding:11px 12px; border:1px solid #dce6f0; border-radius:12px; font-size:13.5px; outline:none; background:#fff; color:#374151; }
+    .view-toggle { display:flex; gap:4px; border:1px solid #dce6f0; border-radius:14px; padding:4px; overflow:hidden; margin-left:auto; flex-shrink:0; background:#f8fafc; }
+    .view-toggle button { padding:8px 11px; background:transparent; border:none; border-radius:10px; cursor:pointer; color:#9ca3af; transition:all .15s; }
     .view-toggle button:hover { background:#f0f4f9; color:#1a407e; }
     .view-toggle button.active { background:#1a407e; color:#fff; }
-    .table-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; }
+    .table-card { background:rgba(255,255,255,.88); border:1px solid #dce6f0; border-radius:24px; overflow:hidden; box-shadow:0 18px 34px rgba(12, 28, 53, .06); backdrop-filter:blur(12px); }
     .data-table { width:100%; border-collapse:collapse; }
     .data-table th { padding:11px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; background:#f8fafc; border-bottom:1px solid #dce6f0; text-align:left; }
     .data-table td { padding:11px 14px; font-size:13.5px; color:#374151; border-bottom:1px solid #f0f4f8; vertical-align:middle; }
@@ -625,8 +892,8 @@ interface UnitMeasure { name: string; usage: string; }
     .btn-page.active { background:#1a407e; border-color:#1a407e; color:#fff; }
     .btn-page:disabled { opacity:.4; cursor:default; }
     .product-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px; }
-    .product-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; padding:18px 16px 14px; position:relative; transition:box-shadow .18s, transform .18s; display:flex; flex-direction:column; }
-    .product-card:hover { box-shadow:0 4px 20px rgba(26,64,126,.1); transform:translateY(-2px); }
+    .product-card { background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); border:1px solid #dce6f0; border-radius:22px; padding:18px 16px 14px; position:relative; transition:box-shadow .18s, transform .18s, border-color .18s; display:flex; flex-direction:column; box-shadow:0 16px 28px rgba(12,28,53,.05); }
+    .product-card:hover { box-shadow:0 18px 30px rgba(26,64,126,.12); transform:translateY(-3px); border-color:#bfdbfe; }
     .low-stock-card { border-color:#fcd34d; background:#fffbeb; }
     .inactive-card { opacity:.7; }
     .product-card--skeleton { pointer-events:none; }
@@ -646,8 +913,8 @@ interface UnitMeasure { name: string; usage: string; }
     .pc-low-label { color:#d97706; font-weight:700; }
     .pc-actions { display:flex; gap:6px; align-items:center; border-top:1px solid #f0f4f8; padding-top:10px; }
     .pc-actions .btn { flex:1; justify-content:center; }
-    .pagination--standalone { background:#fff; border:1px solid #dce6f0; border-radius:12px; margin-top:4px; }
-    .empty-state-grid-wrap { background:#fff; border:1px solid #dce6f0; border-radius:12px; }
+    .pagination--standalone { background:rgba(255,255,255,.88); border:1px solid #dce6f0; border-radius:18px; margin-top:8px; box-shadow:0 12px 24px rgba(12, 28, 53, .05); }
+    .empty-state-grid-wrap { background:rgba(255,255,255,.88); border:1px solid #dce6f0; border-radius:22px; box-shadow:0 18px 34px rgba(12, 28, 53, .06); }
     .empty-state-grid { padding:64px 24px; text-align:center; color:#9ca3af; }
     .empty-state-grid p { margin:16px 0; font-size:14px; }
     .table-loading { padding:12px 16px; }
@@ -719,9 +986,12 @@ interface UnitMeasure { name: string; usage: string; }
     .btn-danger:hover:not(:disabled) { background:#b91c1c; }
     .btn-sm { padding:7px 14px; font-size:13px; }
     @media (max-width: 768px) {
-      .page-header { flex-direction:column; align-items:stretch; gap:10px; }
+      .hero-shell { grid-template-columns:1fr; padding:18px; }
+      .page-header { flex-direction:column; align-items:stretch; gap:12px; }
       .header-actions { flex-direction:row; flex-wrap:wrap; gap:8px; }
       .header-actions .btn { flex:1; justify-content:center; min-width:120px; }
+      .kpi-strip { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+      .filters-head { flex-direction:column; align-items:flex-start; }
       .filters-bar { flex-wrap:wrap; }
       .search-wrap { width:100%; max-width:100%; flex:unset; }
       .view-toggle { margin-left:0; }
@@ -729,6 +999,11 @@ interface UnitMeasure { name: string; usage: string; }
       .drawer { width:100%; max-width:100%; }
     }
     @media (max-width: 640px) {
+      .page { padding:0 0 18px; }
+      .page-title { font-size:26px; }
+      .hero-mini-grid,
+      .kpi-strip { grid-template-columns:1fr; }
+      .filters-shell { padding:16px; border-radius:20px; }
       .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
       .data-table { min-width:560px; }
       .drawer-overlay { align-items:flex-end; justify-content:stretch; }
@@ -811,13 +1086,27 @@ export class InventoryComponent implements OnInit {
   /** Texto de uso de la unidad actualmente seleccionada en el formulario */
   selectedUnitUsage = computed(() => this.unitMap()[this.form.unit]?.usage ?? '');
 
+  lowStockCount = computed(() =>
+    this.products().filter(p => p.stock <= p.minStock && p.status === 'ACTIVE').length,
+  );
+
+  lowStockValue = computed(() => this.lowStockCount());
+
+  activeProductsCount = computed(() =>
+    this.products().filter(p => p.status === 'ACTIVE').length,
+  );
+
+  outOfStockProductsCount = computed(() =>
+    this.products().filter(p => p.status === 'OUT_OF_STOCK' || p.stock <= 0).length,
+  );
+
+  totalInventoryValue = computed(() =>
+    this.products().reduce((sum, p) => sum + (Number(p.cost) || 0) * (Number(p.stock) || 0), 0),
+  );
+
   /** Etiqueta corta para mostrar en tabla/grid/drawer: "Unidad" en lugar de "EA" si está en catálogo */
   unitLabel(code: string): string {
     return this.unitMap()[code]?.name ?? code;
-  }
-
-  get lowStockCount() {
-    return signal(this.products().filter(p => p.stock <= p.minStock && p.status === 'ACTIVE').length);
   }
 
   constructor(private http: HttpClient, private notify: NotificationService) {}

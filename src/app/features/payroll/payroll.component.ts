@@ -114,41 +114,101 @@ type ViewMode  = 'table' | 'grid';
     <div class="py">
 
       <!-- ── Header ──────────────────────────────────────────────────────── -->
-      <div class="page-header">
-        <div>
-          <h1 class="page-header__title">Nómina Electrónica</h1>
-          <p class="page-header__sub">Liquidación y transmisión DIAN de nómina electrónica</p>
+      <section class="hero-shell">
+        <div class="page-header">
+          <div class="hero-copy">
+            <p class="hero-kicker">Gestion laboral</p>
+            <h1 class="page-header__title">Nómina Electrónica</h1>
+            <p class="page-header__sub">Liquida, monitorea y transmite novedades de nómina a la DIAN desde una vista más clara y operativa.</p>
+          </div>
+          <div class="page-header__actions">
+            @if (activeTab() === 'records' && canCreatePayroll()) {
+              <button class="btn btn--primary btn--sm" (click)="openPayrollModal()">
+                <span class="material-symbols-outlined">add</span> Nueva liquidación
+              </button>
+            }
+            @if (activeTab() === 'employees' && canManageEmployees()) {
+              <button class="btn btn--primary btn--sm" (click)="openEmployeeModal()">
+                <span class="material-symbols-outlined">person_add</span> Nuevo empleado
+              </button>
+            }
+          </div>
         </div>
-        <div class="page-header__actions">
-          @if (activeTab() === 'records' && canCreatePayroll()) {
-            <button class="btn btn--primary btn--sm" (click)="openPayrollModal()">
-              <span class="material-symbols-outlined">add</span> Nueva liquidación
-            </button>
-          }
-          @if (activeTab() === 'employees' && canManageEmployees()) {
-            <button class="btn btn--primary btn--sm" (click)="openEmployeeModal()">
-              <span class="material-symbols-outlined">person_add</span> Nuevo empleado
-            </button>
-          }
+
+        <div class="hero-insights">
+          <div class="hero-stat hero-stat--primary">
+            <span class="hero-stat__label">{{ activeTab() === 'records' ? 'Liquidaciones visibles' : 'Empleados visibles' }}</span>
+            <strong class="hero-stat__value">{{ activeTab() === 'records' ? records().length : employees().length }}</strong>
+            <small class="hero-stat__hint">{{ activeTab() === 'records' ? 'Vista operativa del periodo actual' : 'Base laboral disponible para liquidar' }}</small>
+          </div>
+          <div class="hero-mini-grid">
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Aceptadas</span>
+              <strong>{{ acceptedPayrollCount() }}</strong>
+            </div>
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Pendientes</span>
+              <strong>{{ pendingPayrollCount() }}</strong>
+            </div>
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Activos</span>
+              <strong>{{ activeEmployees().length }}</strong>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <!-- ── KPI strip ──────────────────────────────────────────────────── -->
+      <section class="kpi-strip">
+        <article class="kpi-card">
+          <div class="kpi-card__icon"><span class="material-symbols-outlined">payments</span></div>
+          <div>
+            <span class="kpi-card__label">Neto del período</span>
+            <strong class="kpi-card__value">{{ currentNetPay() | currency:'COP':'symbol':'1.0-0' }}</strong>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-card__icon"><span class="material-symbols-outlined">account_balance</span></div>
+          <div>
+            <span class="kpi-card__label">Costo empresa</span>
+            <strong class="kpi-card__value">{{ currentEmployerCost() | currency:'COP':'symbol':'1.0-0' }}</strong>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-card__icon"><span class="material-symbols-outlined">receipt_long</span></div>
+          <div>
+            <span class="kpi-card__label">Transmitidas</span>
+            <strong class="kpi-card__value">{{ submittedPayrollCount() }}</strong>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-card__icon"><span class="material-symbols-outlined">groups</span></div>
+          <div>
+            <span class="kpi-card__label">Colaboradores activos</span>
+            <strong class="kpi-card__value">{{ activeEmployees().length }}</strong>
+          </div>
+        </article>
+      </section>
 
       <!-- ── Tabs ────────────────────────────────────────────────────────── -->
-      <div class="py__tabs">
-        <button class="py__tab" [class.py__tab--active]="activeTab()==='records'"
-                (click)="activeTab.set('records')">
-          <span class="material-symbols-outlined">receipt_long</span> Liquidaciones
-        </button>
-        <button class="py__tab" [class.py__tab--active]="activeTab()==='employees'"
-                (click)="activeTab.set('employees'); loadEmployees()">
-          <span class="material-symbols-outlined">groups</span> Empleados
-        </button>
+      <div class="tab-shell">
+        <div class="py__tabs">
+          <button class="py__tab" [class.py__tab--active]="activeTab()==='records'"
+                  (click)="activeTab.set('records')">
+            <span class="material-symbols-outlined">receipt_long</span> Liquidaciones
+          </button>
+          <button class="py__tab" [class.py__tab--active]="activeTab()==='employees'"
+                  (click)="activeTab.set('employees'); loadEmployees()">
+            <span class="material-symbols-outlined">groups</span> Empleados
+          </button>
+        </div>
       </div>
 
       <!-- ══ TAB: RECORDS ══════════════════════════════════════════════════ -->
       @if (activeTab() === 'records') {
 
         <!-- Filters + View Toggle -->
+        <section class="filters-shell">
         <div class="filters-bar">
           <div class="search-wrap">
             <span class="material-symbols-outlined search-icon">search</span>
@@ -181,6 +241,7 @@ type ViewMode  = 'table' | 'grid';
             </button>
           </div>
         </div>
+        </section>
 
         <!-- Period summary -->
         @if (periodFilter && summary()) {
@@ -210,6 +271,17 @@ type ViewMode  = 'table' | 'grid';
 
         <!-- ── TABLE VIEW ───────────────────────────────────────────────── -->
         @if (recordView() === 'table') {
+          <section class="content-shell">
+          <div class="content-shell__head">
+            <div>
+              <p class="content-shell__kicker">Liquidaciones</p>
+              <h3>{{ periodFilter || 'Periodo actual' }}</h3>
+            </div>
+            <div class="content-shell__meta">
+              <span class="content-chip">{{ records().length }} registros</span>
+              <span class="content-chip content-chip--soft">{{ statusFilter || 'Todos los estados' }}</span>
+            </div>
+          </div>
           <div class="table-card">
             @if (loadingRecords()) {
               <div class="table-loading">
@@ -317,6 +389,7 @@ type ViewMode  = 'table' | 'grid';
               </table>
             }
           </div>
+          </section>
         }
 
         <!-- ── GRID VIEW ────────────────────────────────────────────────── -->
@@ -424,6 +497,7 @@ type ViewMode  = 'table' | 'grid';
       @if (activeTab() === 'employees') {
 
         <!-- Filters + View Toggle -->
+        <section class="filters-shell">
         <div class="filters-bar">
           <div class="search-wrap">
             <span class="material-symbols-outlined search-icon">search</span>
@@ -446,9 +520,21 @@ type ViewMode  = 'table' | 'grid';
             </button>
           </div>
         </div>
+        </section>
 
         <!-- ── TABLE VIEW ───────────────────────────────────────────────── -->
         @if (empView() === 'table') {
+          <section class="content-shell">
+          <div class="content-shell__head">
+            <div>
+              <p class="content-shell__kicker">Equipo</p>
+              <h3>Directorio de empleados</h3>
+            </div>
+            <div class="content-shell__meta">
+              <span class="content-chip">{{ employees().length }} colaboradores</span>
+              <span class="content-chip content-chip--soft">{{ empActive() === undefined ? 'Todos' : empActive() ? 'Activos' : 'Inactivos' }}</span>
+            </div>
+          </div>
           <div class="table-card">
             @if (loadingEmployees()) {
               <div class="table-loading">
@@ -528,6 +614,7 @@ type ViewMode  = 'table' | 'grid';
               </table>
             }
           </div>
+          </section>
         }
 
         <!-- ── GRID VIEW ────────────────────────────────────────────────── -->
@@ -1335,27 +1422,167 @@ type ViewMode  = 'table' | 'grid';
   `,
   styles: [`
     /* ── Layout ──────────────────────────────────────────────────────────── */
-    .py { max-width:1280px; }
-    .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; gap:12px; flex-wrap:wrap; }
-    .page-header__title { font-family:'Sora',sans-serif; font-size:22px; font-weight:700; color:#0c1c35; margin:0 0 4px; }
-    .page-header__sub   { font-size:13px; color:#64748b; margin:0; }
+    .py { max-width:1320px; padding-bottom:22px; }
+    .hero-shell {
+      display:grid;
+      grid-template-columns:minmax(0, 1.3fr) minmax(280px, .7fr);
+      gap:18px;
+      margin-bottom:18px;
+      padding:22px;
+      border-radius:28px;
+      background:
+        radial-gradient(circle at top left, rgba(16,185,129,.16), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(59,130,246,.16), transparent 28%),
+        linear-gradient(135deg, #0d2344 0%, #16386a 52%, #0f7a72 100%);
+      box-shadow:0 24px 48px rgba(12,28,53,.16);
+      color:#fff;
+    }
+    .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+    .hero-copy { max-width:680px; }
+    .hero-kicker {
+      margin:0 0 10px;
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.16em;
+      color:#89f3d1;
+    }
+    .page-header__title { font-family:'Sora',sans-serif; font-size:32px; line-height:1.02; font-weight:800; color:#fff; margin:0 0 10px; letter-spacing:-.05em; }
+    .page-header__sub   { font-size:14px; color:rgba(236,244,255,.8); margin:0; line-height:1.6; max-width:58ch; }
     .page-header__actions { display:flex; gap:8px; flex-shrink:0; }
+    .hero-insights { display:grid; gap:12px; align-content:start; }
+    .hero-stat {
+      padding:18px;
+      border-radius:20px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter:blur(10px);
+    }
+    .hero-stat__label {
+      display:block;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:#a7f3d0;
+      margin-bottom:8px;
+    }
+    .hero-stat__value {
+      display:block;
+      font-family:'Sora',sans-serif;
+      font-size:38px;
+      line-height:1;
+      letter-spacing:-.06em;
+      margin-bottom:8px;
+    }
+    .hero-stat__hint {
+      display:block;
+      font-size:12px;
+      line-height:1.5;
+      color:rgba(236,244,255,.72);
+    }
+    .hero-mini-grid {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:10px;
+    }
+    .hero-mini-card {
+      padding:12px 14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .hero-mini-card__label {
+      display:block;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:rgba(236,244,255,.7);
+      margin-bottom:5px;
+    }
+    .hero-mini-card strong {
+      font-family:'Sora',sans-serif;
+      font-size:20px;
+      color:#fff;
+      letter-spacing:-.04em;
+    }
+
+    /* ── KPI strip ─────────────────────────────────────────────────────── */
+    .kpi-strip {
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:14px;
+      margin-bottom:18px;
+    }
+    .kpi-card {
+      display:flex;
+      align-items:flex-start;
+      gap:14px;
+      padding:16px 18px;
+      border-radius:20px;
+      background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      border:1px solid #dce6f0;
+      box-shadow:0 16px 28px rgba(12,28,53,.05);
+    }
+    .kpi-card__icon {
+      width:44px;
+      height:44px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(135deg, #e0efff, #eefbf7);
+      color:#1a407e;
+      flex-shrink:0;
+    }
+    .kpi-card__icon .material-symbols-outlined { font-size:22px; }
+    .kpi-card__label {
+      display:block;
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#7b8fa8;
+      margin-bottom:6px;
+    }
+    .kpi-card__value {
+      font-family:'Sora',sans-serif;
+      font-size:22px;
+      line-height:1.1;
+      letter-spacing:-.05em;
+      color:#0c1c35;
+    }
 
     /* ── Tabs ─────────────────────────────────────────────────────────────── */
-    .py__tabs { display:flex; gap:4px; margin-bottom:18px; border-bottom:2px solid #f0f4f8; overflow-x:auto; }
+    .tab-shell {
+      margin-bottom:18px;
+      padding:8px;
+      border-radius:20px;
+      background:rgba(255,255,255,.84);
+      border:1px solid #dce6f0;
+      box-shadow:0 12px 26px rgba(12,28,53,.05);
+    }
+    .py__tabs { display:flex; gap:6px; overflow-x:auto; }
     .py__tab  { display:flex; align-items:center; gap:6px; padding:10px 18px; border:none; background:transparent;
                 font-size:13.5px; font-weight:600; color:#64748b; cursor:pointer; white-space:nowrap;
-                border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s; border-radius:6px 6px 0 0; }
+                transition:all .15s; border-radius:14px; }
     .py__tab .material-symbols-outlined { font-size:18px; }
     .py__tab:hover { color:#1a407e; background:#f8fafc; }
-    .py__tab--active { color:#1a407e; border-bottom-color:#1a407e; }
+    .py__tab--active { color:#1a407e; background:#eff6ff; box-shadow:inset 0 0 0 1px #bfdbfe; }
 
     /* ── Filters bar ─────────────────────────────────────────────────────── */
-    .filters-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-                   background:#fff; border:1px solid #dce6f0; border-radius:12px;
-                   padding:12px 16px; margin-bottom:14px; }
+    .filters-shell {
+      margin-bottom:14px;
+      padding:16px;
+      border-radius:22px;
+      background:rgba(255,255,255,.84);
+      border:1px solid #dce6f0;
+      box-shadow:0 12px 28px rgba(12,28,53,.05);
+    }
+    .filters-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .filters-bar__controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-    .search-wrap  { flex:1; position:relative; min-width:180px; max-width:280px; }
+    .search-wrap  { flex:1; position:relative; min-width:180px; max-width:300px; }
     .search-icon  { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:18px; color:#94a3b8; pointer-events:none; }
     .search-input { width:100%; padding:8px 12px 8px 36px; border:1px solid #dce6f0; border-radius:8px;
                     font-size:13.5px; outline:none; background:#fff; color:#0c1c35; box-sizing:border-box; }
@@ -1365,7 +1592,7 @@ type ViewMode  = 'table' | 'grid';
     .filter-select { padding:7px 10px; border:1px solid #dce6f0; border-radius:8px; font-size:13px; outline:none; background:#fff; color:#374151; }
 
     /* ── View toggle ─────────────────────────────────────────────────────── */
-    .view-toggle { display:flex; gap:2px; border:1px solid #dce6f0; border-radius:8px; overflow:hidden; margin-left:auto; flex-shrink:0; }
+    .view-toggle { display:flex; gap:2px; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; margin-left:auto; flex-shrink:0; background:#fff; box-shadow:0 8px 18px rgba(12,28,53,.03); }
     .view-toggle button { padding:7px 10px; background:#fff; border:none; cursor:pointer; color:#9ca3af; transition:all .15s; display:flex; align-items:center; }
     .view-toggle button .material-symbols-outlined { font-size:18px; }
     .view-toggle button:hover  { background:#f0f4f9; color:#1a407e; }
@@ -1379,19 +1606,76 @@ type ViewMode  = 'table' | 'grid';
     .chip--active  { background:#1a407e; border-color:#1a407e; color:#fff; }
 
     /* ── Period summary ──────────────────────────────────────────────────── */
-    .py__resumen { display:flex; background:#fff; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; margin-bottom:16px; flex-wrap:wrap; }
+    .py__resumen { display:flex; background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); border:1px solid #dce6f0; border-radius:20px; overflow:hidden; margin-bottom:16px; flex-wrap:wrap; box-shadow:0 14px 26px rgba(12,28,53,.05); }
     .py__res-item { flex:1; min-width:120px; padding:14px 16px; border-right:1px solid #f0f4f8; }
     .py__res-item:last-child { border-right:none; }
     .py__res-label  { font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; font-weight:600; display:block; }
     .py__res-val    { font-family:'Sora',sans-serif; font-size:15px; font-weight:800; color:#0c1c35; margin-top:4px; display:block; }
     .py__res-val--hl { color:#1a407e; }
 
+    /* ── Content shells ─────────────────────────────────────────────────── */
+    .content-shell {
+      border-radius:24px;
+      background:rgba(255,255,255,.78);
+      border:1px solid #dce6f0;
+      box-shadow:0 16px 32px rgba(12,28,53,.05);
+      overflow:hidden;
+      margin-bottom:12px;
+    }
+    .content-shell__head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:18px 20px 16px;
+      border-bottom:1px solid #e9eef5;
+      background:
+        radial-gradient(circle at top right, rgba(37,99,235,.08), transparent 24%),
+        linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
+    }
+    .content-shell__kicker {
+      margin:0 0 5px;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#00a084;
+    }
+    .content-shell__head h3 {
+      margin:0;
+      font-family:'Sora',sans-serif;
+      font-size:18px;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+    }
+    .content-shell__meta {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .content-chip {
+      padding:7px 11px;
+      border-radius:999px;
+      background:#0f274b;
+      color:#fff;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .content-chip--soft {
+      background:#edf5ff;
+      color:#1a407e;
+      border:1px solid #bfdbfe;
+    }
+
     /* ── Table card ──────────────────────────────────────────────────────── */
-    .table-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; margin-bottom:12px; }
+    .table-card { background:#fff; border:1px solid #dce6f0; border-radius:18px; overflow:hidden; margin-bottom:12px; }
     .data-table { width:100%; border-collapse:collapse; }
-    .data-table th { padding:10px 14px; text-align:left; font-size:11px; font-weight:700; color:#94a3b8;
-                     text-transform:uppercase; letter-spacing:.05em; background:#f8fafc; border-bottom:1px solid #f0f4f8; white-space:nowrap; }
-    .data-table td { padding:12px 14px; font-size:13px; color:#374151; border-bottom:1px solid #f0f4f8; vertical-align:middle; }
+    .data-table th { padding:12px 16px; text-align:left; font-size:11px; font-weight:800; color:#8aa0b8;
+                     text-transform:uppercase; letter-spacing:.08em; background:#f8fbff; border-bottom:1px solid #f0f4f8; white-space:nowrap; }
+    .data-table td { padding:14px 16px; font-size:13px; color:#374151; border-bottom:1px solid #f0f4f8; vertical-align:middle; }
     .data-table tr:last-child td { border-bottom:none; }
     .data-table tr:hover td { background:#fafcff; }
     .row--inactive td { opacity:.55; }
@@ -1440,10 +1724,10 @@ type ViewMode  = 'table' | 'grid';
 
     /* ── Row actions ─────────────────────────────────────────────────────── */
     .row-actions { display:flex; align-items:center; gap:4px; justify-content:flex-end; }
-    .btn-icon { background:none; border:none; padding:6px; border-radius:7px; cursor:pointer;
-                color:#94a3b8; transition:all .14s; display:flex; align-items:center; }
+    .btn-icon { background:#fff; border:1px solid #dce6f0; padding:7px; border-radius:10px; cursor:pointer;
+                color:#94a3b8; transition:all .14s; display:flex; align-items:center; box-shadow:0 6px 16px rgba(12,28,53,.03); }
     .btn-icon .material-symbols-outlined { font-size:18px; }
-    .btn-icon:hover          { background:#f0f4f9; color:#1a407e; }
+    .btn-icon:hover          { background:#f0f6ff; color:#1a407e; border-color:#93c5fd; }
     .btn-icon:disabled       { opacity:.4; cursor:default; }
     .btn-icon--primary:hover { background:#e8eef8; color:#1a407e; }
     .btn-icon--danger:hover  { background:#fee2e2; color:#dc2626; }
@@ -1481,10 +1765,10 @@ type ViewMode  = 'table' | 'grid';
 
     /* ══ RECORD GRID ══════════════════════════════════════════════════════ */
     .record-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:14px; margin-bottom:12px; }
-    .record-card { background:#fff; border:1px solid #dce6f0; border-radius:14px;
+    .record-card { background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); border:1px solid #dce6f0; border-radius:20px;
                    padding:18px 16px 14px; position:relative; display:flex; flex-direction:column;
-                   transition:box-shadow .18s, transform .18s; }
-    .record-card:hover     { box-shadow:0 4px 20px rgba(26,64,126,.1); transform:translateY(-2px); }
+                   transition:box-shadow .18s, transform .18s, border-color .18s; box-shadow:0 12px 26px rgba(12,28,53,.04); }
+    .record-card:hover     { box-shadow:0 18px 32px rgba(26,64,126,.1); transform:translateY(-3px); border-color:#93c5fd; }
     .record-card--voided   { opacity:.65; border-color:#fde8c7; background:#fffbf5; }
     .record-card--anulado  { border-color:#fde68a; background:#fffbeb; }
     .record-card--sk       { pointer-events:none; }
@@ -1507,10 +1791,10 @@ type ViewMode  = 'table' | 'grid';
 
     /* ══ EMPLOYEE GRID ════════════════════════════════════════════════════ */
     .employee-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px; margin-bottom:12px; }
-    .employee-card { background:#fff; border:1px solid #dce6f0; border-radius:14px;
+    .employee-card { background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); border:1px solid #dce6f0; border-radius:20px;
                      padding:18px 16px 14px; position:relative; display:flex; flex-direction:column;
-                     transition:box-shadow .18s, transform .18s; }
-    .employee-card:hover  { box-shadow:0 4px 20px rgba(26,64,126,.1); transform:translateY(-2px); }
+                     transition:box-shadow .18s, transform .18s, border-color .18s; box-shadow:0 12px 26px rgba(12,28,53,.04); }
+    .employee-card:hover  { box-shadow:0 18px 32px rgba(26,64,126,.1); transform:translateY(-3px); border-color:#93c5fd; }
     .employee-card--off   { opacity:.7; border-color:#f0d4d4; background:#fdfafa; }
     .employee-card--sk    { pointer-events:none; }
     .ec-status { position:absolute; top:12px; right:12px; }
@@ -1712,6 +1996,9 @@ type ViewMode  = 'table' | 'grid';
 
     /* ══ RESPONSIVE ═══════════════════════════════════════════════════════ */
     @media (max-width: 900px) {
+      .hero-shell { grid-template-columns:1fr; }
+      .hero-mini-grid,
+      .kpi-strip { grid-template-columns:repeat(2, minmax(0, 1fr)); }
       .py__resumen { flex-wrap:wrap; }
       .py__res-item { flex:1 1 45%; }
       .py__form-grid { grid-template-columns:1fr; }
@@ -1723,8 +2010,11 @@ type ViewMode  = 'table' | 'grid';
     }
 
     @media (max-width: 768px) {
+      .hero-shell { padding:18px; border-radius:24px; }
+      .page-header__title { font-size:26px; }
       .page-header { flex-direction:column; align-items:stretch; gap:10px; }
       .page-header__actions { justify-content:flex-end; }
+      .content-shell__head { flex-direction:column; align-items:flex-start; }
       .filters-bar { gap:8px; }
       .search-wrap { max-width:100%; flex:1 1 100%; }
       .filters-bar__controls { flex:1 1 100%; }
@@ -1732,6 +2022,13 @@ type ViewMode  = 'table' | 'grid';
     }
 
     @media (max-width: 640px) {
+      .hero-shell { padding:16px; gap:14px; }
+      .hero-mini-grid,
+      .kpi-strip { grid-template-columns:1fr; }
+      .page-header__actions { width:100%; }
+      .page-header__actions .btn { width:100%; justify-content:center; }
+      .tab-shell,
+      .filters-shell { padding:12px; }
       .py__resumen { flex-direction:column; }
       .py__res-item { border-right:none; border-bottom:1px solid #f0f4f8; }
       .py__res-item:last-child { border-bottom:none; }
@@ -1815,6 +2112,11 @@ export class PayrollComponent implements OnInit {
   canManageEmployees    = computed(() => this.hasRole('ADMIN') || this.hasRole('MANAGER'));
   canDeactivateEmployee = computed(() => this.hasRole('ADMIN'));
   activeEmployees       = computed(() => this.employees().filter(e => e.isActive));
+  acceptedPayrollCount  = computed(() => this.records().filter(r => r.status === 'ACCEPTED').length);
+  pendingPayrollCount   = computed(() => this.records().filter(r => ['DRAFT', 'SUBMITTED'].includes(r.status)).length);
+  submittedPayrollCount = computed(() => this.records().filter(r => r.status === 'SUBMITTED' || r.status === 'ACCEPTED').length);
+  currentNetPay         = computed(() => this.summary()?.totalNetPay ?? this.records().reduce((sum, r) => sum + Number(r.netPay || 0), 0));
+  currentEmployerCost   = computed(() => this.summary()?.totalEmployerCost ?? this.records().reduce((sum, r) => sum + Number(r.totalEmployerCost || 0), 0));
 
   payrollForm: any = this.emptyPayrollForm();
   empForm: any     = this.emptyEmpForm();

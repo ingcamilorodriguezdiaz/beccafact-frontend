@@ -56,38 +56,111 @@ interface Country { code: string; name: string; }
     <div class="page animate-in">
 
       <!-- Header -->
-      <div class="page-header" id="tour-customers-header">
-        <div>
-          <h2 class="page-title">Clientes</h2>
-          <p class="page-subtitle">{{ total() }} clientes registrados</p>
+      <section class="hero-shell" id="tour-customers-header">
+        <div class="page-header">
+          <div class="hero-copy">
+            <p class="hero-kicker">Relacion comercial</p>
+            <h2 class="page-title">Clientes</h2>
+            <p class="page-subtitle">Gestiona tu base comercial con una vista más moderna, clara y cómoda para el trabajo diario.</p>
+          </div>
+          <button class="btn btn-primary" id="tour-new-customer" (click)="openModal()">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+            Nuevo cliente
+          </button>
         </div>
-        <button class="btn btn-primary" id="tour-new-customer" (click)="openModal()">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
-          Nuevo cliente
-        </button>
-      </div>
+        <div class="hero-aside">
+          <div class="hero-highlight">
+            <span class="hero-highlight-label">Base visible</span>
+            <strong>{{ total() }}</strong>
+            <small>{{ viewMode() === 'table' ? 'Vista operativa detallada' : 'Vista visual por tarjetas' }}</small>
+          </div>
+          <div class="hero-mini-grid">
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Activos</span>
+              <strong>{{ activeCustomersCount() }}</strong>
+            </div>
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Con crédito</span>
+              <strong>{{ creditCustomersCount() }}</strong>
+            </div>
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Sin email</span>
+              <strong>{{ missingEmailCustomersCount() }}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KPI strip -->
+      <section class="kpi-strip">
+        <article class="kpi-card">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M10 2a5 5 0 00-3.536 8.536l-.707.707A1 1 0 006.464 13.95l.707-.707A5 5 0 1010 2zm-3 5a3 3 0 116 0 3 3 0 01-6 0z" clip-rule="evenodd"/></svg>
+          </div>
+          <div>
+            <span class="kpi-card__label">Clientes activos</span>
+            <strong class="kpi-card__value">{{ activeCustomersCount() }}</strong>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h2a1 1 0 010 2H5a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+          </div>
+          <div>
+            <span class="kpi-card__label">Con crédito</span>
+            <strong class="kpi-card__value">{{ creditCustomersCount() }}</strong>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path d="M2.94 6.34A2 2 0 014.8 5h10.4a2 2 0 011.86 1.34L10 10.25 2.94 6.34z"/><path d="M18 8.17l-7.37 4.08a1.5 1.5 0 01-1.26 0L2 8.17V14a2 2 0 002 2h12a2 2 0 002-2V8.17z"/></svg>
+          </div>
+          <div>
+            <span class="kpi-card__label">Con email</span>
+            <strong class="kpi-card__value">{{ customersWithEmailCount() }}</strong>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-card__icon">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/></svg>
+          </div>
+          <div>
+            <span class="kpi-card__label">Con teléfono</span>
+            <strong class="kpi-card__value">{{ customersWithPhoneCount() }}</strong>
+          </div>
+        </article>
+      </section>
 
       <!-- Filters + View Toggle -->
-      <div class="filters-bar">
-        <div class="search-wrap">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
-          <input type="text" placeholder="Buscar por nombre, documento o email..."
-                 [(ngModel)]="search" (ngModelChange)="onSearch()" class="search-input"/>
+      <section class="filters-shell">
+        <div class="filters-head">
+          <div>
+            <p class="filters-kicker">Exploracion</p>
+            <h3>Filtra y encuentra clientes más rápido</h3>
+          </div>
+          <div class="results-pill">{{ total() }} resultados</div>
         </div>
-        <select [(ngModel)]="filterActive" (ngModelChange)="load()" class="filter-select">
-          <option value="">Todos</option>
-          <option value="true">Activos</option>
-          <option value="false">Inactivos</option>
-        </select>
-        <div class="view-toggle">
-          <button [class.active]="viewMode() === 'table'" (click)="viewMode.set('table')" title="Vista tabla">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z"/></svg>
-          </button>
-          <button [class.active]="viewMode() === 'grid'" (click)="viewMode.set('grid')" title="Vista cuadrícula">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-          </button>
+        <div class="filters-bar">
+          <div class="search-wrap">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
+            <input type="text" placeholder="Buscar por nombre, documento o email..."
+                   [(ngModel)]="search" (ngModelChange)="onSearch()" class="search-input"/>
+          </div>
+          <select [(ngModel)]="filterActive" (ngModelChange)="load()" class="filter-select">
+            <option value="">Todos</option>
+            <option value="true">Activos</option>
+            <option value="false">Inactivos</option>
+          </select>
+          <div class="view-toggle">
+            <button [class.active]="viewMode() === 'table'" (click)="viewMode.set('table')" title="Vista tabla">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z"/></svg>
+            </button>
+            <button [class.active]="viewMode() === 'grid'" (click)="viewMode.set('grid')" title="Vista cuadrícula">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
 
       <!-- ══ TABLE VIEW ══ -->
       @if (viewMode() === 'table') {
@@ -500,30 +573,196 @@ interface Country { code: string; name: string; }
     }
   `,
   styles: [`
-    .page { max-width: 1200px; }
-    .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; }
-    .page-title { font-family:'Sora',sans-serif; font-size:22px; font-weight:700; color:#0c1c35; margin:0 0 4px; }
-    .page-subtitle { font-size:13px; color:#7ea3cc; margin:0; }
+    .page { max-width: 1260px; padding-bottom:24px; }
+    .hero-shell {
+      display:grid;
+      grid-template-columns:minmax(0, 1.35fr) minmax(280px, .65fr);
+      gap:18px;
+      margin-bottom:18px;
+      padding:22px;
+      border-radius:28px;
+      background:
+        radial-gradient(circle at top left, rgba(16,185,129,.16), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(59,130,246,.16), transparent 28%),
+        linear-gradient(135deg, #0d2344 0%, #16386a 52%, #0f7a72 100%);
+      box-shadow:0 24px 48px rgba(12,28,53,.16);
+      color:#fff;
+    }
+    .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+    .hero-copy { max-width:620px; }
+    .hero-kicker {
+      margin:0 0 10px;
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.16em;
+      color:#89f3d1;
+    }
+    .page-title { font-family:'Sora',sans-serif; font-size:32px; line-height:1.02; font-weight:800; color:#fff; margin:0 0 10px; letter-spacing:-.05em; }
+    .page-subtitle { font-size:14px; color:rgba(236,244,255,.8); margin:0; line-height:1.6; }
+    .hero-aside { display:grid; gap:12px; align-content:start; }
+    .hero-highlight {
+      padding:18px;
+      border-radius:20px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter:blur(10px);
+    }
+    .hero-highlight-label {
+      display:block;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:#a7f3d0;
+      margin-bottom:8px;
+    }
+    .hero-highlight strong {
+      display:block;
+      font-family:'Sora',sans-serif;
+      font-size:40px;
+      line-height:1;
+      letter-spacing:-.06em;
+      margin-bottom:8px;
+    }
+    .hero-highlight small {
+      display:block;
+      font-size:12px;
+      line-height:1.5;
+      color:rgba(236,244,255,.72);
+    }
+    .hero-mini-grid {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:10px;
+    }
+    .hero-mini-card {
+      padding:12px 14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .hero-mini-card__label {
+      display:block;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:rgba(236,244,255,.72);
+      margin-bottom:5px;
+    }
+    .hero-mini-card strong {
+      font-family:'Sora',sans-serif;
+      font-size:20px;
+      color:#fff;
+      letter-spacing:-.04em;
+    }
+
+    /* KPI strip */
+    .kpi-strip {
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:14px;
+      margin-bottom:18px;
+    }
+    .kpi-card {
+      display:flex;
+      align-items:flex-start;
+      gap:14px;
+      padding:16px 18px;
+      border-radius:20px;
+      background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      border:1px solid #dce6f0;
+      box-shadow:0 16px 28px rgba(12,28,53,.05);
+    }
+    .kpi-card__icon {
+      width:44px;
+      height:44px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(135deg, #e0efff, #eefbf7);
+      color:#1a407e;
+      flex-shrink:0;
+    }
+    .kpi-card__label {
+      display:block;
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#7b8fa8;
+      margin-bottom:6px;
+    }
+    .kpi-card__value {
+      font-family:'Sora',sans-serif;
+      font-size:22px;
+      line-height:1.1;
+      letter-spacing:-.05em;
+      color:#0c1c35;
+    }
 
     /* Filters */
-    .filters-bar { display:flex; gap:12px; margin-bottom:16px; align-items:center; flex-wrap:wrap; }
+    .filters-shell {
+      margin-bottom:18px;
+      padding:18px;
+      border-radius:24px;
+      background:rgba(255,255,255,.84);
+      border:1px solid #dce6f0;
+      box-shadow:0 16px 30px rgba(12,28,53,.05);
+      backdrop-filter:blur(10px);
+    }
+    .filters-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .filters-kicker {
+      margin:0 0 6px;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#00a084;
+    }
+    .filters-head h3 {
+      margin:0;
+      font-family:'Sora',sans-serif;
+      font-size:18px;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+    }
+    .results-pill {
+      padding:8px 12px;
+      border-radius:999px;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      color:#1d4ed8;
+      font-size:12px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .filters-bar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
     .search-wrap { flex:1; position:relative; max-width:420px; min-width:180px; }
     .search-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; }
-    .search-input { width:100%; padding:8px 12px 8px 36px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; background:#fff; }
+    .search-input { width:100%; min-height:44px; padding:8px 12px 8px 36px; border:1px solid #dce6f0; border-radius:12px; font-size:14px; outline:none; background:#fff; box-shadow:0 8px 20px rgba(12,28,53,.03); }
     .search-input:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,0.08); }
-    .filter-select { padding:8px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; background:#fff; color:#374151; }
+    .filter-select { min-height:44px; padding:8px 12px; border:1px solid #dce6f0; border-radius:12px; font-size:14px; outline:none; background:#fff; color:#374151; box-shadow:0 8px 20px rgba(12,28,53,.03); }
 
     /* View toggle */
-    .view-toggle { display:flex; gap:2px; border:1px solid #dce6f0; border-radius:8px; overflow:hidden; margin-left:auto; flex-shrink:0; }
-    .view-toggle button { padding:7px 10px; background:#fff; border:none; cursor:pointer; color:#9ca3af; transition:all .15s; }
+    .view-toggle { display:flex; gap:2px; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; margin-left:auto; flex-shrink:0; background:#fff; box-shadow:0 8px 18px rgba(12,28,53,.03); }
+    .view-toggle button { padding:9px 11px; background:#fff; border:none; cursor:pointer; color:#9ca3af; transition:all .15s; }
     .view-toggle button:hover { background:#f0f4f9; color:#1a407e; }
     .view-toggle button.active { background:#1a407e; color:#fff; }
 
     /* ── TABLE VIEW */
-    .table-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; }
+    .table-card { background:#fff; border:1px solid #dce6f0; border-radius:18px; overflow:hidden; box-shadow:0 16px 28px rgba(12,28,53,.05); }
     .data-table { width:100%; border-collapse:collapse; }
-    .data-table th { padding:11px 16px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; background:#f8fafc; border-bottom:1px solid #dce6f0; text-align:left; }
-    .data-table td { padding:12px 16px; font-size:13.5px; color:#374151; border-bottom:1px solid #f0f4f8; vertical-align:middle; }
+    .data-table th { padding:12px 16px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#8aa0b8; background:#f8fbff; border-bottom:1px solid #dce6f0; text-align:left; }
+    .data-table td { padding:14px 16px; font-size:13.5px; color:#374151; border-bottom:1px solid #f0f4f8; vertical-align:middle; }
     .data-table tr:last-child td { border-bottom:none; }
     .data-table tr:hover td { background:#fafcff; }
     .customer-cell { display:flex; align-items:center; gap:10px; }
@@ -532,9 +771,9 @@ interface Country { code: string; name: string; }
     .cust-email { font-size:12px; color:#9ca3af; margin-top:1px; }
 
     /* ── GRID VIEW */
-    .customer-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px; }
-    .customer-card { background:#fff; border:1px solid #dce6f0; border-radius:12px; padding:18px 16px 14px; position:relative; transition:box-shadow .18s, transform .18s; display:flex; flex-direction:column; gap:0; }
-    .customer-card:hover { box-shadow:0 4px 20px rgba(26,64,126,.1); transform:translateY(-2px); }
+    .customer-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px; }
+    .customer-card { background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); border:1px solid #dce6f0; border-radius:20px; padding:18px 16px 14px; position:relative; transition:box-shadow .18s, transform .18s, border-color .18s; display:flex; flex-direction:column; gap:0; box-shadow:0 12px 26px rgba(12,28,53,.04); }
+    .customer-card:hover { box-shadow:0 18px 32px rgba(26,64,126,.1); transform:translateY(-3px); border-color:#93c5fd; }
     .customer-card--inactive { opacity:.7; border-color:#f0d4d4; background:#fdfafa; }
     .customer-card--skeleton { pointer-events:none; padding:18px 16px; }
     .cc-status { position:absolute; top:12px; right:12px; }
@@ -565,8 +804,8 @@ interface Country { code: string; name: string; }
 
     /* Actions */
     .actions-cell { text-align:right; }
-    .btn-icon { background:none; border:none; padding:5px; border-radius:6px; cursor:pointer; color:#9ca3af; transition:all .15s; }
-    .btn-icon:hover { background:#f0f4f9; color:#1a407e; }
+    .btn-icon { background:#fff; border:1px solid #dce6f0; padding:7px; border-radius:10px; cursor:pointer; color:#9ca3af; transition:all .15s; box-shadow:0 6px 16px rgba(12,28,53,.03); }
+    .btn-icon:hover { background:#f0f6ff; color:#1a407e; border-color:#93c5fd; }
     .btn-icon-danger:hover { background:#fee2e2; color:#dc2626; }
 
     /* Pagination */
@@ -656,8 +895,13 @@ interface Country { code: string; name: string; }
 
     /* Responsive */
     @media (max-width: 768px) {
+      .hero-shell { grid-template-columns:1fr; padding:18px; border-radius:24px; }
+      .page-title { font-size:26px; }
       .page-header { flex-direction:column; align-items:stretch; gap:10px; }
       .page-header .btn { width:100%; justify-content:center; }
+      .hero-mini-grid,
+      .kpi-strip { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+      .filters-head { flex-direction:column; align-items:flex-start; }
       .filters-bar { gap:8px; }
       .search-wrap { max-width:100%; flex:1 1 100%; }
       .view-toggle { margin-left:0; }
@@ -665,6 +909,10 @@ interface Country { code: string; name: string; }
       .customer-grid { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; }
     }
     @media (max-width: 640px) {
+      .hero-shell { padding:16px; gap:14px; }
+      .hero-mini-grid,
+      .kpi-strip { grid-template-columns:1fr; }
+      .filters-shell { padding:14px; }
       .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
       .data-table { min-width:520px; }
       .drawer-overlay { align-items:flex-end; justify-content:stretch; }
@@ -723,6 +971,12 @@ export class CustomersComponent implements OnInit {
       (text.length < 2 || m.name.toLowerCase().includes(text))
     ).slice(0, 40); // max 40 opciones en dropdown
   });
+
+  activeCustomersCount = computed(() => this.customers().filter(c => c.isActive).length);
+  creditCustomersCount = computed(() => this.customers().filter(c => !!c.creditDays && Number(c.creditDays) > 0).length);
+  missingEmailCustomersCount = computed(() => this.customers().filter(c => !c.email).length);
+  customersWithEmailCount = computed(() => this.customers().filter(c => !!c.email).length);
+  customersWithPhoneCount = computed(() => this.customers().filter(c => !!c.phone).length);
 
   private muniSearch$ = new Subject<{ q: string; dept: string }>();
 

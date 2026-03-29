@@ -60,27 +60,55 @@ interface AgingRow {
     <div class="ct">
 
       <!-- ── Header ──────────────────────────────────────────────────── -->
-      <div class="page-header">
-        <div>
-          <h1 class="page-header__title">Cartera</h1>
-          <p class="page-header__sub">Gestión de cuentas por cobrar y seguimiento de pagos</p>
+      <section class="hero-shell">
+        <div class="page-header">
+          <div class="hero-copy">
+            <p class="hero-kicker">Seguimiento financiero</p>
+            <h1 class="page-header__title">Cartera</h1>
+            <p class="page-header__sub">Supervisa cuentas por cobrar, vencimientos y recaudos desde una vista más clara y ejecutiva.</p>
+          </div>
+          <div class="page-header__actions">
+            <button class="btn btn--secondary btn--sm" (click)="loadDashboard(); load()">
+              <span class="material-symbols-outlined">refresh</span>
+              Actualizar
+            </button>
+          </div>
         </div>
-        <div class="page-header__actions">
-          <button class="btn btn--secondary btn--sm" (click)="loadDashboard(); load()">
-            <span class="material-symbols-outlined">refresh</span>
-            Actualizar
-          </button>
+        <div class="hero-aside">
+          <div class="hero-highlight">
+            <span class="hero-highlight-label">Cartera visible</span>
+            <strong>{{ total() }}</strong>
+            <small>{{ activeTab() === 'cartera' ? 'Facturas y saldos en seguimiento' : 'Clientes agrupados por antigüedad' }}</small>
+          </div>
+          @if (dashboard()) {
+            <div class="hero-mini-grid">
+              <div class="hero-mini-card">
+                <span class="hero-mini-card__label">Vencidas</span>
+                <strong>{{ dashboard()!.summary.clientesEnMora }}</strong>
+              </div>
+              <div class="hero-mini-card">
+                <span class="hero-mini-card__label">Activas</span>
+                <strong>{{ dashboard()!.summary.totalInvoices }}</strong>
+              </div>
+              <div class="hero-mini-card">
+                <span class="hero-mini-card__label">Por vencer</span>
+                <strong>{{ dashboard()!.summary.totalDueSoon | currency:'COP':'symbol':'1.0-0' }}</strong>
+              </div>
+            </div>
+          }
         </div>
-      </div>
+      </section>
 
       <!-- ── Tabs ────────────────────────────────────────────────────── -->
-      <div class="ct__tabs">
-        <button class="ct__tab" [class.ct__tab--active]="activeTab() === 'cartera'" (click)="activeTab.set('cartera')">
-          <span class="material-symbols-outlined">receipt_long</span> Cartera
-        </button>
-        <button class="ct__tab" [class.ct__tab--active]="activeTab() === 'aging'" (click)="setTab('aging')">
-          <span class="material-symbols-outlined">bar_chart</span> Aging
-        </button>
+      <div class="tab-shell">
+        <div class="ct__tabs">
+          <button class="ct__tab" [class.ct__tab--active]="activeTab() === 'cartera'" (click)="activeTab.set('cartera')">
+            <span class="material-symbols-outlined">receipt_long</span> Cartera
+          </button>
+          <button class="ct__tab" [class.ct__tab--active]="activeTab() === 'aging'" (click)="setTab('aging')">
+            <span class="material-symbols-outlined">bar_chart</span> Aging
+          </button>
+        </div>
       </div>
 
       <!-- ══════════════════════════════════════════════════════════════
@@ -125,6 +153,7 @@ interface AgingRow {
         }
 
         <!-- ── Filtros ─────────────────────────────────────────────── -->
+        <div class="ct__filters-shell">
         <div class="ct__filters card card--sm card--flat">
           <div class="search-box" style="flex:1;max-width:320px">
             <span class="search-box__icon material-symbols-outlined">search</span>
@@ -139,9 +168,30 @@ interface AgingRow {
               </button>
             }
           </div>
+          <div class="view-toggle">
+            <button [class.active]="viewMode() === 'table'" (click)="viewMode.set('table')" title="Vista tabla">
+              <span class="material-symbols-outlined">table_rows</span>
+            </button>
+            <button [class.active]="viewMode() === 'grid'" (click)="viewMode.set('grid')" title="Vista cuadrícula">
+              <span class="material-symbols-outlined">grid_view</span>
+            </button>
+          </div>
+        </div>
         </div>
 
-        <!-- ── Tabla ───────────────────────────────────────────────── -->
+        <!-- ── Tabla / Grid ────────────────────────────────────────── -->
+        @if (viewMode() === 'table') {
+        <div class="content-shell">
+          <div class="content-shell__head">
+            <div>
+              <p class="content-shell__kicker">Seguimiento</p>
+              <h3>Facturas en gestión de cobro</h3>
+            </div>
+            <div class="content-shell__meta">
+              <span class="content-chip">{{ total() }} registros</span>
+              <span class="content-chip content-chip--soft">{{ statusFilter() || 'Todos' }}</span>
+            </div>
+          </div>
         <div class="table-wrapper">
           <div class="table-scroll">
             @if (loading()) {
@@ -237,6 +287,99 @@ interface AgingRow {
             }
           </div>
         </div>
+        </div>
+        } @else {
+        <div class="grid-shell-head">
+          <div>
+            <p class="content-shell__kicker">Seguimiento</p>
+            <h3>Facturas en tarjetas de cobro</h3>
+          </div>
+          <div class="content-shell__meta">
+            <span class="content-chip">{{ total() }} registros</span>
+            <span class="content-chip content-chip--soft">{{ statusFilter() || 'Todos' }}</span>
+          </div>
+        </div>
+          @if (loading()) {
+            <div class="ct__loading ct__loading--grid">
+              @for (i of [1,2,3,4,5,6]; track i) {
+                <div class="ct-card ct-card--skeleton">
+                  <div class="sk" style="width:110px;height:18px"></div>
+                  <div class="sk" style="width:75%;margin-top:10px"></div>
+                  <div class="sk" style="width:55%;margin-top:8px"></div>
+                  <div class="sk" style="width:100%;margin-top:14px"></div>
+                  <div class="sk" style="width:85%;margin-top:8px"></div>
+                </div>
+              }
+            </div>
+          } @else if (invoices().length === 0) {
+            <div class="ct__empty ct__empty--grid">
+              <span class="material-symbols-outlined">inbox</span>
+              <p>No hay facturas en cartera con los filtros seleccionados</p>
+            </div>
+          } @else {
+            <div class="ct-card-grid">
+              @for (f of invoices(); track f.id) {
+                <article class="ct-card" [class.ct-card--mora]="f.carteraStatus === 'EN_MORA'">
+                  <span class="ct-card__status badge" [ngClass]="statusClass(f.carteraStatus)">
+                    {{ statusLabel(f.carteraStatus) }}
+                  </span>
+                  <div class="ct-card__top">
+                    <div class="ct-card__avatar">{{ initials(f.customer.name) }}</div>
+                    <div class="ct-card__customer">{{ f.customer.name }}</div>
+                    <div class="ct-card__doc">
+                      <code class="inv-num">{{ f.invoiceNumber }}</code>
+                      {{ f.customer.documentNumber }}
+                    </div>
+                  </div>
+                  <div class="ct-card__info">
+                    <div class="ct-card__info-row ct-card__info-row--balance">
+                      <span class="material-symbols-outlined">account_balance_wallet</span>
+                      <span>Saldo {{ f.balance | currency:'COP':'symbol':'1.0-0' }}</span>
+                    </div>
+                    <div class="ct-card__info-row">
+                      <span class="material-symbols-outlined">request_quote</span>
+                      <span>Total {{ f.total | currency:'COP':'symbol':'1.0-0' }}</span>
+                    </div>
+                    <div class="ct-card__info-row">
+                      <span class="material-symbols-outlined">calendar_today</span>
+                      <span>Emisión {{ f.issueDate | date:'dd/MM/yy' }}</span>
+                    </div>
+                    <div class="ct-card__info-row" [class.ct-card__info-row--danger]="(f.daysOverdue ?? 0) > 0">
+                      <span class="material-symbols-outlined">event_busy</span>
+                      <span>Vence {{ f.dueDate ? (f.dueDate | date:'dd/MM/yy') : '—' }}</span>
+                    </div>
+                  </div>
+                  <div class="ct-card__meta">
+                    @if (f.paidAmount > 0 && f.status !== 'PAID') {
+                      <span class="ct__partial-badge">Parcial</span>
+                    } @else {
+                      <span class="ct-card__meta-spacer"></span>
+                    }
+                  </div>
+                  @if ((f.daysOverdue ?? 0) > 0) {
+                    <div class="ct-card__overdue">+{{ f.daysOverdue }} días de atraso</div>
+                  }
+                  <div class="ct-card__actions">
+                    <button class="btn btn--secondary btn--sm" (click)="verCliente(f.customer.id)">
+                      <span class="material-symbols-outlined">person</span>
+                      Cliente
+                    </button>
+                    <button class="btn btn--secondary btn--sm" (click)="verPagos(f)">
+                      <span class="material-symbols-outlined">history</span>
+                      Pagos
+                    </button>
+                    @if (canRegisterPayment() && f.status !== 'PAID') {
+                      <button class="btn btn--primary btn--sm" (click)="openPago(f)">
+                        <span class="material-symbols-outlined">payments</span>
+                        Cobrar
+                      </button>
+                    }
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        }
 
         <!-- Paginación -->
         @if (total() > 0) {
@@ -263,6 +406,17 @@ interface AgingRow {
             <span>Calculando aging…</span>
           </div>
         } @else if (aging()) {
+          <div class="content-shell">
+          <div class="content-shell__head">
+            <div>
+              <p class="content-shell__kicker">Antigüedad</p>
+              <h3>Aging por cliente</h3>
+            </div>
+            <div class="content-shell__meta">
+              <span class="content-chip">Aging</span>
+              <span class="content-chip content-chip--soft">{{ aging()!.rows.length }} clientes</span>
+            </div>
+          </div>
           <div class="ct__aging-header">
             <p class="ct__aging-desc">Distribución de saldos por antigüedad al día de hoy</p>
           </div>
@@ -337,6 +491,7 @@ interface AgingRow {
                 </table>
               }
             </div>
+          </div>
           </div>
         }
       }<!-- /tab aging -->
@@ -582,14 +737,104 @@ interface AgingRow {
     }
   `,
   styles: [`
-    .ct { max-width: 1280px; }
+    .ct { max-width: 1280px; padding-bottom:24px; }
+
+    /* Hero */
+    .hero-shell {
+      display:grid;
+      grid-template-columns:minmax(0, 1.35fr) minmax(280px, .65fr);
+      gap:18px;
+      margin-bottom:18px;
+      padding:22px;
+      border-radius:28px;
+      background:
+        radial-gradient(circle at top left, rgba(16,185,129,.16), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(59,130,246,.16), transparent 28%),
+        linear-gradient(135deg, #0d2344 0%, #16386a 52%, #0f7a72 100%);
+      box-shadow:0 24px 48px rgba(12,28,53,.16);
+      color:#fff;
+    }
+    .hero-copy { max-width:620px; }
+    .hero-kicker {
+      margin:0 0 10px;
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.16em;
+      color:#89f3d1;
+    }
+    .hero-aside { display:grid; gap:12px; align-content:start; }
+    .hero-highlight {
+      padding:18px;
+      border-radius:20px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter:blur(10px);
+    }
+    .hero-highlight-label {
+      display:block;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:#a7f3d0;
+      margin-bottom:8px;
+    }
+    .hero-highlight strong {
+      display:block;
+      font-family:'Sora',sans-serif;
+      font-size:40px;
+      line-height:1;
+      letter-spacing:-.06em;
+      margin-bottom:8px;
+    }
+    .hero-highlight small {
+      display:block;
+      font-size:12px;
+      line-height:1.5;
+      color:rgba(236,244,255,.72);
+    }
+    .hero-mini-grid {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:10px;
+    }
+    .hero-mini-card {
+      padding:12px 14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .hero-mini-card__label {
+      display:block;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:rgba(236,244,255,.72);
+      margin-bottom:5px;
+    }
+    .hero-mini-card strong {
+      font-family:'Sora',sans-serif;
+      font-size:18px;
+      color:#fff;
+      letter-spacing:-.04em;
+    }
 
     /* Tabs */
-    .ct__tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid #f0f4f8; }
+    .tab-shell {
+      margin-bottom:18px;
+      padding:8px;
+      border-radius:20px;
+      background:rgba(255,255,255,.84);
+      border:1px solid #dce6f0;
+      box-shadow:0 12px 26px rgba(12,28,53,.05);
+    }
+    .ct__tabs { display:flex; gap:6px; }
     .ct__tab { display:inline-flex; align-items:center; gap:6px; padding:10px 18px; font-size:13.5px; font-weight:600; color:#64748b; background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px; cursor:pointer; transition:all .15s; border-radius:6px 6px 0 0; }
     .ct__tab .material-symbols-outlined { font-size:17px; }
     .ct__tab:hover { color:#1a407e; background:#f0f4f9; }
-    .ct__tab--active { color:#1a407e; border-bottom-color:#1a407e; background:#f0f4f9; }
+    .ct__tab--active { color:#1a407e; border-bottom-color:#1a407e; background:#eff6ff; box-shadow:inset 0 0 0 1px #bfdbfe; }
 
     /* KPIs */
     .ct__kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
@@ -605,14 +850,99 @@ interface AgingRow {
     .ct__kpi-sub   { font-size:11px; color:#94a3b8; }
 
     /* Filters */
-    .ct__filters { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+    .ct__filters-shell {
+      margin-bottom:16px;
+      padding:16px;
+      border-radius:22px;
+      background:rgba(255,255,255,.84);
+      border:1px solid #dce6f0;
+      box-shadow:0 12px 28px rgba(12,28,53,.05);
+    }
+    .ct__filters { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:0; }
     .ct__filter-chips { display:flex; gap:6px; flex-wrap:wrap; }
+    .view-toggle { display:flex; gap:2px; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; margin-left:auto; flex-shrink:0; background:#fff; box-shadow:0 8px 18px rgba(12,28,53,.03); }
+    .view-toggle button { padding:9px 11px; background:#fff; border:none; cursor:pointer; color:#9ca3af; transition:all .15s; display:flex; align-items:center; justify-content:center; }
+    .view-toggle button:hover { background:#f0f4f9; color:#1a407e; }
+    .view-toggle button.active { background:#1a407e; color:#fff; }
+    .view-toggle .material-symbols-outlined { font-size:18px; }
     .chip { padding:5px 12px; border-radius:99px; border:1px solid #dce6f0; background:#f8fafc; font-size:12.5px; font-weight:500; color:#64748b; cursor:pointer; transition:all .15s; }
     .chip:hover { border-color:#1a407e; color:#1a407e; }
     .chip--active { background:#1a407e; border-color:#1a407e; color:#fff; }
 
+    /* Content shell */
+    .content-shell {
+      border-radius:24px;
+      background:rgba(255,255,255,.78);
+      border:1px solid #dce6f0;
+      box-shadow:0 16px 32px rgba(12,28,53,.05);
+      overflow:hidden;
+      margin-bottom:12px;
+    }
+    .content-shell__head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:18px 20px 16px;
+      border-bottom:1px solid #e9eef5;
+      background:
+        radial-gradient(circle at top right, rgba(37,99,235,.08), transparent 24%),
+        linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
+    }
+    .content-shell__kicker {
+      margin:0 0 5px;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#00a084;
+    }
+    .content-shell__head h3 {
+      margin:0;
+      font-family:'Sora',sans-serif;
+      font-size:18px;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+    }
+    .content-shell__meta {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .grid-shell-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      margin-bottom:14px;
+      padding:0 4px;
+    }
+    .grid-shell-head h3 {
+      margin:0;
+      font-family:'Sora',sans-serif;
+      font-size:18px;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+    }
+    .content-chip {
+      padding:7px 11px;
+      border-radius:999px;
+      background:#0f274b;
+      color:#fff;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .content-chip--soft {
+      background:#edf5ff;
+      color:#1a407e;
+      border:1px solid #bfdbfe;
+    }
+
     /* Table */
-    .table-wrapper { background:#fff; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; margin-bottom:12px; }
+    .table-wrapper { background:#fff; border:1px solid #dce6f0; border-radius:18px; overflow:hidden; margin-bottom:12px; box-shadow:0 16px 28px rgba(12,28,53,.05); }
     .table-scroll { overflow-x:auto; }
     .bf-table { width:100%; border-collapse:collapse; font-size:13px; }
     .bf-table th { padding:10px 14px; text-align:left; font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; background:#f8fafc; border-bottom:1px solid #f0f4f8; white-space:nowrap; }
@@ -667,9 +997,87 @@ interface AgingRow {
     .ct__empty { display:flex; flex-direction:column; align-items:center; padding:48px 24px; gap:10px; color:#94a3b8; }
     .ct__empty .material-symbols-outlined { font-size:40px; }
     .ct__loading { padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .ct__loading--grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+      gap:16px;
+      padding:18px;
+    }
     .sk-row { display:flex; gap:12px; align-items:center; }
     .sk { height:14px; border-radius:6px; background:linear-gradient(90deg,#f0f4f8 25%,#e8eef8 50%,#f0f4f8 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; }
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
+    .ct-card-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+      gap:16px;
+      padding:18px;
+    }
+    .ct-card {
+      display:flex;
+      flex-direction:column;
+      gap:0;
+      padding:18px 16px 14px;
+      position:relative;
+      border-radius:20px;
+      background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      border:1px solid #dce6f0;
+      box-shadow:0 12px 26px rgba(12,28,53,.04);
+      transition:box-shadow .16s, border-color .16s, transform .16s;
+    }
+    .ct-card:hover {
+      border-color:#93c5fd;
+      box-shadow:0 18px 32px rgba(26,64,126,.1);
+      transform:translateY(-3px);
+    }
+    .ct-card--mora { border-color:#fecaca; background:linear-gradient(180deg, #ffffff 0%, #fff8f8 100%); }
+    .ct-card--skeleton { pointer-events:none; }
+    .ct-card__status { position:absolute; top:12px; right:12px; }
+    .ct-card__top { display:flex; flex-direction:column; align-items:center; text-align:center; padding:6px 0 12px; }
+    .ct-card__avatar {
+      width:52px;
+      height:52px;
+      border-radius:12px;
+      background:linear-gradient(135deg,#1a407e,#00c6a0);
+      color:#fff;
+      font-size:16px;
+      font-weight:700;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family:'Sora',sans-serif;
+      margin-bottom:10px;
+    }
+    .ct-card__customer { font-size:14px; font-weight:700; color:#0c1c35; line-height:1.3; margin-bottom:4px; }
+    .ct-card__doc { font-size:11.5px; color:#9ca3af; display:flex; align-items:center; gap:5px; justify-content:center; flex-wrap:wrap; }
+    .ct-card__info { border-top:1px solid #f0f4f8; padding-top:10px; margin-bottom:12px; display:flex; flex-direction:column; gap:5px; flex:1; }
+    .ct-card__info-row { display:flex; align-items:center; gap:6px; font-size:12px; color:#64748b; }
+    .ct-card__info-row .material-symbols-outlined { font-size:14px; color:#94a3b8; flex-shrink:0; }
+    .ct-card__info-row span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ct-card__info-row--balance { color:#0c1c35; font-weight:700; }
+    .ct-card__info-row--balance .material-symbols-outlined { color:#1a407e; }
+    .ct-card__info-row--danger { color:#dc2626; }
+    .ct-card__info-row--danger .material-symbols-outlined { color:#ef4444; }
+    .ct-card__meta { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12px; color:#64748b; margin-bottom:10px; }
+    .ct-card__meta-spacer { display:block; min-height:18px; }
+    .ct-card__overdue {
+      padding:8px 10px;
+      border-radius:10px;
+      background:#fff1f2;
+      border:1px solid #fecdd3;
+      font-size:12px;
+      font-weight:700;
+      color:#be123c;
+      margin-bottom:10px;
+    }
+    .ct-card__actions {
+      display:flex;
+      gap:6px;
+      align-items:center;
+      padding-top:10px;
+      border-top:1px solid #f0f4f8;
+    }
+    .ct-card__actions .btn { flex:1; justify-content:center; }
+    .ct__empty--grid { padding:48px 24px; }
 
     /* Aging */
     .ct__aging-loading { display:flex; align-items:center; justify-content:center; gap:12px; padding:48px; color:#64748b; }
@@ -750,9 +1158,9 @@ interface AgingRow {
     .btn--sm { padding:7px 14px; font-size:12.5px; }
 
     /* Page header */
-    .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; gap:12px; flex-wrap:wrap; }
-    .page-header__title { font-family:'Sora',sans-serif; font-size:22px; font-weight:700; color:#0c1c35; margin:0 0 4px; }
-    .page-header__sub { font-size:13px; color:#64748b; margin:0; }
+    .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .page-header__title { font-family:'Sora',sans-serif; font-size:32px; line-height:1.02; font-weight:800; color:#fff; margin:0 0 10px; letter-spacing:-.05em; }
+    .page-header__sub { font-size:14px; color:rgba(236,244,255,.8); margin:0; line-height:1.6; }
     .page-header__actions { display:flex; gap:8px; }
     .card { background:#fff; border:1px solid #dce6f0; border-radius:12px; }
     .card--sm { padding:12px 16px; }
@@ -762,14 +1170,28 @@ interface AgingRow {
     .search-box__input { border:none; outline:none; font-size:13.5px; color:#0c1c35; width:100%; background:transparent; }
 
     @media (max-width:1100px) { .ct__aging-summary { grid-template-columns:repeat(3,1fr); } }
-    @media (max-width:900px) { .ct__kpis { grid-template-columns:repeat(2,1fr); } }
+    @media (max-width:900px) {
+      .hero-shell { grid-template-columns:1fr; }
+      .hero-mini-grid,
+      .ct__kpis { grid-template-columns:repeat(2,1fr); }
+    }
     @media (max-width:640px) {
+      .hero-shell { padding:16px; gap:14px; }
+      .page-header__title { font-size:26px; }
+      .hero-mini-grid,
+      .ct__kpis { grid-template-columns:1fr; }
+      .content-shell__head { flex-direction:column; align-items:flex-start; }
+      .grid-shell-head { flex-direction:column; align-items:flex-start; padding:0; }
       .ct__kpis { grid-template-columns:1fr; }
       .ct__filters { flex-direction:column; align-items:stretch; }
+      .view-toggle { margin-left:0; }
       .ct__cliente-kpis { grid-template-columns:repeat(2,1fr); }
       .ct__aging-summary { grid-template-columns:repeat(2,1fr); }
       .ct__ph-summary { flex-direction:column; }
       .ct__ph-item { border-right:none; border-bottom:1px solid #f0f4f8; }
+      .ct-card-grid,
+      .ct__loading--grid { grid-template-columns:1fr; padding:14px; }
+      .ct-card__dates { grid-template-columns:1fr; }
       .form-row-2 { grid-template-columns:1fr; }
       .modal-overlay { align-items:flex-end; padding:0; }
       .modal { border-radius:20px 20px 0 0; max-height:95dvh; }
@@ -797,6 +1219,7 @@ export class CarteraComponent implements OnInit {
   search        = '';
   statusFilter  = signal('');
   activeTab     = signal<'cartera' | 'aging'>('cartera');
+  viewMode      = signal<'table' | 'grid'>('table');
 
   showCustomerModal      = signal(false);
   customerReceivables    = signal<any>(null);
@@ -1007,6 +1430,16 @@ export class CarteraComponent implements OnInit {
       PAID: 'Pagada', PAGADA: 'Pagada',
     };
     return map[s] ?? s;
+  }
+
+  initials(name: string): string {
+    return (name || '')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0])
+      .join('')
+      .toUpperCase();
   }
 
   min(a: number, b: number) { return Math.min(a, b); }

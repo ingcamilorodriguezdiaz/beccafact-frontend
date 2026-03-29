@@ -28,21 +28,77 @@ interface ImportJob {
   template: `
     <div class="import-page animate-in">
 
-      <div class="page-header">
-        <div>
-          <h2 class="page-title">Importación Masiva</h2>
-          <p class="page-subtitle">Carga productos desde CSV o Excel — hasta 10MB</p>
+      <section class="hero-shell">
+        <div class="page-header">
+          <div class="hero-copy">
+            <p class="hero-kicker">Carga operativa</p>
+            <h2 class="page-title">Importación masiva</h2>
+            <p class="page-subtitle">Carga productos desde CSV o Excel, valida la estructura antes de procesar y sigue el avance de cada lote desde una vista más clara.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-secondary btn-secondary-hero" (click)="downloadTemplate()" [disabled]="downloadingTemplate()">
+              @if (downloadingTemplate()) {
+                <span class="btn-spinner"></span>
+                Generando...
+              } @else {
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/></svg>
+                Descargar plantilla
+              }
+            </button>
+          </div>
         </div>
-        <button class="btn btn-secondary" (click)="downloadTemplate()" [disabled]="downloadingTemplate()">
-          @if (downloadingTemplate()) {
-            <span class="btn-spinner"></span>
-            Generando...
-          } @else {
-            <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/></svg>
-            Descargar plantilla
-          }
-        </button>
-      </div>
+        <div class="hero-aside">
+          <div class="hero-highlight">
+            <span class="hero-highlight-label">Estado actual</span>
+            <strong>{{ activeJob() ? statusLabel(activeJob()!.status) : 'Listo para cargar' }}</strong>
+            <small>{{ activeJob() ? ('Archivo en proceso: ' + activeJob()!.fileName) : 'Sube un archivo, revisa la vista previa y lanza la importación solo cuando todo esté correcto.' }}</small>
+          </div>
+          <div class="hero-mini-grid">
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Historial</span>
+              <strong>{{ history().length }}</strong>
+            </div>
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Exitosas</span>
+              <strong>{{ completedJobsCount() }}</strong>
+            </div>
+            <div class="hero-mini-card">
+              <span class="hero-mini-card__label">Importados</span>
+              <strong>{{ importedRowsCount() }}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="kpi-strip">
+        <article class="kpi-card">
+          <div class="kpi-icon-wrap">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/></svg>
+          </div>
+          <div>
+            <span class="kpi-label">Archivo listo</span>
+            <strong class="kpi-value">{{ selectedFile() ? selectedFile()!.name : 'Ninguno' }}</strong>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-icon-wrap">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z"/><path fill-rule="evenodd" d="M10 3a7 7 0 100 14A7 7 0 0010 3zm-9 7a9 9 0 1118 0A9 9 0 011 10z"/></svg>
+          </div>
+          <div>
+            <span class="kpi-label">Vista previa</span>
+            <strong class="kpi-value">{{ preview() ? (preview()!.validRows + ' válidas') : 'Pendiente' }}</strong>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-icon-wrap">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z"/></svg>
+          </div>
+          <div>
+            <span class="kpi-label">Progreso</span>
+            <strong class="kpi-value">{{ activeJob() ? (jobProgress() + '%') : 'Sin proceso' }}</strong>
+          </div>
+        </article>
+      </section>
 
       <!-- Steps indicator -->
       <div class="steps-bar">
@@ -62,7 +118,7 @@ interface ImportJob {
       </div>
 
       <!-- Step 1: Upload -->
-      <div class="import-card">
+      <div class="import-card import-card--upload">
         <div class="ic-title">
           <span class="ic-num">1</span>
           Seleccionar archivo
@@ -257,7 +313,7 @@ interface ImportJob {
       }
 
       <!-- History -->
-      <div class="import-card">
+      <div class="import-card import-card--history">
         <div class="ic-title">
           <svg viewBox="0 0 20 20" fill="currentColor" width="17" style="color:#7ea3cc"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"/></svg>
           Historial de importaciones
@@ -322,14 +378,160 @@ interface ImportJob {
     </div>
   `,
   styles: [`
-    .import-page { max-width: 900px; }
+    .import-page { max-width: 1120px; }
+    .hero-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(300px, .85fr);
+      gap: 18px;
+      padding: 22px 24px;
+      margin-bottom: 16px;
+      border-radius: 28px;
+      border: 1px solid rgba(148, 163, 184, .16);
+      background:
+        radial-gradient(circle at top left, rgba(45, 212, 191, .18), transparent 30%),
+        radial-gradient(circle at top right, rgba(96, 165, 250, .16), transparent 34%),
+        linear-gradient(135deg, #0d2344 0%, #16386a 58%, #0d7d73 100%);
+      box-shadow: 0 26px 44px rgba(12, 28, 53, .14);
+    }
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 0;
+    }
+    .hero-copy { max-width: 640px; }
+    .hero-kicker {
+      margin: 0 0 10px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      color: #86efdc;
+    }
+    .page-title {
+      font-family: 'Sora', sans-serif;
+      font-size: 30px;
+      line-height: 1;
+      letter-spacing: -.05em;
+      font-weight: 700;
+      color: #fff;
+      margin: 0 0 10px;
+    }
+    .page-subtitle {
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(226, 232, 240, .84);
+      margin: 0;
+      max-width: 58ch;
+    }
+    .header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .btn-secondary-hero {
+      background: rgba(255,255,255,.12) !important;
+      border-color: rgba(255,255,255,.16) !important;
+      color: #fff !important;
+      backdrop-filter: blur(8px);
+    }
+    .btn-secondary-hero:hover { background: rgba(255,255,255,.18) !important; }
+    .hero-aside { display: grid; gap: 12px; align-content: start; }
+    .hero-highlight,
+    .hero-mini-card {
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.12);
+      backdrop-filter: blur(12px);
+      color: #fff;
+    }
+    .hero-highlight {
+      padding: 18px 18px 16px;
+      box-shadow: 0 18px 28px rgba(7, 16, 32, .16);
+    }
+    .hero-highlight-label,
+    .hero-mini-card__label {
+      display: block;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+    }
+    .hero-highlight-label { color: #a7f3d0; }
+    .hero-highlight strong {
+      display: block;
+      margin-top: 8px;
+      font-family: 'Sora', sans-serif;
+      font-size: 32px;
+      line-height: 1;
+      letter-spacing: -.06em;
+    }
+    .hero-highlight small {
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+      color: rgba(226, 232, 240, .78);
+      line-height: 1.5;
+    }
+    .hero-mini-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .hero-mini-card { padding: 14px 14px 12px; }
+    .hero-mini-card__label { color: rgba(226, 232, 240, .7); }
+    .hero-mini-card strong {
+      display: block;
+      margin-top: 8px;
+      font-family: 'Sora', sans-serif;
+      font-size: 22px;
+      letter-spacing: -.04em;
+    }
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .kpi-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+      border-radius: 22px;
+      background: rgba(255,255,255,.88);
+      border: 1px solid #dce6f0;
+      box-shadow: 0 18px 34px rgba(12, 28, 53, .06);
+      backdrop-filter: blur(10px);
+    }
+    .kpi-icon-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0f4b8a;
+      background: linear-gradient(135deg, #e0f2fe, #dbeafe);
+      box-shadow: inset 0 0 0 1px rgba(147, 197, 253, .72);
+      flex-shrink: 0;
+    }
+    .kpi-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: #8aa0b8;
+      margin-bottom: 4px;
+    }
+    .kpi-value {
+      display: block;
+      font-family: 'Sora', sans-serif;
+      font-size: 18px;
+      letter-spacing: -.04em;
+      color: #0c1c35;
+    }
 
     /* Steps bar */
     .steps-bar {
       display: flex; align-items: center; margin-bottom: 24px;
-      background: var(--surface,#fff); border: 1px solid var(--border,#dce6f0);
-      border-radius: 13px; padding: 18px 24px;
-      box-shadow: var(--shadow-sm);
+      background: rgba(255,255,255,.88); border: 1px solid var(--border,#dce6f0);
+      border-radius: 22px; padding: 18px 24px;
+      box-shadow: 0 18px 34px rgba(12, 28, 53, .06);
     }
     .step-item { display: flex; align-items: center; gap: 9px; }
     .step-num {
@@ -350,13 +552,15 @@ interface ImportJob {
 
     /* Import card */
     .import-card {
-      background: var(--surface,#fff); border: 1px solid var(--border,#dce6f0);
-      border-radius: 13px; padding: 24px; margin-bottom: 20px;
-      box-shadow: var(--shadow-sm);
+      background: rgba(255,255,255,.9); border: 1px solid var(--border,#dce6f0);
+      border-radius: 24px; padding: 24px; margin-bottom: 20px;
+      box-shadow: 0 18px 34px rgba(12, 28, 53, .06);
     }
+    .import-card--upload,
+    .import-card--history { backdrop-filter: blur(10px); }
     .ic-title {
       display: flex; align-items: center; gap: 10px;
-      font-family: 'Sora',sans-serif; font-size: 15px; font-weight: 700;
+      font-family: 'Sora',sans-serif; font-size: 16px; font-weight: 700;
       color: #0c1c35; margin-bottom: 20px;
     }
     .ic-num {
@@ -368,9 +572,12 @@ interface ImportJob {
 
     /* Drop zone */
     .drop-zone {
-      border: 2px dashed #c8d8eb; border-radius: 12px; padding: 40px 24px;
+      border: 2px dashed #c8d8eb; border-radius: 20px; padding: 42px 24px;
       text-align: center; cursor: pointer; transition: all 0.2s;
-      background: #f8fbfd; margin-bottom: 18px;
+      background:
+        radial-gradient(circle at top, rgba(96, 165, 250, .08), transparent 40%),
+        #f8fbfd;
+      margin-bottom: 18px;
     }
     .drop-zone:hover, .drop-zone.drag-over {
       border-color: #1a407e; background: #e8eef8; cursor: pointer;
@@ -404,8 +611,9 @@ interface ImportJob {
       display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
     }
     .ps-item {
-      flex: 1; min-width: 110px; padding: 16px 20px; border-radius: 10px;
+      flex: 1; min-width: 110px; padding: 18px 20px; border-radius: 18px;
       text-align: center; display: flex; flex-direction: column; align-items: center; gap: 5px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.3);
     }
     .ps-total { background: #f0f4f9; }
     .ps-valid { background: #e0faf4; }
@@ -415,7 +623,7 @@ interface ImportJob {
 
     /* Errors box */
     .errors-box {
-      background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px;
+      background: #fffbeb; border: 1px solid #fcd34d; border-radius: 18px;
       margin-bottom: 20px; overflow: hidden;
     }
     .eb-header {
@@ -477,14 +685,17 @@ interface ImportJob {
 
     /* ── Responsive ──────────────────────────────────────────── */
     @media (max-width: 768px) {
+      .hero-shell { grid-template-columns: 1fr; padding: 18px; }
       .page-header { flex-direction: column; align-items: stretch; gap: 10px; }
-      .import-layout { flex-direction: column !important; }
-      .import-sidebar { width: 100% !important; }
+      .kpi-strip { grid-template-columns: 1fr; }
+      .hero-mini-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 640px) {
-      .upload-zone { padding: 28px 16px; }
-      .table-card { overflow-x: auto; }
-      .history-table { min-width: 480px; }
+      .page-title { font-size: 25px; }
+      .hero-mini-grid { grid-template-columns: 1fr; }
+      .steps-bar { padding: 16px; overflow-x: auto; }
+      .preview-actions { flex-direction: column-reverse; }
+      .preview-actions .btn { width: 100%; justify-content: center; }
     }
   `],
 })
@@ -511,6 +722,12 @@ export class ImportComponent implements OnDestroy {
     const rows = this.preview()?.previewRows ?? [];
     return rows.length > 0 ? Object.keys(rows[0]) : [];
   });
+  completedJobsCount = computed(() =>
+    this.history().filter(job => job.status === 'COMPLETED').length,
+  );
+  importedRowsCount = computed(() =>
+    this.history().reduce((sum, job) => sum + Number(job.successRows || 0), 0),
+  );
   jobProgress = computed(() => {
     const job = this.activeJob();
     if (!job || job.totalRows === 0) return 0;
