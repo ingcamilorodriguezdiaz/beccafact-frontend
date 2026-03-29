@@ -31,16 +31,21 @@ interface Customer {
   @if (activeSession()) {
     <div class="session-bar" id="tour-pos-session-bar">
       <div class="session-left">
-        <div class="session-live">
-          <span class="live-dot"></span>
-          <span class="live-label">CAJA ABIERTA</span>
+        <div class="session-headline">
+          <div class="session-live">
+            <span class="live-dot"></span>
+            <span class="live-label">Caja abierta</span>
+          </div>
+          <div class="session-operator">
+            <div class="session-avatar">
+              {{ customerInitials({ name: (activeSession()?.user?.firstName ?? '') + ' ' + (activeSession()?.user?.lastName ?? '') }) }}
+            </div>
+            <div>
+              <strong>{{ activeSession()?.user?.firstName }} {{ activeSession()?.user?.lastName }}</strong>
+              <small>Operando desde hace {{ sessionElapsed() }}</small>
+            </div>
+          </div>
         </div>
-        <span class="sb-divider"></span>
-        <span class="sb-cashier">
-          <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zm2-3a2 2 0 11-4 0 2 2 0 014 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4z"/></svg>
-          {{ activeSession()?.user?.firstName }} {{ activeSession()?.user?.lastName }}
-        </span>
-        <span class="sb-divider"></span>
         <div class="sb-stats">
           <div class="sb-stat">
             <span class="sb-stat-lbl">Apertura</span>
@@ -54,15 +59,13 @@ interface Customer {
             <span class="sb-stat-lbl">Transacciones</span>
             <span class="sb-stat-val">{{ activeSession()!.totalTransactions }}</span>
           </div>
-          @if (activeSession()!.totalTransactions > 0) {
-            <div class="sb-stat">
-              <span class="sb-stat-lbl">Ticket prom.</span>
-              <span class="sb-stat-val">{{ fmtCOP(activeSession()!.totalSales / activeSession()!.totalTransactions) }}</span>
-            </div>
-          }
           <div class="sb-stat">
-            <span class="sb-stat-lbl">Sesión abierta</span>
-            <span class="sb-stat-val sb-session-time">{{ sessionElapsed() }}</span>
+            <span class="sb-stat-lbl">Ticket prom.</span>
+            <span class="sb-stat-val">{{ fmtCOP(sessionAverageTicket()) }}</span>
+          </div>
+          <div class="sb-stat sb-stat--focus">
+            <span class="sb-stat-lbl">Pendientes</span>
+            <span class="sb-stat-val">{{ cartCount() }} ítems</span>
           </div>
         </div>
       </div>
@@ -110,108 +113,172 @@ interface Customer {
 
       <!-- ── LEFT: Products panel ─────────────────────────── -->
       <div class="products-panel" id="tour-pos-products">
-
-        <!-- Toolbar -->
-        <div class="panel-toolbar">
-          <div class="toolbar-search">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="14" class="ts-icon"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
-            <input #productSearchInput type="text" placeholder="Buscar por nombre o SKU..." [(ngModel)]="productSearch"
-                   (input)="onProductSearch()" class="ts-input" aria-label="Buscar productos por nombre o SKU" />
-            @if (productSearch) {
-              <button class="ts-clear" (click)="productSearch=''; loadProducts()">
-                <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z"/></svg>
-              </button>
-            }
+        <div class="products-overview">
+          <div class="po-copy">
+            <p class="po-kicker">Punto de venta</p>
+            <h2>Catálogo de productos</h2>
+            <p>Explora, filtra y agrega productos sin perder visibilidad del flujo de cobro.</p>
           </div>
-          <div class="toolbar-right">
-            <span class="products-counter">
-              <span class="pc-num">{{ products().length }}</span> productos
-            </span>
+          <div class="po-stats">
+            <div class="po-stat">
+              <span>Disponibles</span>
+              <strong>{{ availableProductsCount() }}</strong>
+            </div>
+            <div class="po-stat">
+              <span>Stock bajo</span>
+              <strong>{{ lowStockProductsCount() }}</strong>
+            </div>
+            <div class="po-stat po-stat--accent">
+              <span>En carrito</span>
+              <strong>{{ cartCount() }}</strong>
+            </div>
           </div>
         </div>
 
-        <!-- Grid -->
-        @if (loadingProducts()) {
-          <div class="panel-placeholder">
-            @for (i of [1,2,3,4,5,6,7,8]; track i) {
-              <div class="product-skeleton"></div>
-            }
+        <!-- Toolbar -->
+        <div class="catalog-tools">
+          <div class="panel-toolbar">
+            <div class="toolbar-search">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="14" class="ts-icon"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
+              <input #productSearchInput type="text" placeholder="Buscar por nombre o SKU..." [(ngModel)]="productSearch"
+                     (input)="onProductSearch()" class="ts-input" aria-label="Buscar productos por nombre o SKU" />
+              @if (productSearch) {
+                <button class="ts-clear" (click)="productSearch=''; loadProducts()">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z"/></svg>
+                </button>
+              }
+            </div>
+            <div class="toolbar-right">
+              <span class="products-counter">
+                <span class="pc-num">{{ products().length }}</span> visibles
+              </span>
+            </div>
           </div>
-        } @else if (products().length === 0) {
-          <div class="panel-empty">
-            <svg viewBox="0 0 48 48" fill="none" width="44">
-              <circle cx="24" cy="24" r="19" stroke="#1e3a5f" stroke-width="2"/>
-              <path d="M16 24h16M24 16v16" stroke="#2a5080" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
-            <p>No se encontraron productos</p>
-            @if (productSearch) {
-              <button class="link-btn" (click)="productSearch=''; loadProducts()">Ver todos</button>
-            }
-          </div>
-        } @else {
-          <div class="products-grid">
-            @for (p of products(); track p.id) {
-              <div class="product-card" [class.out-of-stock]="p.stock <= 0"
-                   (click)="addToCart(p)"
-                   [attr.aria-disabled]="p.stock <= 0"
-                   [attr.title]="p.stock <= 0 ? 'Sin stock disponible' : ('Agregar ' + p.name + ' al carrito')">
-                <!-- Stock ribbon -->
-                @if (p.stock <= 0) {
-                  <div class="pc-ribbon out">✗ Sin stock</div>
-                } @else if (p.stock <= (p.minStock ?? 10)) {
-                  <div class="pc-ribbon low">⚠ Stock bajo</div>
-                }
 
-                <div class="pc-content">
-                  <div class="pc-header">
-                    <span class="pc-sku">{{ p.sku }}</span>
-                    <span class="pc-tax-badge">IVA {{ p.taxRate }}%</span>
-                  </div>
-                  <div class="pc-name">{{ p.name }}</div>
-                  <div class="pc-price">{{ fmtCOP(p.price) }}</div>
-                  <div class="pc-footer">
-                    @if (p.stock <= 0) {
-                      <span class="pc-stock-badge out-of-stock-badge">✗ Sin stock</span>
-                    } @else if (p.stock <= (p.minStock ?? 10)) {
-                      <span class="pc-stock-badge low-stock-badge">⚠ {{ p.stock }} {{ p.unit }}</span>
-                    } @else {
-                      <span class="pc-stock-badge in-stock-badge">✓ En stock</span>
-                    }
-                    @if (p.stock > 0) {
-                      <div class="pc-add-btn" aria-hidden="true">
-                        <svg viewBox="0 0 12 12" fill="currentColor" width="11"><path d="M6 1a.5.5 0 01.5.5v4h4a.5.5 0 010 1h-4v4a.5.5 0 01-1 0v-4h-4a.5.5 0 010-1h4v-4A.5.5 0 016 1z"/></svg>
-                      </div>
-                    }
+          <div class="sku-search-zone" id="tour-pos-sku">
+            <div class="sku-field">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="12" class="sku-icon"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h1a1 1 0 010 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h1a1 1 0 010 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h1a1 1 0 010 2H4a1 1 0 01-1-1zm5-8a1 1 0 011-1h6a1 1 0 010 2h-6a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 010 2h-6a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 010 2h-6a1 1 0 01-1-1z"/></svg>
+              <input type="text" class="sku-input" placeholder="SKU / código de barras"
+                     [(ngModel)]="skuSearch" (keyup.enter)="onSkuSearch()" />
+            </div>
+            <button class="btn-free-item" (click)="showFreeItemForm.set(!showFreeItemForm())">
+              + Ítem libre
+            </button>
+          </div>
+        </div>
+        <div class="catalog-body">
+          <!-- Free item form -->
+          @if (showFreeItemForm()) {
+            <div class="free-item-form">
+              <div class="fi-row">
+                <input type="text" class="fi-input fi-desc" placeholder="Descripción" [(ngModel)]="freeItemName" />
+              </div>
+              <div class="fi-row">
+                <input type="number" class="fi-input" placeholder="Precio" [(ngModel)]="freeItemPrice" min="0" />
+                <input type="number" class="fi-input fi-tax" placeholder="IVA%" [(ngModel)]="freeItemTax" min="0" max="100" />
+                <button class="fi-add-btn" (click)="addFreeItem()">Agregar</button>
+              </div>
+            </div>
+          }
+
+          <!-- Grid -->
+          @if (loadingProducts()) {
+            <div class="panel-placeholder">
+              @for (i of [1,2,3,4,5,6,7,8]; track i) {
+                <div class="product-skeleton"></div>
+              }
+            </div>
+          } @else if (products().length === 0) {
+            <div class="panel-empty">
+              <svg viewBox="0 0 48 48" fill="none" width="44">
+                <circle cx="24" cy="24" r="19" stroke="#1e3a5f" stroke-width="2"/>
+                <path d="M16 24h16M24 16v16" stroke="#2a5080" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+              <p>No se encontraron productos</p>
+              @if (productSearch) {
+                <button class="link-btn" (click)="productSearch=''; loadProducts()">Ver todos</button>
+              }
+            </div>
+          } @else {
+            <div class="products-grid">
+              @for (p of products(); track p.id) {
+                <div class="product-card" [class.out-of-stock]="p.stock <= 0"
+                     (click)="addToCart(p)"
+                     [attr.aria-disabled]="p.stock <= 0"
+                     [attr.title]="p.stock <= 0 ? 'Sin stock disponible' : ('Agregar ' + p.name + ' al carrito')">
+                  @if (p.stock <= 0) {
+                    <div class="pc-ribbon out">✗ Sin stock</div>
+                  } @else if (p.stock <= (p.minStock ?? 10)) {
+                    <div class="pc-ribbon low">⚠ Stock bajo</div>
+                  }
+
+                  <div class="pc-content">
+                    <div class="pc-header">
+                      <span class="pc-sku">{{ p.sku }}</span>
+                      <span class="pc-tax-badge">IVA {{ p.taxRate }}%</span>
+                    </div>
+                    <div class="pc-name">{{ p.name }}</div>
+                    <div class="pc-price">{{ fmtCOP(p.price) }}</div>
+                    <div class="pc-footer">
+                      @if (p.stock <= 0) {
+                        <span class="pc-stock-badge out-of-stock-badge">✗ Sin stock</span>
+                      } @else if (p.stock <= (p.minStock ?? 10)) {
+                        <span class="pc-stock-badge low-stock-badge">⚠ {{ p.stock }} {{ p.unit }}</span>
+                      } @else {
+                        <span class="pc-stock-badge in-stock-badge">✓ En stock</span>
+                      }
+                      @if (p.stock > 0) {
+                        <div class="pc-add-btn" aria-hidden="true">
+                          <svg viewBox="0 0 12 12" fill="currentColor" width="11"><path d="M6 1a.5.5 0 01.5.5v4h4a.5.5 0 010 1h-4v4a.5.5 0 01-1 0v-4h-4a.5.5 0 010-1h4v-4A.5.5 0 016 1z"/></svg>
+                        </div>
+                      }
+                    </div>
                   </div>
                 </div>
-              </div>
-            }
-          </div>
-        }
+              }
+            </div>
+          }
+        </div>
       </div>
 
       <!-- ── RIGHT: Cart panel ───────────────────────────── -->
-      <div class="cart-panel" id="tour-pos-cart">
-
-        <!-- Cart header -->
-        <div class="cart-header">
-          <div class="cart-header-left">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="15" class="cart-icon">
-              <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3z"/>
-              <circle cx="6.5" cy="17.5" r="1.5"/><circle cx="14.5" cy="17.5" r="1.5"/>
-            </svg>
-            <span class="cart-title-text">Venta actual</span>
+      <div class="checkout-panel" id="tour-pos-cart">
+        <div class="checkout-shell">
+          <div class="cart-header">
+            <div class="cart-header-left">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15" class="cart-icon">
+                <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3z"/>
+                <circle cx="6.5" cy="17.5" r="1.5"/><circle cx="14.5" cy="17.5" r="1.5"/>
+              </svg>
+              <div>
+                <span class="cart-title-text">Venta actual</span>
+                <small class="cart-title-sub">{{ cartCount() }} ítems listos para cobrar</small>
+              </div>
+            </div>
             @if (cart().length > 0) {
-              <span class="cart-count-badge">{{ cart().length }}</span>
+              <button class="cart-clear-btn" (click)="clearCart()">
+                <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1z"/></svg>
+                Limpiar
+              </button>
             }
           </div>
-          @if (cart().length > 0) {
-            <button class="cart-clear-btn" (click)="clearCart()">
-              <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1z"/></svg>
-              Limpiar
-            </button>
-          }
-        </div>
+
+          <div class="cart-hero">
+            <div class="cart-hero-copy">
+              <p class="cart-hero-kicker">Resumen de orden</p>
+              <strong>{{ fmtCOP(cartTotal()) }}</strong>
+              <span>{{ selectedCustomer()?.name ?? 'Cliente ocasional' }}</span>
+            </div>
+            <div class="cart-hero-badges">
+              <span class="cart-hero-badge">{{ getPaymentLabel(selectedPaymentMethod()) }}</span>
+              @if (generateInvoice()) {
+                <span class="cart-hero-badge cart-hero-badge--accent">Factura</span>
+              }
+              @if (isAdvancePayment()) {
+                <span class="cart-hero-badge cart-hero-badge--warn">Anticipo</span>
+              }
+            </div>
+          </div>
 
         <!-- Customer picker -->
         <div class="customer-zone" id="tour-pos-customer">
@@ -266,32 +333,6 @@ interface Customer {
             </div>
           }
         </div>
-
-        <!-- SKU / barcode search -->
-        <div class="sku-search-zone" id="tour-pos-sku">
-          <div class="sku-field">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="12" class="sku-icon"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h1a1 1 0 010 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h1a1 1 0 010 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h1a1 1 0 010 2H4a1 1 0 01-1-1zm5-8a1 1 0 011-1h6a1 1 0 010 2h-6a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 010 2h-6a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 010 2h-6a1 1 0 01-1-1z"/></svg>
-            <input type="text" class="sku-input" placeholder="SKU / código de barras"
-                   [(ngModel)]="skuSearch" (keyup.enter)="onSkuSearch()" />
-          </div>
-          <button class="btn-free-item" (click)="showFreeItemForm.set(!showFreeItemForm())">
-            + Ítem libre
-          </button>
-        </div>
-
-        <!-- Free item form -->
-        @if (showFreeItemForm()) {
-          <div class="free-item-form">
-            <div class="fi-row">
-              <input type="text" class="fi-input fi-desc" placeholder="Descripción" [(ngModel)]="freeItemName" />
-            </div>
-            <div class="fi-row">
-              <input type="number" class="fi-input" placeholder="Precio" [(ngModel)]="freeItemPrice" min="0" />
-              <input type="number" class="fi-input fi-tax" placeholder="IVA%" [(ngModel)]="freeItemTax" min="0" max="100" />
-              <button class="fi-add-btn" (click)="addFreeItem()">Agregar</button>
-            </div>
-          </div>
-        }
 
         <!-- Cart items -->
         <div class="cart-items">
@@ -386,13 +427,21 @@ interface Customer {
 
         <!-- Payment method -->
         <div class="payment-section">
-          <div class="ps-label">Método de pago</div>
+          <div class="payment-header">
+            <div class="ps-label">Método de pago</div>
+            <div class="ps-current">{{ getPaymentLabel(selectedPaymentMethod()) }}</div>
+          </div>
           <div class="pm-grid">
             @for (m of paymentMethods; track m.value) {
-              <button class="pm-btn" [class.pm-active]="selectedPaymentMethod() === m.value"
+              <button class="pm-btn"
+                      [attr.data-method]="m.value.toLowerCase()"
+                      [class.pm-active]="selectedPaymentMethod() === m.value"
                       (click)="selectedPaymentMethod.set(m.value)">
                 <span class="pm-icon">{{ m.emoji }}</span>
-                <span class="pm-name">{{ m.label }}</span>
+                <span class="pm-copy">
+                  <span class="pm-name">{{ m.label }}</span>
+                  <span class="pm-hint">{{ getPaymentHint(m.value) }}</span>
+                </span>
               </button>
             }
           </div>
@@ -414,8 +463,8 @@ interface Customer {
             }
           </button>
         </div>
-
-      </div><!-- /cart-panel -->
+        </div>
+      </div><!-- /checkout-panel -->
     </div><!-- /pos-layout -->
   }
 
@@ -990,9 +1039,12 @@ interface Customer {
     ═══════════════════════════════════════ */
     .pos-root {
       display:flex; flex-direction:column; height:100%;
-      background:#f8fafc;
+      background:
+        radial-gradient(circle at top left, rgba(0, 198, 160, 0.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(26, 64, 126, 0.08), transparent 24%),
+        #f4f8fc;
       overflow:hidden;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: var(--font-b, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
     }
 
     /* ═══════════════════════════════════════
@@ -1000,12 +1052,15 @@ interface Customer {
     ═══════════════════════════════════════ */
     .session-bar {
       display:flex; align-items:center; justify-content:space-between;
-      padding:0 20px; height:46px;
-      background:#fff;
-      border-bottom:1px solid #dce6f0;
+      padding:14px 20px;
+      background:linear-gradient(135deg, #0d2344 0%, #16386a 52%, #0c7e70 100%);
+      border-bottom:1px solid rgba(255,255,255,.08);
       flex-shrink:0; gap:16px;
+      color:#fff;
+      box-shadow:0 18px 30px rgba(12,28,53,.12);
     }
-    .session-left { display:flex; align-items:center; gap:14px; min-width:0; }
+    .session-left { display:flex; align-items:center; justify-content:space-between; gap:18px; min-width:0; flex:1; }
+    .session-headline { display:grid; gap:10px; min-width:220px; }
     .session-live { display:flex; align-items:center; gap:7px; }
     .live-dot {
       width:7px; height:7px; border-radius:50%;
@@ -1014,24 +1069,42 @@ interface Customer {
       animation:pulse 2s ease infinite;
     }
     @keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(16,185,129,.15)} 50%{box-shadow:0 0 0 5px rgba(16,185,129,.08)} }
-    .live-label { font-size:10px; font-weight:800; letter-spacing:.1em; color:#059669; }
-    .sb-divider { width:1px; height:18px; background:#dce6f0; flex-shrink:0; }
-    .sb-cashier { display:flex; align-items:center; gap:5px; font-size:12px; color:#374151; }
-    .sb-stats { display:flex; align-items:center; gap:20px; }
-    .sb-stat { display:flex; flex-direction:column; gap:1px; }
-    .sb-stat-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; }
-    .sb-stat-val { font-size:12px; font-weight:700; color:#374151; }
-    .sb-stat.accent .sb-stat-val { color:#059669; }
+    .live-label { font-size:10px; font-weight:800; letter-spacing:.1em; color:#7ef4d8; text-transform:uppercase; }
+    .session-operator { display:flex; align-items:center; gap:10px; }
+    .session-avatar {
+      width:38px; height:38px; border-radius:12px;
+      background:rgba(255,255,255,.15);
+      border:1px solid rgba(255,255,255,.18);
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px; font-weight:800; color:#fff; flex-shrink:0;
+    }
+    .session-operator strong { display:block; font-size:13px; font-weight:700; color:#fff; }
+    .session-operator small { display:block; margin-top:2px; font-size:11px; color:rgba(236,244,255,.72); }
+    .sb-stats { display:grid; grid-template-columns:repeat(5, minmax(92px, 1fr)); gap:10px; flex:1; }
+    .sb-stat {
+      display:flex; flex-direction:column; gap:4px;
+      padding:10px 12px;
+      border-radius:14px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.1);
+      backdrop-filter:blur(10px);
+      min-width:0;
+    }
+    .sb-stat-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:rgba(236,244,255,.66); }
+    .sb-stat-val { font-size:13px; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sb-stat.accent .sb-stat-val { color:#8bf3cb; }
+    .sb-stat--focus { background:rgba(0,198,160,.16); border-color:rgba(138,243,203,.22); }
     .session-actions { display:flex; gap:7px; flex-shrink:0; }
     .sb-btn {
       display:flex; align-items:center; gap:5px; padding:5px 12px;
       border-radius:7px; font-size:11.5px; font-weight:600; cursor:pointer;
-      background:#fff; border:1px solid #dce6f0;
-      color:#374151; transition:all .14s;
+      background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.12);
+      color:#fff; transition:all .14s;
+      backdrop-filter:blur(8px);
     }
-    .sb-btn:hover { background:#f8fafc; border-color:#93c5fd; color:#1a407e; }
-    .sb-btn.danger { background:#fff5f5; border-color:#fecaca; color:#dc2626; }
-    .sb-btn.danger:hover { background:#fee2e2; }
+    .sb-btn:hover { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.22); color:#fff; }
+    .sb-btn.danger { background:rgba(239,68,68,.16); border-color:rgba(254,202,202,.32); color:#fff; }
+    .sb-btn.danger:hover { background:rgba(239,68,68,.22); }
 
     /* ═══════════════════════════════════════
        NO SESSION
@@ -1072,19 +1145,71 @@ interface Customer {
     /* ═══════════════════════════════════════
        POS LAYOUT
     ═══════════════════════════════════════ */
-    .pos-layout { display:flex; flex:1; overflow:hidden; }
+    .pos-layout {
+      flex:1;
+      min-height:0;
+      display:grid;
+      grid-template-columns:minmax(0, 1.18fr) minmax(420px, .82fr);
+      gap:18px;
+      padding:16px;
+      overflow:hidden;
+      align-items:stretch;
+    }
 
     /* ══ Products Panel ══ */
     .products-panel {
-      flex:1; display:flex; flex-direction:column; overflow:hidden;
-      background:#f8fafc;
-      border-right:1px solid #dce6f0;
+      min-width:0; display:flex; flex-direction:column; overflow:hidden;
+      background:rgba(255,255,255,.78);
+      border:1px solid #dce6f0;
+      border-radius:24px;
+      box-shadow:0 18px 34px rgba(12,28,53,.06);
+      backdrop-filter:blur(12px);
     }
+    .catalog-tools {
+      display:grid;
+      gap:0;
+      flex-shrink:0;
+      border-top:1px solid #eef3f8;
+      border-bottom:1px solid #dce6f0;
+      background:rgba(255,255,255,.82);
+    }
+    .catalog-body {
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      flex:1;
+    }
+    .products-overview {
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
+      padding:16px 18px 12px;
+    }
+    .po-copy h2 {
+      margin:0;
+      font-family:var(--font-d, 'Sora', sans-serif);
+      font-size:20px; line-height:1.05; letter-spacing:-.04em; color:#0c1c35;
+    }
+    .po-copy p:last-child { margin:8px 0 0; font-size:12px; color:#6b7f99; max-width:44ch; }
+    .po-kicker {
+      margin:0 0 8px; font-size:10px; font-weight:800; text-transform:uppercase;
+      letter-spacing:.12em; color:#00a084;
+    }
+    .po-stats {
+      display:grid; grid-template-columns:repeat(3, minmax(96px, 1fr)); gap:10px; flex-shrink:0;
+    }
+    .po-stat {
+      padding:10px 12px; border-radius:14px; background:#fff; border:1px solid #dce6f0;
+      box-shadow:0 10px 24px rgba(12,28,53,.05);
+    }
+    .po-stat span { display:block; font-size:10px; color:#8aa0b8; text-transform:uppercase; letter-spacing:.08em; font-weight:700; margin-bottom:4px; }
+    .po-stat strong { font-family:var(--font-d, 'Sora', sans-serif); font-size:18px; color:#0c1c35; letter-spacing:-.05em; }
+    .po-stat--accent { background:linear-gradient(135deg, #e7fbf5, #f5fffc); border-color:#c7f4e8; }
+    .po-stat--accent strong { color:#00856f; }
 
     .panel-toolbar {
       display:flex; align-items:center; gap:12px; padding:12px 16px;
-      border-bottom:1px solid #dce6f0; flex-shrink:0;
-      background:#fff;
+      border-bottom:1px solid #eef3f8; flex-shrink:0;
+      background:rgba(255,255,255,.8);
+      backdrop-filter:blur(12px);
     }
     .toolbar-search {
       flex:1; display:flex; align-items:center; gap:8px;
@@ -1112,21 +1237,23 @@ interface Customer {
     /* Products grid */
     .products-grid {
       flex:1; overflow-y:auto; padding:14px;
-      display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:10px; align-content:start;
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:12px; align-content:start;
     }
     .products-grid::-webkit-scrollbar { width:4px; }
     .products-grid::-webkit-scrollbar-thumb { background:#dce6f0; border-radius:2px; }
 
     .product-card {
-      background:#fff;
+      background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
       border:1px solid #dce6f0;
-      border-radius:12px; overflow:hidden; cursor:pointer; position:relative;
+      border-radius:18px; overflow:hidden; cursor:pointer; position:relative;
       transition:all .16s ease;
+      box-shadow:0 8px 24px rgba(12,28,53,.04);
+      min-height:146px;
     }
     .product-card:not(.out-of-stock):hover {
-      border-color:#93c5fd;
-      transform:translateY(-3px);
-      box-shadow:0 4px 12px rgba(26,64,126,.08);
+      border-color:#9ec7ff;
+      transform:translateY(-4px);
+      box-shadow:0 18px 28px rgba(26,64,126,.1);
     }
     .product-card.out-of-stock { opacity:.45; cursor:not-allowed; filter:grayscale(.4); }
 
@@ -1143,8 +1270,8 @@ interface Customer {
     .pc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; }
     .pc-sku { font-size:9.5px; color:#9ca3af; font-family:monospace; }
     .pc-tax-badge { font-size:9px; padding:1px 6px; border-radius:4px; background:#dbeafe; color:#1e40af; font-weight:600; }
-    .pc-name { font-size:12.5px; font-weight:600; color:#374151; line-height:1.35; margin-bottom:7px; min-height:34px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-    .pc-price { font-size:16px; font-weight:800; color:#1a407e; margin-bottom:8px; letter-spacing:-.3px; }
+    .pc-name { font-size:12.5px; font-weight:700; color:#374151; line-height:1.35; margin-bottom:10px; min-height:34px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .pc-price { font-size:17px; font-weight:800; color:#1a407e; margin-bottom:10px; letter-spacing:-.3px; }
     .pc-footer { display:flex; align-items:center; justify-content:space-between; }
     .pc-stock { display:flex; align-items:center; gap:3px; font-size:10px; color:#059669; }
     .pc-stock.low { color:#d97706; }
@@ -1157,20 +1284,43 @@ interface Customer {
     .product-card:not(.out-of-stock):hover .pc-add-btn { background:#1a407e; color:#fff; }
 
     /* ══ Cart Panel ══ */
-    .cart-panel {
-      width:360px; min-width:320px; flex-shrink:0;
-      background:#fff; display:flex; flex-direction:column; overflow:hidden;
-      border-left:1px solid #dce6f0;
+    .checkout-panel {
+      min-width:0;
+      background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); display:flex; flex-direction:column; overflow:hidden;
+      border:1px solid #dce6f0;
+      border-radius:24px;
+      box-shadow:0 18px 34px rgba(12,28,53,.08);
+      min-height:0;
     }
+    .checkout-shell {
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      flex:1;
+      overflow-y:auto;
+      overscroll-behavior:contain;
+      scroll-padding-bottom:110px;
+    }
+    .checkout-shell::-webkit-scrollbar { width:8px; }
+    .checkout-shell::-webkit-scrollbar-track { background:transparent; }
+    .checkout-shell::-webkit-scrollbar-thumb {
+      background:rgba(140,160,183,.45);
+      border-radius:999px;
+      border:2px solid transparent;
+      background-clip:padding-box;
+    }
+    .checkout-shell::-webkit-scrollbar-thumb:hover { background:rgba(95,122,152,.65); }
 
     /* Cart header */
     .cart-header {
       display:flex; align-items:center; justify-content:space-between;
-      padding:12px 16px; border-bottom:1px solid #dce6f0; flex-shrink:0;
+      padding:16px 16px 12px; border-bottom:1px solid #eef3f8; flex-shrink:0;
     }
     .cart-header-left { display:flex; align-items:center; gap:8px; }
+    .cart-header-left > div { display:grid; gap:2px; }
     .cart-icon { color:#1a407e; }
     .cart-title-text { font-size:13px; font-weight:700; color:#0c1c35; }
+    .cart-title-sub { font-size:11px; color:#8ca0b7; }
     .cart-count-badge {
       background:#dbeafe; color:#1e40af;
       border:1px solid #bfdbfe;
@@ -1182,9 +1332,40 @@ interface Customer {
       color:#dc2626; font-size:11px; cursor:pointer; transition:all .13s;
     }
     .cart-clear-btn:hover { background:#fee2e2; }
+    .cart-hero {
+      margin:0 14px 12px;
+      padding:14px 16px;
+      border-radius:18px;
+      background:
+        radial-gradient(circle at top right, rgba(0,198,160,.18), transparent 36%),
+        linear-gradient(135deg, #0f274b 0%, #17437e 58%, #0c8f79 100%);
+      color:#fff;
+      box-shadow:0 18px 34px rgba(12,28,53,.14);
+    }
+    .cart-hero-copy strong {
+      display:block;
+      margin-top:6px;
+      font-family:var(--font-d, 'Sora', sans-serif);
+      font-size:28px; line-height:1; letter-spacing:-.06em;
+    }
+    .cart-hero-copy span {
+      display:block; margin-top:8px; color:rgba(236,244,255,.74); font-size:12px;
+    }
+    .cart-hero-kicker {
+      margin:0; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:#89f3d1;
+    }
+    .cart-hero-badges { display:flex; flex-wrap:wrap; gap:7px; margin-top:14px; }
+    .cart-hero-badge {
+      padding:5px 10px; border-radius:999px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.12);
+      font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.08em;
+    }
+    .cart-hero-badge--accent { color:#8bf3cb; }
+    .cart-hero-badge--warn { color:#fde68a; }
 
     /* Customer zone */
-    .customer-zone { padding:10px 14px; border-bottom:1px solid #dce6f0; flex-shrink:0; }
+    .customer-zone { padding:10px 14px; border-bottom:1px solid #dce6f0; flex-shrink:0; background:#fff; }
     .cust-search-wrap { position:relative; }
     .cust-field {
       display:flex; align-items:center; gap:8px;
@@ -1225,18 +1406,23 @@ interface Customer {
     .cs-remove:hover { background:#fee2e2; color:#dc2626; }
 
     /* Cart items */
-    .cart-items { flex:1; overflow-y:auto; padding:8px; min-height:0; }
-    .cart-items::-webkit-scrollbar { width:3px; }
-    .cart-items::-webkit-scrollbar-thumb { background:#dce6f0; border-radius:2px; }
+    .cart-items {
+      flex:0 0 auto;
+      overflow:visible;
+      padding:10px 10px 6px;
+      min-height:140px;
+      background:linear-gradient(180deg, #fbfdff 0%, #f5f9fc 100%);
+    }
     .cart-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:120px; gap:10px; }
     .ce-icon { opacity:.3; }
     .cart-empty p { color:#9ca3af; font-size:12px; margin:0; }
 
     .cart-item {
       background:#fff; border:1px solid #dce6f0;
-      border-radius:10px; padding:9px 11px; margin-bottom:6px; transition:border-color .13s;
+      border-radius:14px; padding:11px 12px; margin-bottom:8px; transition:border-color .13s, box-shadow .13s, transform .13s;
+      box-shadow:0 8px 18px rgba(12,28,53,.03);
     }
-    .cart-item:hover { border-color:#93c5fd; }
+    .cart-item:hover { border-color:#93c5fd; box-shadow:0 12px 24px rgba(26,64,126,.06); transform:translateY(-1px); }
     .ci-top { display:flex; align-items:flex-start; justify-content:space-between; gap:6px; margin-bottom:4px; }
     .ci-name { font-size:12.5px; font-weight:600; color:#374151; line-height:1.3; }
     .ci-remove { background:none; border:none; color:#9ca3af; cursor:pointer; display:flex; align-items:center; padding:2px; border-radius:4px; transition:all .12s; flex-shrink:0; }
@@ -1260,12 +1446,12 @@ interface Customer {
     .ci-line-total { font-size:14px; font-weight:700; color:#1a407e; }
 
     /* Totals */
-    .cart-totals { padding:10px 16px; border-top:1px solid #dce6f0; flex-shrink:0; }
+    .cart-totals { padding:12px 16px; border-top:1px solid #dce6f0; flex-shrink:0; background:#fff; box-shadow:0 -12px 24px rgba(12,28,53,.04); }
     .ct-row { display:flex; justify-content:space-between; font-size:12px; color:#9ca3af; padding:2px 0; }
     .ct-grand {
       display:flex; justify-content:space-between; align-items:center;
       padding:9px 12px; margin-top:8px;
-      background:#f0f6ff; border:1px solid #bfdbfe; border-radius:9px;
+      background:linear-gradient(135deg, #eff6ff, #f4fbff); border:1px solid #bfdbfe; border-radius:14px;
       font-size:12px; font-weight:700; color:#374151;
     }
     .ct-grand-amount { font-size:20px; font-weight:800; color:#1a407e; font-family:'Sora',sans-serif; }
@@ -1286,28 +1472,98 @@ interface Customer {
     .it-doc-icon { color:#9ca3af; flex-shrink:0; }
 
     /* Payment method */
-    .payment-section { padding:10px 14px; flex-shrink:0; }
-    .ps-label { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#9ca3af; margin-bottom:8px; }
-    .pm-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
-    .pm-btn {
-      display:flex; flex-direction:column; align-items:center; gap:3px;
-      padding:8px 4px; border-radius:9px;
-      background:#fff; border:1px solid #dce6f0;
-      color:#374151; cursor:pointer; transition:all .14s;
+    .payment-section {
+      margin:10px 14px 0;
+      padding:14px;
+      flex-shrink:0;
+      background:
+        radial-gradient(circle at top right, rgba(37,99,235,.08), transparent 38%),
+        linear-gradient(180deg, #f8fbff 0%, #eef5fb 100%);
+      border:1px solid #d7e3ef;
+      border-radius:18px;
+      box-shadow:0 12px 28px rgba(12,28,53,.05), inset 0 1px 0 rgba(255,255,255,.78);
     }
-    .pm-btn:hover { background:#f8fafc; border-color:#93c5fd; color:#1a407e; }
-    .pm-btn.pm-active { background:#eff6ff; border-color:#1a407e; color:#1a407e; }
-    .pm-icon { font-size:15px; line-height:1; }
-    .pm-name { font-size:10.5px; font-weight:600; }
+    .payment-header {
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      margin-bottom:12px;
+    }
+    .ps-label {
+      font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.12em;
+      color:#58728f;
+    }
+    .ps-current {
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:5px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.8);
+      border:1px solid #d7e3ef;
+      color:#17437e;
+      font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+      box-shadow:0 6px 16px rgba(12,28,53,.04);
+    }
+    .pm-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+    .pm-btn {
+      display:flex; align-items:center; gap:10px;
+      min-height:72px;
+      padding:12px;
+      border-radius:14px;
+      background:rgba(255,255,255,.96);
+      border:1px solid #d6e2ee;
+      color:#2f435b; cursor:pointer; transition:all .16s;
+      box-shadow:0 8px 18px rgba(12,28,53,.05);
+      text-align:left;
+    }
+    .pm-btn:hover {
+      background:#ffffff; border-color:#93c5fd; color:#1a407e;
+      transform:translateY(-1px);
+      box-shadow:0 12px 24px rgba(26,64,126,.1);
+    }
+    .pm-btn.pm-active {
+      background:linear-gradient(135deg, #e9f3ff 0%, #eefbf7 100%);
+      border-color:#1a407e;
+      color:#123f7b;
+      box-shadow:0 14px 24px rgba(26,64,126,.14);
+    }
+    .pm-btn[data-method="cash"] .pm-icon { background:#dcfce7; color:#15803d; }
+    .pm-btn[data-method="card"] .pm-icon { background:#dbeafe; color:#1d4ed8; }
+    .pm-btn[data-method="transfer"] .pm-icon { background:#ede9fe; color:#6d28d9; }
+    .pm-btn[data-method="mixed"] .pm-icon { background:#fef3c7; color:#b45309; }
+    .pm-btn.pm-active .pm-icon {
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.55), 0 8px 16px rgba(12,28,53,.08);
+      transform:scale(1.02);
+    }
+    .pm-icon {
+      width:40px; height:40px; border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:18px; line-height:1; flex-shrink:0;
+    }
+    .pm-copy {
+      display:grid; gap:3px; min-width:0;
+    }
+    .pm-name { font-size:12px; font-weight:800; color:#0c1c35; }
+    .pm-hint {
+      font-size:10.5px; line-height:1.25;
+      color:#6f88a4;
+    }
 
     /* Charge button */
-    .charge-wrap { padding:0 14px 14px; flex-shrink:0; }
+    .charge-wrap {
+      padding:10px 14px 14px;
+      flex-shrink:0;
+      background:linear-gradient(180deg, rgba(255,255,255,.88) 0%, #ffffff 24%);
+      border-top:1px solid #edf2f7;
+      position:sticky;
+      bottom:0;
+      z-index:3;
+      backdrop-filter:blur(10px);
+      margin-top:auto;
+    }
     .btn-charge {
       width:100%; display:flex; align-items:center; justify-content:center; gap:8px;
-      padding:14px 0; border-radius:12px; border:none; cursor:pointer;
+      padding:15px 0; border-radius:16px; border:none; cursor:pointer;
       font-size:15px; font-weight:800; color:#fff; letter-spacing:.01em;
-      background:linear-gradient(135deg, #1a407e, #2563eb);
-      box-shadow:0 4px 20px rgba(26,64,126,.22);
+      background:linear-gradient(135deg, #103265, #2563eb 58%, #16a085);
+      box-shadow:0 14px 26px rgba(26,64,126,.24);
       transition:all .16s;
     }
     .btn-charge:hover:not(:disabled) { opacity:.93; transform:translateY(-1px); box-shadow:0 8px 28px rgba(26,64,126,.3); }
@@ -1576,7 +1832,7 @@ interface Customer {
     ═══════════════════════════════════════ */
     .sku-search-zone {
       display:flex; align-items:center; gap:6px;
-      padding:6px 14px; border-bottom:1px solid #dce6f0; flex-shrink:0;
+      padding:8px 14px; border-bottom:1px solid #dce6f0; flex-shrink:0; background:#fff;
     }
     .sku-field {
       flex:1; display:flex; align-items:center; gap:6px;
@@ -1824,6 +2080,36 @@ interface Customer {
     .success-autoclosehint {
       font-size:10.5px; color:#9ca3af; margin-bottom:6px;
     }
+    @media (max-width: 1200px) {
+      .session-left { flex-direction:column; align-items:stretch; }
+      .sb-stats { grid-template-columns:repeat(3, minmax(92px, 1fr)); }
+      .products-overview { flex-direction:column; align-items:stretch; }
+      .po-stats { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 980px) {
+      .pos-layout {
+        display:flex;
+        flex-direction:column;
+        padding:12px;
+      }
+      .products-panel { border-right:none; }
+      .checkout-panel { width:100%; min-width:0; }
+    }
+    @media (max-width: 760px) {
+      .session-bar { padding:14px; flex-direction:column; align-items:stretch; }
+      .session-actions { width:100%; }
+      .session-actions .sb-btn { flex:1; justify-content:center; }
+      .sb-stats { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+      .products-overview { padding:14px; }
+      .po-stats { grid-template-columns:1fr; }
+      .panel-toolbar { flex-direction:column; align-items:stretch; }
+      .toolbar-right { justify-content:flex-end; }
+      .pos-layout { padding:10px; gap:10px; }
+      .products-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+      .cart-hero-copy strong { font-size:24px; }
+      .cart-header { flex-direction:column; align-items:flex-start; gap:10px; }
+      .pm-grid { grid-template-columns:repeat(2,1fr); }
+    }
   `],
 })
 export class PosComponent implements OnInit, OnDestroy {
@@ -1914,6 +2200,14 @@ export class PosComponent implements OnInit, OnDestroy {
 
   cartSubtotal = computed(() => this.cart().reduce((s, i) => s + i.subtotal, 0));
   cartTax      = computed(() => this.cart().reduce((s, i) => s + i.taxAmount, 0));
+  cartCount    = computed(() => this.cart().reduce((s, i) => s + i.quantity, 0));
+  availableProductsCount = computed(() => this.products().filter(p => p.stock > 0).length);
+  lowStockProductsCount = computed(() => this.products().filter(p => p.stock > 0 && p.stock <= (p.minStock ?? 10)).length);
+  sessionAverageTicket = computed(() => {
+    const session = this.activeSession();
+    if (!session || !session.totalTransactions) return 0;
+    return Number(session.totalSales) / Number(session.totalTransactions);
+  });
   cartTotal    = computed(() => {
     const raw  = this.cart().reduce((s, i) => s + i.total, 0);
     const disc = this.cartDiscountPct();
@@ -2295,6 +2589,14 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   getPaymentLabel(m: string): string { return this.paymentMethods.find(x => x.value === m)?.label ?? m; }
+  getPaymentHint(m: string): string {
+    return ({
+      CASH: 'Pago inmediato con cambio',
+      CARD: 'Cobro por datáfono',
+      TRANSFER: 'Confirmar transferencia',
+      MIXED: 'Combina varios medios',
+    } as Record<string, string>)[m] ?? 'Seleccionar medio de pago';
+  }
   getStatusLabel(s: string): string { return ({ COMPLETED:'Completada', CANCELLED:'Cancelada', REFUNDED:'Reembolsada', ADVANCE:'Anticipo' } as any)[s] ?? s; }
 
   fmtCOP(n: number | string | null | undefined): string {
