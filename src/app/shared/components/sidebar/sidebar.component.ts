@@ -19,14 +19,6 @@ export type PlanInfo = {
   features: Array<{ key: string; value: string; label?: string }>;
 } | null;
 
-export interface NavItem {
-  label: string;
-  iconId: string;
-  route: string;
-  feature?: string;
-  roles?: string[];
-}
-
 const NAV_ITEMS: NavItem[] = [
 
   // ── VISIÓN GENERAL ──────────────────────────────────────────
@@ -306,34 +298,49 @@ const FEATURE_LABELS: Record<string, string> = {
     :host { display: flex; height: 100%; position: relative; }
 
     .sidebar {
-      width: 248px; height: 100%; background: #0c1c35;
+      width: 256px; height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(0,198,160,0.14), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(59,130,246,0.12), transparent 28%),
+        linear-gradient(180deg, #08172c 0%, #0c1c35 48%, #0f2341 100%);
       display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
-      transition: width 0.24s cubic-bezier(0.4,0,0.2,1);
+      transition: width 0.24s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s ease;
+      box-shadow: inset -1px 0 0 rgba(255,255,255,0.04);
     }
     .sidebar.collapsed { width: 64px; }
 
     .sidebar-brand {
       display: flex; align-items: center; gap: 10px;
-      padding: 0 12px; height: 64px; min-height: 64px;
+      position: relative;
+      padding: 0 14px; height: 72px; min-height: 72px;
       border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
     }
     .sidebar.collapsed .sidebar-brand { justify-content: center; padding: 0; }
+    .sidebar-brand::after {
+      content: '';
+      position: absolute;
+      inset: auto 14px 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    }
     .brand-logo {
-      width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0;
-      background: rgba(0,198,160,0.12); border: 1px solid rgba(0,198,160,0.22);
+      width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0;
+      background: linear-gradient(135deg, rgba(0,198,160,0.18), rgba(59,130,246,0.18));
+      border: 1px solid rgba(125,211,252,0.24);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
       display: flex; align-items: center; justify-content: center;
     }
     .brand-text { flex: 1; min-width: 0; }
-    .brand-name { display: block; font-family: 'Sora',sans-serif; font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; }
-    .brand-sub  { display: block; font-size: 10px; color: #4d7ab3; letter-spacing: 0.1em; text-transform: uppercase; }
+    .brand-name { display: block; font-family: 'Sora',sans-serif; font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; letter-spacing: -.02em; }
+    .brand-sub  { display: block; font-size: 10px; color: #6ea6dd; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 2px; }
 
     .collapse-btn {
       display: flex; align-items: center; justify-content: center;
-      width: 28px; height: 28px; background: none; border: none;
-      border-radius: 6px; color: #4d7ab3; cursor: pointer;
-      transition: background 0.15s, color 0.15s; flex-shrink: 0; margin-left: auto;
+      width: 30px; height: 30px; background: rgba(255,255,255,0.04); border: none;
+      border-radius: 8px; color: #6ea6dd; cursor: pointer;
+      transition: background 0.15s, color 0.15s, transform 0.15s; flex-shrink: 0; margin-left: auto;
     }
-    .collapse-btn:hover { background: rgba(255,255,255,0.08); color: #7ea3cc; }
+    .collapse-btn:hover { background: rgba(255,255,255,0.1); color: #d4e4f7; transform: translateY(-1px); }
     .sidebar.collapsed .collapse-btn {
       margin: 0; width: 36px; height: 36px; border-radius: 8px;
       border: 1px solid rgba(0,198,160,0.25);
@@ -342,17 +349,24 @@ const FEATURE_LABELS: Record<string, string> = {
     .sidebar.collapsed .collapse-btn:hover { background: rgba(0,198,160,0.18); }
 
     .company-info {
-      display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+      display: flex; align-items: center; gap: 12px; padding: 14px;
       border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
     }
     .company-info--center { justify-content: center; padding: 12px 0; }
     .company-avatar {
-      width: 34px; height: 34px; min-width: 34px; border-radius: 8px;
+      width: 38px; height: 38px; min-width: 38px; border-radius: 12px;
       background: linear-gradient(135deg,#1a407e,#00c6a0);
       color: #fff; font-family: 'Sora',sans-serif; font-size: 12px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
     }
-    .company-details { min-width: 0; flex: 1; }
+    .company-details {
+      min-width: 0; flex: 1;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
     .company-name { font-size: 13px; font-weight: 600; color: #d4e4f7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .plan-badge { display: inline-block; margin-top: 3px; padding: 1px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; }
     .plan-basic       { background: rgba(59,130,246,0.2);  color: #93c5fd; }
@@ -364,20 +378,32 @@ const FEATURE_LABELS: Record<string, string> = {
     .plan-business { background: rgba(245,158,11,0.2);  color: #fcd34d; }
     .plan-free     { background: rgba(156,163,175,0.2); color: #9ca3af; }
 
-    .sidebar-nav { flex: 1; padding: 8px; overflow-y: auto; overflow-x: hidden; }
+    .sidebar-nav { flex: 1; padding: 10px 8px; overflow-y: auto; overflow-x: hidden; }
     .sidebar-nav::-webkit-scrollbar { width: 3px; }
     .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-    .nav-section-label { padding: 8px 10px 4px; font-size: 10px; font-weight: 700; color: #2e4a6e; letter-spacing: 0.12em; }
+    .nav-section-label {
+      padding: 10px 10px 6px;
+      font-size: 10px; font-weight: 800; color: #4f77a4; letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
 
     .nav-item {
+      position: relative;
       display: flex; align-items: center; gap: 10px;
-      padding: 9px 10px; margin-bottom: 2px; border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 4px; border-radius: 12px;
       color: #7ea3cc; text-decoration: none; min-height: 40px;
-      transition: background 0.15s, color 0.15s; cursor: pointer;
+      transition: background 0.15s, color 0.15s, transform 0.15s, border-color 0.15s;
+      cursor: pointer;
+      border: 1px solid transparent;
     }
     .nav-item.nav-item--collapsed { justify-content: center; padding: 9px 0; gap: 0; }
-    .nav-item:hover   { background: rgba(255,255,255,0.06); color: #d4e4f7; }
-    .nav-item.active  { background: rgba(0,198,160,0.16); color: #00c6a0; box-shadow: inset 3px 0 0 #00c6a0; }
+    .nav-item:hover   { background: rgba(255,255,255,0.06); color: #d4e4f7; transform: translateX(2px); }
+    .nav-item.active  {
+      background: linear-gradient(135deg, rgba(0,198,160,0.16), rgba(59,130,246,0.12));
+      color: #9ef7df;
+      border-color: rgba(0,198,160,0.22);
+      box-shadow: inset 3px 0 0 #00c6a0, 0 10px 22px rgba(0,0,0,0.12);
+    }
     .nav-item.active.nav-item--collapsed { box-shadow: none; border: 1px solid rgba(0,198,160,0.3); }
 
     .nav-item--locked { opacity: 0.45; cursor: pointer; transition: opacity 0.15s, background 0.15s; }
@@ -389,11 +415,24 @@ const FEATURE_LABELS: Record<string, string> = {
       color: #f59e0b; padding: 2px 7px; border-radius: 99px; white-space: nowrap;
     }
 
-    .nav-icon { display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; min-width: 18px; flex-shrink: 0; color: inherit; }
-    .nav-label { flex: 1; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nav-icon {
+      display: flex; align-items: center; justify-content: center;
+      width: 18px; height: 18px; min-width: 18px; flex-shrink: 0; color: inherit;
+      transition: transform 0.15s ease;
+    }
+    .nav-item:hover .nav-icon { transform: scale(1.05); }
+    .nav-label { flex: 1; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .plan-section { margin: 0 8px 4px; border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.02); flex-shrink: 0; }
-    .plan-section-header { display: flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 10px; font-weight: 800; color: #2e4a6e; letter-spacing: 0.12em; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .plan-section {
+      margin: 0 8px 6px; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px;
+      overflow: hidden; background: rgba(255,255,255,0.03); flex-shrink: 0;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+    .plan-section-header {
+      display: flex; align-items: center; gap: 6px; padding: 10px 12px;
+      font-size: 10px; font-weight: 800; color: #4f77a4; letter-spacing: 0.12em;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
     .plan-features-list { padding: 6px 10px 8px; }
     .plan-feat-row { display: flex; align-items: center; gap: 7px; padding: 3px 0; font-size: 12px; color: #7ea3cc; }
     .plan-feat-row.feat-off { opacity: 0.4; }
@@ -403,7 +442,14 @@ const FEATURE_LABELS: Record<string, string> = {
     .feat-name  { flex: 1; font-size: 11.5px; }
     .feat-limit { font-size: 11px; font-weight: 700; color: #00c6a0; background: rgba(0,198,160,0.12); padding: 1px 6px; border-radius: 4px; }
 
-    .usage-section { padding: 10px 14px 14px; border-top: 1px solid rgba(255,255,255,0.07); flex-shrink: 0; }
+    .usage-section {
+      margin: 0 8px 8px;
+      padding: 12px 14px 14px;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.03);
+      flex-shrink: 0;
+    }
     .usage-header  { display: flex; justify-content: space-between; margin-bottom: 7px; }
     .usage-label   { font-size: 11px; color: #4d7ab3; font-weight: 600; }
     .usage-pct     { font-size: 11px; color: #4d7ab3; font-weight: 700; }
@@ -418,7 +464,7 @@ const FEATURE_LABELS: Record<string, string> = {
 
     .mobile-close-btn {
       display: none; align-items: center; justify-content: center;
-      width: 32px; height: 32px; background: rgba(255,255,255,0.08);
+      width: 34px; height: 34px; background: rgba(255,255,255,0.08);
       border: none; border-radius: 7px; color: #7ea3cc; cursor: pointer;
       margin-left: auto; flex-shrink: 0; transition: background 0.15s;
     }
@@ -464,10 +510,10 @@ const FEATURE_LABELS: Record<string, string> = {
     }
     .upgrade-btn:hover { background: rgba(245,158,11,0.35); }
     .nav-section-divider {
-  height: 1px;
-  background: rgba(255,255,255,0.06);
-  margin: 6px 8px;
-}
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+      margin: 8px 8px;
+    }
   `],
 })
 export class SidebarComponent {
