@@ -27,8 +27,22 @@ import { AuthService } from '../../core/auth/auth.service';
             </div>
           </div>
 
-          <h1 class="form-headline">Iniciar sesión</h1>
-          <p class="form-desc">Accede al panel de tu empresa</p>
+          <div class="form-intro">
+            <span class="form-kicker">Acceso seguro</span>
+            <h1 class="form-headline">Iniciar sesión</h1>
+            <p class="form-desc">Entra a tu operación diaria y gestiona facturación, cartera, POS, nómina e inventario desde un solo lugar.</p>
+          </div>
+
+          <div class="trust-strip">
+            <div class="trust-pill">
+              <span class="trust-dot"></span>
+              Cifrado activo
+            </div>
+            <div class="trust-pill">
+              <span class="trust-dot"></span>
+              Acceso multiempresa
+            </div>
+          </div>
 
           <form (ngSubmit)="login()" class="login-form">
 
@@ -87,6 +101,17 @@ import { AuthService } from '../../core/auth/auth.service';
             </button>
           </form>
 
+          <div class="login-help-grid">
+            <div class="help-card">
+              <strong>Acceso centralizado</strong>
+              <span> Usa el correo principal de tu empresa para entrar al panel administrativo.</span>
+            </div>
+            <div class="help-card">
+              <strong>Soporte rápido</strong>
+              <span> Si tu cuenta está bloqueada, nuestro equipo te ayuda a restablecer el acceso.</span>
+            </div>
+          </div>
+
           <div class="form-footer">
             ¿Problemas para acceder?
             <a href="mailto:soporte@beccasoft.com">Contactar soporte</a>
@@ -97,7 +122,7 @@ import { AuthService } from '../../core/auth/auth.service';
       <!-- Right panel: hero -->
       <div class="login-hero">
         <div class="hero-inner">
-          <div class="hero-badge">✦ Certificado DIAN · Factura + Nómina</div>
+          <div class="hero-badge">Operacion certificada · Factura + Nómina + POS</div>
           <h2 class="hero-headline">ERP Cloud para<br>empresas colombianas<br>que crecen.</h2>
           <p class="hero-desc">
             Facturación electrónica, nómina, POS, inventario y cartera,
@@ -127,6 +152,12 @@ import { AuthService } from '../../core/auth/auth.service';
               <div class="hs-label">Uptime garantizado</div>
             </div>
           </div>
+
+          <div class="hero-floating-card">
+            <span class="hero-floating-label">Control en tiempo real</span>
+            <strong>Todo tu negocio en una sola sesión</strong>
+            <p>Consulta métricas, emite documentos y registra operaciones sin cambiar de sistema.</p>
+          </div>
         </div>
 
         <!-- Decorative grid lines -->
@@ -138,25 +169,32 @@ import { AuthService } from '../../core/auth/auth.service';
   `,
   styles: [`
     .login-wrap {
-      display: flex; min-height: 100vh; background: #f0f4f9;
+      display: flex; min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(16,185,129,.08), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(59,130,246,.08), transparent 28%),
+        #eef4fa;
     }
 
     /* ── Form panel ── */
     .login-form-panel {
-      flex: 0 0 460px; background: #fff;
+      flex: 0 0 500px;
+      background: rgba(255,255,255,.92);
       display: flex; flex-direction: column; justify-content: center;
-      box-shadow: 4px 0 32px rgba(12,28,53,0.08);
+      box-shadow: 18px 0 40px rgba(12,28,53,0.08);
+      backdrop-filter: blur(14px);
       position: relative; z-index: 2;
     }
-    .lf-inner { padding: 56px 52px; }
+    .lf-inner { padding: 56px 54px; }
 
     .login-logo {
-      display: flex; align-items: center; gap: 14px; margin-bottom: 44px;
+      display: flex; align-items: center; gap: 14px; margin-bottom: 34px;
     }
     .logo-mark {
-      width: 46px; height: 46px; border-radius: 12px;
-      background: #0c1c35;
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, #0c1c35, #17437e);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      box-shadow: 0 12px 28px rgba(12,28,53,.18);
     }
     .logo-mark svg { width: 26px; height: 26px; }
     .logo-name {
@@ -164,11 +202,44 @@ import { AuthService } from '../../core/auth/auth.service';
     }
     .logo-sub { font-size: 11px; color: #9ab5cc; margin-top: 1px; }
 
+    .form-intro { margin-bottom: 20px; }
+    .form-kicker {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 14px;
+    }
+
     .form-headline {
-      font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 700;
+      font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 700;
       color: #0c1c35; margin: 0 0 6px; letter-spacing: -0.03em;
     }
-    .form-desc { font-size: 14px; color: #7ea3cc; margin: 0 0 32px; }
+    .form-desc { font-size: 14px; color: #6e84a3; margin: 0; line-height: 1.65; }
+    .trust-strip { display:flex; gap:8px; flex-wrap:wrap; margin: 0 0 24px; }
+    .trust-pill {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:12px;
+      background:#f8fbff;
+      border:1px solid #dce6f0;
+      font-size:12px;
+      font-weight:700;
+      color:#3d5a80;
+    }
+    .trust-dot {
+      width:8px; height:8px; border-radius:50%;
+      background:#10b981;
+      box-shadow:0 0 0 4px rgba(16,185,129,.12);
+      flex-shrink:0;
+    }
 
     .login-form { display: flex; flex-direction: column; gap: 0; }
 
@@ -184,10 +255,11 @@ import { AuthService } from '../../core/auth/auth.service';
     }
     .field-input {
       width: 100%; padding: 11px 14px 11px 38px;
-      border: 1.5px solid #dce6f0; border-radius: 9px;
+      border: 1.5px solid #dce6f0; border-radius: 14px;
       font-size: 14px; color: #0c1c35; background: #f9fbfd;
       transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
       box-sizing: border-box;
+      min-height: 48px;
     }
     .field-input:focus {
       outline: none; border-color: #1a407e; background: #fff;
@@ -204,24 +276,24 @@ import { AuthService } from '../../core/auth/auth.service';
     .error-banner {
       display: flex; align-items: center; gap: 8px;
       background: #fee2e2; color: #991b1b; padding: 10px 14px;
-      border-radius: 8px; font-size: 13.5px; margin-bottom: 16px;
+      border-radius: 12px; font-size: 13.5px; margin-bottom: 16px;
       border-left: 3px solid #ef4444;
     }
 
     .btn-login {
       display: flex; align-items: center; justify-content: center; gap: 8px;
       width: 100%; padding: 13px;
-      background: linear-gradient(135deg, #1a407e, #1e4d94);
-      color: #fff; border: none; border-radius: 9px;
+      background: linear-gradient(135deg, #123f7b, #1f5baa 58%, #0ea88e);
+      color: #fff; border: none; border-radius: 14px;
       font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700;
       cursor: pointer; letter-spacing: -0.01em; margin-top: 8px;
-      box-shadow: 0 4px 16px rgba(26,64,126,0.28);
+      box-shadow: 0 14px 28px rgba(26,64,126,0.22);
       transition: all 0.2s;
     }
     .btn-login:hover:not(:disabled) {
-      background: linear-gradient(135deg, #122f5c, #1a407e);
+      background: linear-gradient(135deg, #102f5d, #1a407e 58%, #0b8f78);
       transform: translateY(-1px);
-      box-shadow: 0 6px 22px rgba(26,64,126,0.38);
+      box-shadow: 0 18px 34px rgba(26,64,126,0.28);
     }
     .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
     .spinner {
@@ -231,6 +303,32 @@ import { AuthService } from '../../core/auth/auth.service';
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    .login-help-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:22px;
+    }
+    .help-card {
+      padding:14px 14px 12px;
+      border-radius:16px;
+      background:#f8fbff;
+      border:1px solid #dce6f0;
+      box-shadow:0 10px 20px rgba(12,28,53,.03);
+    }
+    .help-card strong {
+      display:block;
+      font-size:13px;
+      color:#0c1c35;
+      margin-bottom:6px;
+    }
+    .help-card span {
+      display:block;
+      font-size:12px;
+      line-height:1.55;
+      color:#6e84a3;
+    }
+
     .form-footer {
       text-align: center; margin-top: 28px; font-size: 13px; color: #9ab5cc;
     }
@@ -239,7 +337,12 @@ import { AuthService } from '../../core/auth/auth.service';
 
     /* ── Hero panel ── */
     .login-hero {
-      flex: 1; background: #0c1c35; position: relative;
+      flex: 1;
+      background:
+        radial-gradient(circle at top right, rgba(0,198,160,.18), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(59,130,246,.18), transparent 32%),
+        linear-gradient(160deg, #07172c 0%, #0c1c35 48%, #123765 100%);
+      position: relative;
       display: flex; flex-direction: column; justify-content: center;
       overflow: hidden;
     }
@@ -248,17 +351,18 @@ import { AuthService } from '../../core/auth/auth.service';
     }
     .hero-badge {
       display: inline-flex; align-items: center; gap: 7px;
-      background: rgba(0,198,160,0.12); color: #00c6a0;
-      border: 1px solid rgba(0,198,160,0.25); padding: 5px 14px;
-      border-radius: 9999px; font-size: 12.5px; font-weight: 700;
+      background: rgba(0,198,160,0.12); color: #7ef4d8;
+      border: 1px solid rgba(0,198,160,0.25); padding: 6px 14px;
+      border-radius: 9999px; font-size: 11.5px; font-weight: 800;
       letter-spacing: 0.04em; margin-bottom: 28px;
+      text-transform: uppercase;
     }
     .hero-headline {
-      font-family: 'Sora', sans-serif; font-size: 40px; font-weight: 800;
-      color: #fff; line-height: 1.18; margin: 0 0 20px;
+      font-family: 'Sora', sans-serif; font-size: 46px; font-weight: 800;
+      color: #fff; line-height: 1.08; margin: 0 0 20px;
       letter-spacing: -0.04em;
     }
-    .hero-desc { font-size: 15px; color: #5a80a8; line-height: 1.7; margin: 0 0 36px; max-width: 420px; }
+    .hero-desc { font-size: 15px; color: #87a8cc; line-height: 1.7; margin: 0 0 36px; max-width: 440px; }
 
     .hero-features { display: flex; flex-direction: column; gap: 12px; margin-bottom: 48px; }
     .hf-item { display: flex; align-items: center; gap: 12px; }
@@ -271,8 +375,9 @@ import { AuthService } from '../../core/auth/auth.service';
 
     .hero-stats {
       display: flex; gap: 0;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px; overflow: hidden;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px; overflow: hidden;
+      box-shadow: 0 18px 32px rgba(0,0,0,.14);
     }
     .hs-item {
       flex: 1; padding: 18px 20px; text-align: center;
@@ -284,6 +389,40 @@ import { AuthService } from '../../core/auth/auth.service';
       color: #00c6a0; margin-bottom: 2px;
     }
     .hs-label { font-size: 11.5px; color: #4d7ab3; }
+    .hero-floating-card {
+      margin-top: 20px;
+      max-width: 340px;
+      padding: 18px 18px 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.1);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 32px rgba(0,0,0,.16);
+    }
+    .hero-floating-label {
+      display:block;
+      margin-bottom:8px;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:#89f3d1;
+    }
+    .hero-floating-card strong {
+      display:block;
+      font-family:'Sora', sans-serif;
+      font-size:20px;
+      line-height:1.2;
+      color:#fff;
+      margin-bottom:8px;
+      letter-spacing:-.03em;
+    }
+    .hero-floating-card p {
+      margin:0;
+      font-size:13px;
+      line-height:1.6;
+      color:#a9c0da;
+    }
 
     /* Decorative */
     .hero-grid {
@@ -307,8 +446,9 @@ import { AuthService } from '../../core/auth/auth.service';
     }
     @media (max-width: 480px) {
       .lf-inner { padding: 28px 18px; }
-      .lf-title { font-size: 22px; }
-      .login-container { height: auto; min-height: 100dvh; }
+      .form-headline { font-size: 24px; }
+      .login-help-grid { grid-template-columns:1fr; }
+      .login-form-panel { background:#fff; }
     }
   `],
 })
