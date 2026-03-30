@@ -48,7 +48,7 @@ interface BranchForm {
 }
 
 interface StockEditState { productId: string; stock: number; minStock: number; }
-interface TransferForm   { targetBranchId: string; productId: string; quantity: number | null; }
+interface TransferForm   { toBranchId: string; productId: string; quantity: number | null; }
 
 interface BranchUserAssignment {
   id: string;
@@ -337,7 +337,7 @@ interface CompanyUser {
             <div class="brf-transfer-body">
               <div class="brf-form-group">
                 <label>Sucursal destino *</label>
-                <select [(ngModel)]="transferForm.targetBranchId" class="brf-form-control">
+                <select [(ngModel)]="transferForm.toBranchId" class="brf-form-control">
                   <option value="">Seleccionar sucursal...</option>
                   @for (b of otherBranches(); track b.id) {
                     <option [value]="b.id">{{ b.name }}</option>
@@ -361,7 +361,7 @@ interface CompanyUser {
               <div class="brf-transfer-actions">
                 <button class="brf-btn brf-btn-secondary brf-btn-sm" (click)="transferMode.set(false)">Cancelar</button>
                 <button class="brf-btn brf-btn-primary brf-btn-sm"
-                        [disabled]="saving() || !transferForm.targetBranchId || !transferForm.productId || !transferForm.quantity"
+                        [disabled]="saving() || !transferForm.toBranchId || !transferForm.productId || !transferForm.quantity"
                         (click)="doTransfer()">
                   {{ saving() ? 'Transfiriendo...' : 'Confirmar transferencia' }}
                 </button>
@@ -1096,7 +1096,7 @@ export class BranchesComponent implements OnInit {
     );
   });
 
-  transferForm: TransferForm = { targetBranchId: '', productId: '', quantity: null };
+  transferForm: TransferForm = { toBranchId: '', productId: '', quantity: null };
 
   // ── Computed ───────────────────────────────────────────────────────────────
   filteredStocks = computed(() => {
@@ -1332,17 +1332,17 @@ export class BranchesComponent implements OnInit {
   // ── Transfer ───────────────────────────────────────────────────────────────
   doTransfer(): void {
     const branch = this.selectedBranch();
-    if (!branch || !this.transferForm.targetBranchId || !this.transferForm.productId || !this.transferForm.quantity) return;
+    if (!branch || !this.transferForm.toBranchId || !this.transferForm.productId || !this.transferForm.quantity) return;
     this.saving.set(true);
     this.http.post<any>(`${this.API}/${branch.id}/stocks/transfer`, {
-      targetBranchId: this.transferForm.targetBranchId,
+      toBranchId: this.transferForm.toBranchId,
       productId:      this.transferForm.productId,
       quantity:       this.transferForm.quantity,
     }).subscribe({
       next: () => {
         this.notify.success('Transferencia realizada exitosamente');
         this.saving.set(false); this.transferMode.set(false);
-        this.transferForm = { targetBranchId:'', productId:'', quantity:null };
+        this.transferForm = { toBranchId:'', productId:'', quantity:null };
         this.loadStocks(branch.id);
       },
       error: err => { this.notify.error(err?.error?.message ?? 'Error al transferir'); this.saving.set(false); },
