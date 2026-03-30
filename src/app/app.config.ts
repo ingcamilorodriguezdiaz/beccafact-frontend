@@ -6,7 +6,7 @@ import {
   APP_INITIALIZER,
   LOCALE_ID,                          // ← agrega esto
 } from '@angular/core';
-import { provideRouter, withComponentInputBinding, withViewTransitions } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withViewTransitions, withRouterConfig } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { routes } from './app.routes';
@@ -22,7 +22,7 @@ registerLocaleData(localeEsCO);       // ← ejecuta antes del bootstrap
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes, withComponentInputBinding(), withViewTransitions()),
+    provideRouter(routes, withComponentInputBinding(), withViewTransitions(), withRouterConfig({ onSameUrlNavigation: 'reload' })),
     provideHttpClient(
       withInterceptors([authInterceptor, errorInterceptor, loadingInterceptor, apiResponseInterceptor, branchInterceptor]),
     ),

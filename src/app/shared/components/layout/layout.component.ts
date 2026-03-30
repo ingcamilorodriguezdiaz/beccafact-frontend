@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal, HostListener, effect } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../core/auth/auth.service';
 import { SidebarComponent } from '../sidebar/sidebar.component';
@@ -10,8 +10,8 @@ import { BranchSelectorModalComponent } from '../branch-selector/branch-selector
 import { TourService } from '../../../core/services/tour.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, of } from 'rxjs';
+import { toSignal, toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { catchError, distinctUntilChanged, filter, of, skip } from 'rxjs';
 
 interface UsageData {
   documentsUsedThisMonth: number;
@@ -92,6 +92,7 @@ export class LayoutComponent {
   private http        = inject(HttpClient);
   protected auth      = inject(AuthService);
   private tourService = inject(TourService);
+  private router      = inject(Router);
 
   constructor() {
     effect(() => {
@@ -99,6 +100,22 @@ export class LayoutComponent {
       if (user && !user.isSuperAdmin && !user.hasSeenTour) {
         this.tourService.start(user.firstName);
       }
+    });
+
+    // Recarga la ruta activa cada vez que el usuario cambia de sucursal.
+    // skip(1) ignora el valor inicial (carga de sesión); filter(Boolean) ignora
+    // el null que se emite al abrir el modal de selección; distinctUntilChanged
+    // evita recargas si el mismo id se vuelve a seleccionar.
+    toObservable(this.auth.activeBranchId).pipe(
+      skip(1),
+      filter(Boolean),
+      distinctUntilChanged(),
+      takeUntilDestroyed(),
+    ).subscribe(() => {
+      const currentUrl = this.router.url;
+      this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => {
+        this.router.navigateByUrl(currentUrl);
+      });
     });
   }
   /**
