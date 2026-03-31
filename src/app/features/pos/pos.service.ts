@@ -193,8 +193,12 @@ export class PosApiService {
     return this.http.post(`${this.base}/sales/${saleId}/invoice`, {});
   }
 
+  private getContextHeaders(source: 'invoice' | 'pos') {
+    return { headers: { 'X-Context-Source': source } };
+  }
+
   submitInvoiceToDian(invoiceId: string): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/invoices/${invoiceId}/issue`, {});
+    return this.http.post(`${environment.apiUrl}/invoices/${invoiceId}/issue`, {},this.getContextHeaders('pos'));
   }
 
   queryInvoiceDianStatus(invoiceId: string): Observable<any> {

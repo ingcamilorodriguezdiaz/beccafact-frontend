@@ -9,12 +9,22 @@ interface DianFacturacionConfig {
   enabled: boolean;
   ambiente: 'habilitacion' | 'produccion';
   softwareId: string;
-  resolucion: string;
-  prefijo: string;
-  rangoDesde: number | null;
-  rangoHasta: number | null;
-  vigenciaDesde: string;
-  vigenciaHasta: string;
+  venta: {
+    resolucion: string;
+    prefijo: string;
+    rangoDesde: number | null;
+    rangoHasta: number | null;
+    vigenciaDesde: string;
+    vigenciaHasta: string;
+  };
+  pos: {
+    resolucion: string;
+    prefijo: string;
+    rangoDesde: number | null;
+    rangoHasta: number | null;
+    vigenciaDesde: string;
+    vigenciaHasta: string;
+  };
   hasCertificate: boolean;
 }
 
@@ -102,7 +112,7 @@ interface DianCertificateConfig {
                 </div>
                 <div class="integration-title-wrap">
                   <div class="integration-title">Facturacion Electronica</div>
-                  <div class="integration-sub">Emision de comprobantes hacia la DIAN</div>
+                  <div class="integration-sub">Emision de venta y documento equivalente POS con numeraciones independientes</div>
                 </div>
                 <div class="status-stack">
                   <span class="connected-badge">Activa</span>
@@ -113,17 +123,20 @@ interface DianCertificateConfig {
               </div>
 
               <div class="meta-grid">
-                @if (facturacion().resolucion) {
-                  <div class="meta-item">Resolucion <strong>{{ facturacion().resolucion }}</strong></div>
+                @if (facturacion().venta.resolucion) {
+                  <div class="meta-item">Venta <strong>{{ facturacion().venta.prefijo || 'Sin prefijo' }}</strong></div>
                 }
-                @if (facturacion().prefijo) {
-                  <div class="meta-item">Prefijo <strong>{{ facturacion().prefijo }}</strong></div>
+                @if (facturacion().venta.rangoDesde && facturacion().venta.rangoHasta) {
+                  <div class="meta-item">Rango venta <strong>{{ facturacion().venta.rangoDesde }} - {{ facturacion().venta.rangoHasta }}</strong></div>
                 }
-                @if (facturacion().rangoDesde && facturacion().rangoHasta) {
-                  <div class="meta-item">Rango <strong>{{ facturacion().rangoDesde }} - {{ facturacion().rangoHasta }}</strong></div>
+                @if (facturacion().pos.resolucion) {
+                  <div class="meta-item">POS <strong>{{ facturacion().pos.prefijo || 'Sin prefijo' }}</strong></div>
                 }
-                @if (facturacion().vigenciaHasta) {
-                  <div class="meta-item">Vigencia <strong>{{ facturacion().vigenciaHasta }}</strong></div>
+                @if (facturacion().pos.rangoDesde && facturacion().pos.rangoHasta) {
+                  <div class="meta-item">Rango POS <strong>{{ facturacion().pos.rangoDesde }} - {{ facturacion().pos.rangoHasta }}</strong></div>
+                }
+                @if (facturacion().venta.vigenciaHasta || facturacion().pos.vigenciaHasta) {
+                  <div class="meta-item">Vigencias <strong>{{ facturacion().venta.vigenciaHasta || '—' }} / {{ facturacion().pos.vigenciaHasta || '—' }}</strong></div>
                 }
                 @if (certificate().hasCertificate) {
                   <div class="meta-item">Certificado <strong>Configurado</strong></div>
@@ -446,7 +459,14 @@ export class SettingsIntegrationsComponent implements OnInit {
   private http = inject(HttpClient);
 
   loading      = signal(true);
-  facturacion  = signal<DianFacturacionConfig>({ enabled: false, ambiente: 'habilitacion', softwareId: '', resolucion: '', prefijo: '', rangoDesde: null, rangoHasta: null, vigenciaDesde: '', vigenciaHasta: '', hasCertificate: false });
+  facturacion  = signal<DianFacturacionConfig>({
+    enabled: false,
+    ambiente: 'habilitacion',
+    softwareId: '',
+    venta: { resolucion: '', prefijo: '', rangoDesde: null, rangoHasta: null, vigenciaDesde: '', vigenciaHasta: '' },
+    pos: { resolucion: '', prefijo: '', rangoDesde: null, rangoHasta: null, vigenciaDesde: '', vigenciaHasta: '' },
+    hasCertificate: false,
+  });
   nomina       = signal<DianNominaConfig>({ enabled: false, softwareId: '' });
   certificate  = signal<DianCertificateConfig>({ hasCertificate: false });
 

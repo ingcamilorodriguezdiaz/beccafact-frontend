@@ -7,6 +7,15 @@ import { environment } from '../../../../environments/environment';
 
 interface Company { id: string; name: string; nit: string; razonSocial: string; }
 
+interface DianResolutionBlock {
+  resolucion: string;
+  prefijo: string;
+  rangoDesde: number | null;
+  rangoHasta: number | null;
+  vigenciaDesde: string;
+  vigenciaHasta: string;
+}
+
 interface DianFacturacionConfig {
   enabled: boolean;
   ambiente: 'habilitacion' | 'produccion';
@@ -14,6 +23,8 @@ interface DianFacturacionConfig {
   softwarePin: string;
   testSetId: string;
   claveTecnica: string;
+  venta: DianResolutionBlock;
+  pos: DianResolutionBlock;
   resolucion: string;
   prefijo: string;
   rangoDesde: number | null;
@@ -39,6 +50,8 @@ interface DianNominaConfig {
 const EMPTY_FACT = (): DianFacturacionConfig => ({
   enabled: false, ambiente: 'habilitacion',
   softwareId: '', softwarePin: '', testSetId: '', claveTecnica: '',
+  venta: { resolucion: '', prefijo: '', rangoDesde: null, rangoHasta: null, vigenciaDesde: '', vigenciaHasta: '' },
+  pos: { resolucion: '', prefijo: '', rangoDesde: null, rangoHasta: null, vigenciaDesde: '', vigenciaHasta: '' },
   resolucion: '', prefijo: '', rangoDesde: null, rangoHasta: null,
   vigenciaDesde: '', vigenciaHasta: '', hasCertificate: false,
 });
@@ -127,7 +140,7 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
                   <span class="cert-badge">🔐 Cert.</span>
                 }
               </div>
-              <div class="intg-desc">Configuración de resolución, software y certificado para facturación electrónica DIAN</div>
+              <div class="intg-desc">Configura software DIAN y dos resoluciones independientes: Factura Electrónica de Venta y Documento Equivalente POS Electrónico</div>
             </div>
             <div class="intg-actions">
               <button class="btn" [class.btn-primary]="!facturacion().enabled" [class.btn-secondary]="facturacion().enabled"
@@ -204,40 +217,86 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
                   </div>
                 </div>
 
-                <!-- Resolución y prefijo -->
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>Número de resolución *</label>
-                    <input type="text" [(ngModel)]="draftFact.resolucion" class="form-control" placeholder="Ej: 18760000001"/>
-                  </div>
-                  <div class="form-group">
-                    <label>Prefijo de factura</label>
-                    <input type="text" [(ngModel)]="draftFact.prefijo" class="form-control" placeholder="Ej: SETT"/>
-                  </div>
-                </div>
+                <div class="dual-resolution-grid">
+                  <section class="resolution-card">
+                    <div class="resolution-card__head">
+                      <div>
+                        <h4>Factura Electrónica de Venta</h4>
+                        <p>Usa su propio prefijo y rango autorizado por la DIAN.</p>
+                      </div>
+                      <span class="resolution-chip">Venta</span>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Número de resolución *</label>
+                        <input type="text" [(ngModel)]="draftFact.venta.resolucion" class="form-control" placeholder="Ej: 18760000001"/>
+                      </div>
+                      <div class="form-group">
+                        <label>Prefijo</label>
+                        <input type="text" [(ngModel)]="draftFact.venta.prefijo" class="form-control" placeholder="Ej: FEV"/>
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Rango desde *</label>
+                        <input type="number" [(ngModel)]="draftFact.venta.rangoDesde" class="form-control" placeholder="1"/>
+                      </div>
+                      <div class="form-group">
+                        <label>Rango hasta *</label>
+                        <input type="number" [(ngModel)]="draftFact.venta.rangoHasta" class="form-control" placeholder="1000"/>
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Vigencia desde *</label>
+                        <input type="date" [(ngModel)]="draftFact.venta.vigenciaDesde" class="form-control"/>
+                      </div>
+                      <div class="form-group">
+                        <label>Vigencia hasta *</label>
+                        <input type="date" [(ngModel)]="draftFact.venta.vigenciaHasta" class="form-control"/>
+                      </div>
+                    </div>
+                  </section>
 
-                <!-- Rango -->
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>Rango desde *</label>
-                    <input type="number" [(ngModel)]="draftFact.rangoDesde" class="form-control" placeholder="1"/>
-                  </div>
-                  <div class="form-group">
-                    <label>Rango hasta *</label>
-                    <input type="number" [(ngModel)]="draftFact.rangoHasta" class="form-control" placeholder="1000"/>
-                  </div>
-                </div>
-
-                <!-- Vigencia -->
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>Vigencia desde *</label>
-                    <input type="date" [(ngModel)]="draftFact.vigenciaDesde" class="form-control"/>
-                  </div>
-                  <div class="form-group">
-                    <label>Vigencia hasta *</label>
-                    <input type="date" [(ngModel)]="draftFact.vigenciaHasta" class="form-control"/>
-                  </div>
+                  <section class="resolution-card resolution-card--pos">
+                    <div class="resolution-card__head">
+                      <div>
+                        <h4>Documento Equivalente POS Electrónico</h4>
+                        <p>Mantén un prefijo y consecutivo independiente al de venta.</p>
+                      </div>
+                      <span class="resolution-chip resolution-chip--pos">POS</span>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Número de resolución *</label>
+                        <input type="text" [(ngModel)]="draftFact.pos.resolucion" class="form-control" placeholder="Ej: 18760000002"/>
+                      </div>
+                      <div class="form-group">
+                        <label>Prefijo</label>
+                        <input type="text" [(ngModel)]="draftFact.pos.prefijo" class="form-control" placeholder="Ej: POS"/>
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Rango desde *</label>
+                        <input type="number" [(ngModel)]="draftFact.pos.rangoDesde" class="form-control" placeholder="1"/>
+                      </div>
+                      <div class="form-group">
+                        <label>Rango hasta *</label>
+                        <input type="number" [(ngModel)]="draftFact.pos.rangoHasta" class="form-control" placeholder="1000"/>
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Vigencia desde *</label>
+                        <input type="date" [(ngModel)]="draftFact.pos.vigenciaDesde" class="form-control"/>
+                      </div>
+                      <div class="form-group">
+                        <label>Vigencia hasta *</label>
+                        <input type="date" [(ngModel)]="draftFact.pos.vigenciaHasta" class="form-control"/>
+                      </div>
+                    </div>
+                  </section>
                 </div>
 
                 <div class="panel-footer">
@@ -479,6 +538,51 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
 
     .panel-footer { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
     .panel-btns { display:flex; gap:10px; }
+    .dual-resolution-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:8px; }
+    .resolution-card {
+      padding:16px;
+      border:1px solid #dce6f0;
+      border-radius:14px;
+      background:#fff;
+      box-shadow:0 10px 24px rgba(12,28,53,.04);
+    }
+    .resolution-card--pos { background:linear-gradient(180deg, #fbfdff 0%, #f7fbff 100%); }
+    .resolution-card__head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .resolution-card__head h4 {
+      margin:0;
+      font-size:14px;
+      font-weight:700;
+      color:#0c1c35;
+    }
+    .resolution-card__head p {
+      margin:5px 0 0;
+      font-size:11.5px;
+      color:#8aa0b8;
+      line-height:1.5;
+    }
+    .resolution-chip {
+      display:inline-flex;
+      align-items:center;
+      padding:4px 9px;
+      border-radius:999px;
+      background:#e8fff8;
+      color:#0f8a74;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      white-space:nowrap;
+    }
+    .resolution-chip--pos {
+      background:#eff6ff;
+      color:#1d4ed8;
+    }
 
     .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; font-size:13.5px; font-weight:600; cursor:pointer; border:none; transition:background .15s; }
     .btn-primary { background:#1a407e; color:#fff; }
@@ -502,6 +606,7 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
       .form-row { grid-template-columns: 1fr; }
       .form-group--full { grid-column: span 1; }
       .radio-group { grid-template-columns: 1fr; }
+      .dual-resolution-grid { grid-template-columns: 1fr; }
     }
   `]
 })
