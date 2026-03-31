@@ -9,7 +9,7 @@ import { Subject, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs
 import { takeUntil } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../core/services/notification.service';
-import { PosApiService, CartItem, PosSession, PosSale } from './pos.service';
+import { PosApiService, CartItem, PosInvoiceDetail, PosSession, PosSale } from './pos.service';
 
 interface Product {
   id: string; name: string; sku: string; price: number;
@@ -409,21 +409,23 @@ interface Customer {
           }
         </div>
 
-        <!-- Invoice toggle -->
-        @if (selectedCustomer()) {
-          <div class="invoice-toggle" [class.active]="generateInvoice()" (click)="generateInvoice.set(!generateInvoice())">
-            <div class="it-checkbox" [class.checked]="generateInvoice()">
-              @if (generateInvoice()) {
-                <svg viewBox="0 0 12 12" fill="none" width="10"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              }
-            </div>
-            <div class="it-text">
-              <span class="it-main">Generar factura electrónica</span>
-              <span class="it-sub">Se vinculará a esta venta automáticamente</span>
-            </div>
-            <svg viewBox="0 0 16 16" fill="currentColor" width="13" class="it-doc-icon"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
+        <!-- Invoice toggle — always visible -->
+        <div class="invoice-toggle" [class.active]="generateInvoice() && !!selectedCustomer()" [class.it-disabled]="!selectedCustomer()" (click)="selectedCustomer() && generateInvoice.set(!generateInvoice())">
+          <div class="it-checkbox" [class.checked]="generateInvoice() && !!selectedCustomer()">
+            @if (generateInvoice() && selectedCustomer()) {
+              <svg viewBox="0 0 12 12" fill="none" width="10"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            }
           </div>
-        }
+          <div class="it-text">
+            <span class="it-main">¿Requiere factura electrónica?</span>
+            @if (!selectedCustomer()) {
+              <span class="it-sub it-sub--warn">Selecciona un cliente para habilitar</span>
+            } @else {
+              <span class="it-sub">{{ generateInvoice() ? 'Se generará factura para ' + selectedCustomer()!.name : 'Toca para activar la facturación electrónica' }}</span>
+            }
+          </div>
+          <svg viewBox="0 0 16 16" fill="currentColor" width="13" class="it-doc-icon"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
+        </div>
 
         <!-- Payment method -->
         <div class="payment-section">
@@ -535,11 +537,36 @@ interface Customer {
                     <span class="status-chip status-{{ sale.status.toLowerCase() }}">{{ getStatusLabel(sale.status) }}</span>
                   </td>
                   <td class="tc">
-                    @if (sale.invoiceId) {
-                      <span class="inv-chip">
-                        <svg viewBox="0 0 12 12" fill="currentColor" width="9"><path fill-rule="evenodd" d="M10 6a4 4 0 11-8 0 4 4 0 018 0zm-3.78-1.28a.75.75 0 00-1.06 1.06l1.5 1.5a.75.75 0 001.06 0l2.5-2.5a.75.75 0 00-1.06-1.06L6.25 5.69l-.97-.97z"/></svg>
-                        Vinculada
-                      </span>
+                    @if (sale.invoiceId && sale.invoice) {
+                      <div class="inv-dian-cell">
+                        <span class="inv-chip inv-chip--sm">
+                          <svg viewBox="0 0 12 12" fill="currentColor" width="9"><path fill-rule="evenodd" d="M10 6a4 4 0 11-8 0 4 4 0 018 0zm-3.78-1.28a.75.75 0 00-1.06 1.06l1.5 1.5a.75.75 0 001.06 0l2.5-2.5a.75.75 0 00-1.06-1.06L6.25 5.69l-.97-.97z"/></svg>
+                          {{ sale.invoice.invoiceNumber }}
+                        </span>
+                        <button class="history-link-btn history-link-btn--neutral" (click)="openInvoiceModal(sale)">
+                          <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path d="M8 3C4.5 3 1.61 5.167.5 8c1.11 2.833 4 5 7.5 5s6.39-2.167 7.5-5c-1.11-2.833-4-5-7.5-5zm0 8.5A3.5 3.5 0 118 4.5a3.5 3.5 0 010 7zm0-1.5A2 2 0 108 6a2 2 0 000 4z"/></svg>
+                          Ver detalle
+                        </button>
+                        @if (sale.invoice.status === 'ACCEPTED_DIAN') {
+                          <span class="dian-badge dian-accepted">DIAN ✓</span>
+                        } @else if (sale.invoice.status === 'PAID') {
+                          <span class="dian-badge dian-paid">Pagada</span>
+                        } @else if (sale.invoice.status === 'REJECTED_DIAN') {
+                          <span class="dian-badge dian-rejected">DIAN ✗</span>
+                        } @else if (sale.invoice.status === 'SENT_DIAN') {
+                          <button class="history-link-btn history-link-btn--dian" (click)="queryDianStatus(sale)" [disabled]="queryingDian[sale.id]">
+                            <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path fill-rule="evenodd" d="M8 3a5 5 0 00-4.546 2.916.5.5 0 11-.908-.418 6 6 0 111.2 6.635.5.5 0 11.84-.542A5 5 0 108 3z"/><path d="M8.5 5.5a.5.5 0 00-1 0V8c0 .133.053.26.146.354l1.5 1.5a.5.5 0 00.708-.708L8.5 7.793V5.5z"/></svg>
+                            {{ queryingDian[sale.id] ? 'Consultando…' : 'Consultar DIAN' }}
+                          </button>
+                        } @else {
+                          <button class="history-link-btn history-link-btn--dian" (click)="submitInvoiceToDian(sale)" [disabled]="sendingDian[sale.id]">
+                            <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path d="M8.5 1.5a.5.5 0 00-1 0v6.293L5.354 5.646a.5.5 0 10-.708.708l3 3a.498.498 0 00.708 0l3-3a.5.5 0 10-.708-.708L8.5 7.793V1.5z"/><path d="M2.5 10a.5.5 0 00-.5.5v1A2.5 2.5 0 004.5 14h7a2.5 2.5 0 002.5-2.5v-1a.5.5 0 00-1 0v1A1.5 1.5 0 0111.5 13h-7A1.5 1.5 0 013 11.5v-1a.5.5 0 00-.5-.5z"/></svg>
+                            {{ sendingDian[sale.id] ? 'Enviando…' : 'Enviar DIAN' }}
+                          </button>
+                        }
+                      </div>
+                    } @else if (sale.invoiceId) {
+                      <span class="inv-chip">Vinculada</span>
                     } @else if (sale.status === 'ADVANCE') {
                       <div class="advance-actions">
                         <button class="link-btn adv-pay-btn" (click)="openAddPaymentModal(sale)">+Pago</button>
@@ -548,7 +575,10 @@ interface Customer {
                         }
                       </div>
                     } @else if (sale.status === 'COMPLETED' && sale.customer && sale.deliveryStatus === 'DELIVERED') {
-                      <button class="link-btn" (click)="generateInvoiceForSale(sale)">Generar</button>
+                      <button class="history-link-btn history-link-btn--primary" (click)="generateInvoiceForSale(sale)">
+                        <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/><path d="M8 7a.5.5 0 01.5.5V9H10a.5.5 0 010 1H8.5v1.5a.5.5 0 01-1 0V10H6a.5.5 0 010-1h1.5V7.5A.5.5 0 018 7z"/></svg>
+                        Generar
+                      </button>
                     } @else {
                       <span class="td-dash">—</span>
                     }
@@ -889,9 +919,38 @@ interface Customer {
 
         <!-- Factura generada -->
         @if (completedSale()!.invoice) {
-          <div class="success-inv-badge">
-            <svg viewBox="0 0 16 16" fill="currentColor" width="12" aria-hidden="true"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
-            Factura {{ completedSale()!.invoice!.invoiceNumber }} generada
+          <div class="success-inv-block">
+            <div class="sib-header">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="12" aria-hidden="true"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
+              <span>{{ completedSale()!.invoice!.invoiceNumber }}</span>
+              @if (completedSale()!.invoice!.status === 'ACCEPTED_DIAN') {
+                <span class="dian-badge dian-accepted">DIAN ✓</span>
+              } @else if (completedSale()!.invoice!.status === 'PAID') {
+                <span class="dian-badge dian-paid">Pagada</span>
+              } @else if (completedSale()!.invoice!.status === 'REJECTED_DIAN') {
+                <span class="dian-badge dian-rejected">DIAN ✗</span>
+              } @else if (completedSale()!.invoice!.status === 'SENT_DIAN') {
+                <span class="dian-badge dian-sent">Enviada</span>
+              } @else {
+                <span class="dian-badge dian-draft">Borrador</span>
+              }
+            </div>
+            <div class="sib-actions">
+              @if (completedSale()!.invoice!.status === 'DRAFT') {
+                <button class="sib-btn sib-btn--dian" (click)="submitInvoiceToDian(completedSale()!)" [disabled]="sendingDian[completedSale()!.id]">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M.5 9.9a.5.5 0 01.5.5v2.5a1 1 0 001 1h12a1 1 0 001-1v-2.5a.5.5 0 011 0v2.5a2 2 0 01-2 2H2a2 2 0 01-2-2v-2.5a.5.5 0 01.5-.5z"/><path d="M7.646 1.146a.5.5 0 01.708 0l3 3a.5.5 0 01-.708.708L8.5 2.707V11.5a.5.5 0 01-1 0V2.707L5.354 4.854a.5.5 0 11-.708-.708l3-3z"/></svg>
+                  {{ sendingDian[completedSale()!.id] ? 'Enviando…' : 'Enviar a DIAN' }}
+                </button>
+              } @else if (completedSale()!.invoice!.status === 'SENT_DIAN') {
+                <button class="sib-btn" (click)="queryDianStatus(completedSale()!)" [disabled]="queryingDian[completedSale()!.id]">
+                  {{ queryingDian[completedSale()!.id] ? 'Consultando…' : 'Consultar DIAN' }}
+                </button>
+              }
+              <button class="sib-btn" (click)="openInvoiceModal(completedSale()!)">
+                <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M10.5 8a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/><path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z"/></svg>
+                Ver factura
+              </button>
+            </div>
           </div>
         }
 
@@ -916,7 +975,7 @@ interface Customer {
               <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M0 3.5A1.5 1.5 0 011.5 2h9A1.5 1.5 0 0112 3.5V5h1.02a1.5 1.5 0 011.17.563l1.481 1.85a1.5 1.5 0 01.329.938V10.5a1.5 1.5 0 01-1.5 1.5H14a2 2 0 11-4 0H5a2 2 0 11-3.998-.085A1.5 1.5 0 010 10.5v-7z"/></svg>
               Marcar entregado
             </button>
-          } @else if (!completedSale()!.invoiceId && completedSale()!.customer && completedSale()!.deliveryStatus === 'DELIVERED') {
+          } @else if (!completedSale()!.invoiceId && completedSale()!.customer) {
             <button class="sa-btn" (click)="generateInvoiceForSale(completedSale()!)">
               <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
               Generar factura
@@ -926,6 +985,285 @@ interface Customer {
             <svg viewBox="0 0 16 16" fill="currentColor" width="14" aria-hidden="true"><path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z"/></svg>
             Nueva venta
           </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- Invoice Detail Drawer -->
+  @if (showInvoiceModal() && selectedInvoiceSale()) {
+    <div class="pos-drawer-overlay" (click)="showInvoiceModal.set(false)">
+      <div class="pos-drawer" (click)="$event.stopPropagation()">
+
+        <!-- Drawer header -->
+        <div class="pos-drawer-header">
+          <div class="pos-drawer-header-left">
+            <div class="pos-drawer-inv-number">{{ selectedInvoiceSale()!.invoice?.invoiceNumber ?? selectedInvoiceSale()!.saleNumber }}</div>
+            <div class="pos-drawer-meta">
+              <span class="type-badge-pos">Factura electrónica</span>
+              <span class="pos-drawer-dot">·</span>
+              <span class="pos-drawer-date">{{ selectedInvoiceSale()!.createdAt | date:'dd MMM yyyy' }}</span>
+            </div>
+          </div>
+          <div class="pos-drawer-header-right">
+            @if (selectedInvoiceSale()!.invoice?.status === 'ACCEPTED_DIAN') {
+              <span class="dian-badge dian-accepted">Aceptada ✓</span>
+            } @else if (selectedInvoiceSale()!.invoice?.status === 'PAID') {
+              <span class="dian-badge dian-paid">Pagada</span>
+            } @else if (selectedInvoiceSale()!.invoice?.status === 'REJECTED_DIAN') {
+              <span class="dian-badge dian-rejected">Rechazada ✗</span>
+            } @else if (selectedInvoiceSale()!.invoice?.status === 'SENT_DIAN') {
+              <span class="dian-badge dian-sent">Enviada</span>
+            } @else {
+              <span class="dian-badge dian-draft">Borrador</span>
+            }
+            <button class="pos-drawer-close" (click)="showInvoiceModal.set(false)" title="Cerrar">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="17"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Drawer body -->
+        <div class="pos-drawer-body">
+
+          <!-- Venta info -->
+          <div class="pos-dw-section">
+            <div class="pos-dw-section-title">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/><path fill-rule="evenodd" d="M1.5 8a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0z"/></svg>
+              Información de venta
+            </div>
+            <div class="pos-dw-card">
+              <div class="pos-dw-info-row">
+                <span class="pos-dw-lbl">Nro. venta</span>
+                <span class="pos-dw-val">{{ selectedInvoiceSale()!.saleNumber }}</span>
+              </div>
+              <div class="pos-dw-info-row">
+                <span class="pos-dw-lbl">Fecha</span>
+                <span class="pos-dw-val">{{ selectedInvoiceSale()!.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              <div class="pos-dw-info-row">
+                <span class="pos-dw-lbl">Método de pago</span>
+                <span class="pos-dw-val">{{ getPaymentLabel(selectedInvoiceSale()!.paymentMethod) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cliente -->
+          @if (selectedInvoiceSale()!.customer) {
+            <div class="pos-dw-section">
+              <div class="pos-dw-section-title">
+                <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zm2-3a2 2 0 11-4 0 2 2 0 014 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4z"/></svg>
+                Cliente
+              </div>
+              <div class="pos-dw-card">
+                <div class="pos-dw-client-name">{{ selectedInvoiceSale()!.customer!.name }}</div>
+                <div class="pos-dw-client-doc">{{ selectedInvoiceSale()!.customer!.documentType }}: {{ selectedInvoiceSale()!.customer!.documentNumber }}</div>
+              </div>
+            </div>
+          }
+
+          @if (selectedInvoiceDetail() || loadingInvoiceDetail()) {
+            <div class="pos-dw-section">
+              <div class="pos-dw-section-title">
+                <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path fill-rule="evenodd" d="M4.75 1a.75.75 0 01.75.75V3h5V1.75a.75.75 0 011.5 0V3h.75A2.25 2.25 0 0115 5.25v7.5A2.25 2.25 0 0112.75 15h-9.5A2.25 2.25 0 011 12.75v-7.5A2.25 2.25 0 013.25 3H4V1.75A.75.75 0 014.75 1zM2.5 6.5v6.25c0 .414.336.75.75.75h9.5a.75.75 0 00.75-.75V6.5h-11zm11-1.5v-.25a.75.75 0 00-.75-.75h-9.5a.75.75 0 00-.75.75V5h11z"/></svg>
+                Fechas y documento
+              </div>
+              @if (loadingInvoiceDetail()) {
+                <div class="pos-dw-card pos-dw-loading">
+                  <div class="spinner-xs"></div>
+                  Cargando detalle de factura...
+                </div>
+              } @else if (selectedInvoiceDetail()) {
+                <div class="pos-dw-card">
+                  <div class="pos-dw-date-grid">
+                    <div class="pos-dw-date-chip">
+                      <span class="pos-dw-date-lbl">Emisión</span>
+                      <span class="pos-dw-date-val">{{ selectedInvoiceDetail()!.issueDate | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                    <div class="pos-dw-date-chip">
+                      <span class="pos-dw-date-lbl">Vencimiento</span>
+                      <span class="pos-dw-date-val">{{ selectedInvoiceDetail()!.dueDate ? (selectedInvoiceDetail()!.dueDate! | date:'dd/MM/yyyy') : 'Contado' }}</span>
+                    </div>
+                    <div class="pos-dw-date-chip">
+                      <span class="pos-dw-date-lbl">Moneda</span>
+                      <span class="pos-dw-date-val">{{ selectedInvoiceDetail()!.currency ?? 'COP' }}</span>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Ítems -->
+          <div class="pos-dw-section">
+            <div class="pos-dw-section-title">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M3 2a2 2 0 00-2 2v1h14V4a2 2 0 00-2-2H3zm13 3H0v6a2 2 0 002 2h12a2 2 0 002-2V5z"/></svg>
+              Ítems ({{ selectedInvoiceSale()!.items.length }})
+            </div>
+            <div class="pos-dw-items">
+              <div class="pos-dw-items-head">
+                <span>Producto</span>
+                <span class="tc">Cant.</span>
+                <span class="tr">Total</span>
+              </div>
+              @for (item of selectedInvoiceSale()!.items; track item.id) {
+                <div class="pos-dw-item-row">
+                  <div class="pos-dw-item-desc">
+                    <span class="pos-dw-item-name">{{ item.description }}</span>
+                    @if (item.taxRate > 0) {
+                      <span class="pos-dw-item-tax">IVA {{ item.taxRate }}%</span>
+                    }
+                  </div>
+                  <span class="tc pos-dw-item-qty">{{ item.quantity }}</span>
+                  <span class="tr pos-dw-item-total">{{ fmtCOP(item.total) }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Totales -->
+          <div class="pos-dw-section">
+            <div class="pos-dw-section-title">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.149-.17-1.95-.8-2.12-1.718H4zm2.09-5.9c0-1.028.836-1.6 2.056-1.71V8.84c-1.164-.267-2.056-.82-2.056-1.96zm2.56 6.116c1.38.235 2.07.87 2.07 1.964 0 1.164-.85 1.807-2.07 1.962v-3.926z"/></svg>
+              Totales
+            </div>
+            <div class="pos-dw-totals">
+              <div class="pos-dw-total-row">
+                <span>Subtotal</span>
+                <span>{{ fmtCOP(selectedInvoiceSale()!.subtotal) }}</span>
+              </div>
+              <div class="pos-dw-total-row">
+                <span>IVA</span>
+                <span>{{ fmtCOP(selectedInvoiceSale()!.taxAmount) }}</span>
+              </div>
+              @if (selectedInvoiceSale()!.discountAmount > 0) {
+                <div class="pos-dw-total-row pos-dw-total-disc">
+                  <span>Descuento</span>
+                  <span>-{{ fmtCOP(selectedInvoiceSale()!.discountAmount) }}</span>
+                </div>
+              }
+              <div class="pos-dw-total-row pos-dw-total-grand">
+                <span>TOTAL</span>
+                <strong>{{ fmtCOP(selectedInvoiceSale()!.total) }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- DIAN -->
+          @if (selectedInvoiceSale()!.invoice) {
+            <div class="pos-dw-section">
+              <div class="pos-dw-section-title">
+                <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
+                Factura electrónica DIAN
+              </div>
+              <div class="pos-dw-card">
+                <div class="pos-dw-info-row">
+                  <span class="pos-dw-lbl">Número</span>
+                  <span class="pos-dw-val">{{ selectedInvoiceSale()!.invoice!.invoiceNumber }}</span>
+                </div>
+                @if (selectedInvoiceDetail()?.status) {
+                  <div class="pos-dw-info-row">
+                    <span class="pos-dw-lbl">Estado interno</span>
+                    <span class="pos-dw-val">{{ selectedInvoiceDetail()!.status }}</span>
+                  </div>
+                }
+                <div class="pos-dw-info-row">
+                  <span class="pos-dw-lbl">Estado</span>
+                  <span class="pos-dw-val">
+                    @if (selectedInvoiceSale()!.invoice!.status === 'ACCEPTED_DIAN') {
+                      <span class="dian-badge dian-accepted">Aceptada ✓</span>
+                    } @else if (selectedInvoiceSale()!.invoice!.status === 'PAID') {
+                      <span class="dian-badge dian-paid">Pagada</span>
+                    } @else if (selectedInvoiceSale()!.invoice!.status === 'REJECTED_DIAN') {
+                      <span class="dian-badge dian-rejected">Rechazada ✗</span>
+                    } @else if (selectedInvoiceSale()!.invoice!.status === 'SENT_DIAN') {
+                      <span class="dian-badge dian-sent">Enviada</span>
+                    } @else {
+                      <span class="dian-badge dian-draft">Borrador</span>
+                    }
+                  </span>
+                </div>
+                @if (selectedInvoiceDetail()?.dianStatusCode) {
+                  <div class="pos-dw-info-row">
+                    <span class="pos-dw-lbl">Código DIAN</span>
+                    <span class="pos-dw-val pos-dw-code">
+                      {{ selectedInvoiceDetail()!.dianStatusCode }}
+                      @if (dianCodeDesc(selectedInvoiceDetail()!.dianStatusCode)) {
+                        <small>{{ dianCodeDesc(selectedInvoiceDetail()!.dianStatusCode) }}</small>
+                      }
+                    </span>
+                  </div>
+                }
+                @if (selectedInvoiceSale()!.invoice!.dianZipKey) {
+                  <div class="pos-dw-info-row">
+                    <span class="pos-dw-lbl">ZipKey</span>
+                    <span class="pos-dw-val pos-dw-mono">
+                      {{ selectedInvoiceSale()!.invoice!.dianZipKey }}
+                      <button class="pos-dw-copy" (click)="copyText(selectedInvoiceSale()!.invoice!.dianZipKey)">Copiar</button>
+                    </span>
+                  </div>
+                }
+                @if (selectedInvoiceSale()!.invoice!.dianCufe) {
+                  <div class="pos-dw-cufe-block">
+                    <span class="pos-dw-lbl">CUFE</span>
+                    <code class="pos-dw-cufe-code">{{ selectedInvoiceSale()!.invoice!.dianCufe }}</code>
+                    <button class="pos-dw-copy pos-dw-copy--inline" (click)="copyText(selectedInvoiceSale()!.invoice!.dianCufe)">Copiar CUFE</button>
+                  </div>
+                }
+                @if (selectedInvoiceSale()!.invoice!.dianStatusMsg) {
+                  <div class="pos-dw-info-row">
+                    <span class="pos-dw-lbl">Respuesta DIAN</span>
+                    <span class="pos-dw-val pos-dw-muted">{{ selectedInvoiceSale()!.invoice!.dianStatusMsg }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          @if (selectedInvoiceDetail()?.notes) {
+            <div class="pos-dw-section">
+              <div class="pos-dw-section-title">
+                <svg viewBox="0 0 16 16" fill="currentColor" width="11"><path d="M2 3.75A1.75 1.75 0 013.75 2h8.5A1.75 1.75 0 0114 3.75v8.5A1.75 1.75 0 0112.25 14h-8.5A1.75 1.75 0 012 12.25v-8.5zm2.25 1a.75.75 0 000 1.5h7.5a.75.75 0 000-1.5h-7.5zm0 3a.75.75 0 000 1.5h7.5a.75.75 0 000-1.5h-7.5zm0 3a.75.75 0 100 1.5h4.5a.75.75 0 000-1.5h-4.5z"/></svg>
+                Observaciones
+              </div>
+              <div class="pos-dw-card pos-dw-note">
+                {{ selectedInvoiceDetail()!.notes }}
+              </div>
+            </div>
+          }
+
+        </div>
+
+        <!-- Drawer footer -->
+        <div class="pos-drawer-footer">
+          @if (selectedInvoiceSale()!.invoice?.status === 'DRAFT') {
+            <button class="pos-dw-btn pos-dw-btn--primary" (click)="submitInvoiceToDian(selectedInvoiceSale()!); showInvoiceModal.set(false)" [disabled]="sendingDian[selectedInvoiceSale()!.id]">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
+              {{ sendingDian[selectedInvoiceSale()!.id] ? 'Enviando...' : 'Enviar a la DIAN' }}
+            </button>
+          }
+          @if (selectedInvoiceSale()!.invoice?.dianZipKey || selectedInvoiceSale()!.invoice?.dianCufe) {
+            <button class="pos-dw-btn pos-dw-btn--outline" (click)="queryDianStatus(selectedInvoiceSale()!)" [disabled]="queryingDian[selectedInvoiceSale()!.id]">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/></svg>
+              {{ queryingDian[selectedInvoiceSale()!.id] ? 'Consultando...' : 'Consultar DIAN' }}
+            </button>
+          }
+          <button class="pos-dw-btn pos-dw-btn--outline" (click)="openInvoicePdf(selectedInvoiceSale()!)">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M9.293 0H3.5A1.5 1.5 0 002 1.5v13A1.5 1.5 0 003.5 16h9a1.5 1.5 0 001.5-1.5V4.707L9.293 0zM9 1.5 12.5 5H9V1.5z"/><path d="M4.75 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z"/></svg>
+            Ver PDF
+          </button>
+          <button class="pos-dw-btn pos-dw-btn--outline" (click)="downloadInvoiceXml(selectedInvoiceSale()!)">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path fill-rule="evenodd" d="M8 1a.75.75 0 01.75.75v6.19l1.72-1.72a.75.75 0 111.06 1.06L8.53 10.28a.75.75 0 01-1.06 0L4.47 7.28a.75.75 0 111.06-1.06l1.72 1.72V1.75A.75.75 0 018 1z"/><path d="M2.75 10.5a.75.75 0 00-.75.75v1A2.75 2.75 0 004.75 15h6.5A2.75 2.75 0 0014 12.25v-1a.75.75 0 00-1.5 0v1c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1a.75.75 0 00-.75-.75z"/></svg>
+            Descargar XML
+          </button>
+          @if (selectedInvoiceSale()!.invoice && canMarkInvoicePaid()) {
+            <button class="pos-dw-btn pos-dw-btn--success" (click)="markInvoicePaid(selectedInvoiceSale()!)">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/></svg>
+              Marcar pagada
+            </button>
+          }
+          <button class="pos-dw-btn pos-dw-btn--ghost" (click)="showInvoiceModal.set(false)">Cerrar</button>
         </div>
 
       </div>
@@ -1632,8 +1970,122 @@ interface Customer {
     .status-chip.status-refunded { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
     .status-chip.status-advance { background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
     .inv-chip { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+    .inv-chip--sm { font-size:10px; padding:2px 6px; }
+    .inv-dian-cell { display:flex; flex-direction:column; align-items:center; gap:3px; }
+    .dian-badge { display:inline-block; padding:2px 7px; border-radius:5px; font-size:10px; font-weight:700; white-space:nowrap; }
+    .dian-accepted { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+    .dian-rejected { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+    .dian-btn { font-size:10.5px; padding:2px 6px; }
+
+    /* Invoice success block in overlay */
+    .success-inv-block { background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 14px; margin:10px 0; }
+    .sib-header { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:#1e40af; margin-bottom:8px; }
+    .sib-actions { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+    .sib-btn { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; border:1px solid #93c5fd; background:#fff; color:#1e40af; transition:all .12s; }
+    .sib-btn:hover { background:#dbeafe; }
+    .sib-btn:disabled { opacity:.6; cursor:not-allowed; }
+    .sib-btn--dian { background:#1a407e; color:#fff; border-color:#1a407e; }
+    .sib-btn--dian:hover { background:#1e3a8a; }
+    .dian-sent { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+    .dian-draft { background:#f3f4f6; color:#374151; border:1px solid #d1d5db; }
+    .dian-paid { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+    /* Invoice modal */
+    .modal-invoice { width:460px; }
+    .inv-modal-rows { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+    .inv-modal-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid #f0f4f8; }
+    .imr-label { font-size:12.5px; color:#7ea3cc; }
+    .imr-val { font-size:13px; color:#1a1a2e; }
+    .imr-mono { font-family:monospace; font-size:11px; word-break:break-all; }
+    .imr-muted { font-size:11.5px; color:#6b7280; max-width:220px; text-align:right; }
+    .inv-modal-dian { margin-top:4px; }
+    .inv-modal-hint { font-size:12.5px; color:#6b7280; margin:0 0 12px; line-height:1.5; }
+    .inv-modal-success { display:flex; align-items:center; gap:8px; padding:12px; background:#dcfce7; border-radius:8px; color:#166534; font-size:13px; font-weight:600; }
+
+    /* POS Invoice Drawer */
+    .pos-drawer-overlay { position:fixed; inset:0; background:rgba(12,28,53,.45); z-index:600; display:flex; justify-content:flex-end; backdrop-filter:blur(2px); animation:fadeIn .15s ease; }
+    .pos-drawer { width:460px; max-width:100vw; background:#fff; height:100%; display:flex; flex-direction:column; box-shadow:-8px 0 32px rgba(12,28,53,.14); animation:slideInRight .2s ease; }
+    @keyframes slideInRight { from{transform:translateX(40px);opacity:0} to{transform:none;opacity:1} }
+    .pos-drawer-header { display:flex; align-items:flex-start; justify-content:space-between; padding:20px 22px 14px; border-bottom:1px solid #f0f4f8; flex-shrink:0; gap:10px; }
+    .pos-drawer-header-left { flex:1; min-width:0; }
+    .pos-drawer-inv-number { font-size:18px; font-weight:800; color:#0c1c35; letter-spacing:.3px; }
+    .pos-drawer-meta { display:flex; align-items:center; gap:6px; margin-top:4px; }
+    .type-badge-pos { display:inline-block; padding:2px 8px; border-radius:5px; font-size:10.5px; font-weight:700; background:#ede9fe; color:#5b21b6; }
+    .pos-drawer-dot { color:#cbd5e1; font-size:12px; }
+    .pos-drawer-date { font-size:12px; color:#94a3b8; }
+    .pos-drawer-header-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .pos-drawer-close { background:none; border:none; cursor:pointer; color:#94a3b8; padding:5px; border-radius:7px; transition:all .15s; }
+    .pos-drawer-close:hover { background:#f1f5f9; color:#374151; }
+    .pos-drawer-body { flex:1; overflow-y:auto; padding:0; scrollbar-width:thin; scrollbar-color:#e2e8f0 transparent; }
+    .pos-dw-section { padding:14px 20px; border-bottom:1px solid #f8fafc; }
+    .pos-dw-section:last-child { border-bottom:none; }
+    .pos-dw-section-title { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; margin-bottom:10px; }
+    .pos-dw-card { background:#f8fafc; border:1px solid #f0f4f8; border-radius:10px; padding:12px 14px; }
+    .pos-dw-info-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid #f0f4f8; }
+    .pos-dw-info-row:last-child { border-bottom:none; }
+    .pos-dw-lbl { font-size:11.5px; color:#94a3b8; }
+    .pos-dw-val { font-size:12.5px; color:#1e293b; text-align:right; }
+    .pos-dw-mono { font-family:monospace; font-size:11px; word-break:break-all; max-width:200px; }
+    .pos-dw-code { display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
+    .pos-dw-code small { font-size:10px; color:#94a3b8; }
+    .pos-dw-muted { font-size:11px; color:#6b7280; max-width:200px; text-align:right; }
+    .pos-dw-client-name { font-size:14px; font-weight:700; color:#0c1c35; margin-bottom:3px; }
+    .pos-dw-client-doc { font-size:12px; color:#64748b; font-family:monospace; }
+    .pos-dw-date-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
+    .pos-dw-date-chip { padding:10px 12px; border-radius:10px; background:#fff; border:1px solid #e2e8f0; }
+    .pos-dw-date-lbl { display:block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; margin-bottom:4px; }
+    .pos-dw-date-val { display:block; font-size:12.5px; font-weight:700; color:#1e293b; }
+    .pos-dw-loading { display:flex; align-items:center; gap:8px; color:#64748b; }
+    .pos-dw-items { border:1px solid #f0f4f8; border-radius:10px; overflow:hidden; }
+    .pos-dw-items-head { display:grid; grid-template-columns:1fr 52px 80px; padding:6px 12px; background:#f8fafc; border-bottom:1px solid #f0f4f8; }
+    .pos-dw-items-head span { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; }
+    .pos-dw-item-row { display:grid; grid-template-columns:1fr 52px 80px; align-items:center; padding:8px 12px; border-bottom:1px solid #f8fafc; }
+    .pos-dw-item-row:last-child { border-bottom:none; }
+    .pos-dw-item-name { display:block; font-size:12.5px; font-weight:600; color:#1e293b; }
+    .pos-dw-item-tax { display:inline-block; font-size:10px; color:#94a3b8; background:#f1f5f9; padding:1px 5px; border-radius:4px; margin-top:2px; }
+    .pos-dw-item-qty { font-size:12.5px; color:#475569; }
+    .pos-dw-item-total { font-size:12.5px; font-weight:700; color:#0c1c35; }
+    .pos-dw-totals { border:1px solid #f0f4f8; border-radius:10px; overflow:hidden; }
+    .pos-dw-total-row { display:flex; justify-content:space-between; padding:7px 14px; border-bottom:1px solid #f0f4f8; font-size:13px; color:#64748b; }
+    .pos-dw-total-row:last-child { border-bottom:none; }
+    .pos-dw-total-disc { color:#f59e0b; }
+    .pos-dw-total-grand { background:#fff; border-top:2px solid #e8eef8 !important; font-weight:700; color:#0c1c35; font-size:14px; }
+    .pos-dw-total-grand strong { font-family:'Sora',sans-serif; font-size:16px; font-weight:800; color:#1a407e; }
+    .pos-dw-cufe-block { padding:8px 0 4px; border-top:1px solid #f0f4f8; margin-top:4px; }
+    .pos-dw-cufe-code { display:block; font-size:10px; color:#475569; font-family:monospace; word-break:break-all; margin-top:4px; background:#f1f5f9; padding:6px 8px; border-radius:6px; line-height:1.5; }
+    .pos-dw-copy { margin-left:8px; padding:3px 7px; border:none; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-size:10px; font-weight:700; cursor:pointer; }
+    .pos-dw-copy--inline { margin-top:8px; margin-left:0; }
+    .pos-dw-note { font-size:12.5px; color:#475569; line-height:1.6; white-space:pre-wrap; }
+    .pos-drawer-footer { display:flex; gap:8px; flex-wrap:wrap; padding:14px 20px; border-top:1px solid #f0f4f8; flex-shrink:0; background:#fafcff; }
+    .pos-dw-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .12s; border:none; }
+    .pos-dw-btn:disabled { opacity:.6; cursor:not-allowed; }
+    .pos-dw-btn--primary { background:#1a407e; color:#fff; }
+    .pos-dw-btn--primary:hover:not(:disabled) { background:#1e3a8a; }
+    .pos-dw-btn--outline { background:#fff; border:1.5px solid #dce6f0; color:#374151; }
+    .pos-dw-btn--outline:hover:not(:disabled) { border-color:#93c5fd; color:#1a407e; }
+    .pos-dw-btn--success { background:#ecfdf5; border:1.5px solid #a7f3d0; color:#047857; }
+    .pos-dw-btn--success:hover:not(:disabled) { background:#d1fae5; }
+    .pos-dw-btn--ghost { background:none; border:none; color:#94a3b8; }
+    .pos-dw-btn--ghost:hover { color:#374151; }
+    /* Improved invoice toggle */
+    .it-disabled { opacity:.55; cursor:not-allowed !important; }
+    .it-sub--warn { color:#d97706 !important; }
 
     .td-actions { display:flex; align-items:center; justify-content:center; gap:5px; }
+    .history-link-btn {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border-radius:999px; border:1px solid transparent;
+      font-size:11px; font-weight:700; cursor:pointer; transition:all .14s;
+      background:#f8fafc; color:#1e3a8a;
+    }
+    .history-link-btn svg { flex-shrink:0; }
+    .history-link-btn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 8px 18px rgba(26,64,126,.08); }
+    .history-link-btn:disabled { opacity:.6; cursor:not-allowed; box-shadow:none; transform:none; }
+    .history-link-btn--neutral { background:#fff; border-color:#dbe5f0; color:#334155; }
+    .history-link-btn--neutral:hover:not(:disabled) { border-color:#93c5fd; color:#1d4ed8; background:#eff6ff; }
+    .history-link-btn--primary { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+    .history-link-btn--primary:hover:not(:disabled) { background:#dbeafe; }
+    .history-link-btn--dian { background:#ecfeff; border-color:#a5f3fc; color:#0f766e; }
+    .history-link-btn--dian:hover:not(:disabled) { background:#cffafe; border-color:#67e8f9; }
     .tda-btn { width:28px; height:28px; border-radius:7px; background:#fff; border:1px solid #dce6f0; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .12s; }
     .tda-btn:hover { background:#f8fafc; border-color:#93c5fd; color:#1a407e; }
     .tda-btn.danger { border-color:#fecaca; color:#dc2626; }
@@ -2109,6 +2561,7 @@ interface Customer {
       .cart-hero-copy strong { font-size:24px; }
       .cart-header { flex-direction:column; align-items:flex-start; gap:10px; }
       .pm-grid { grid-template-columns:repeat(2,1fr); }
+      .pos-dw-date-grid { grid-template-columns:1fr; }
     }
   `],
 })
@@ -2173,6 +2626,12 @@ export class PosComponent implements OnInit, OnDestroy {
   deliverNotes         = '';
   deliverGenerateInv   = false;
   processingAdvance    = signal(false);
+  sendingDian: Record<string, boolean> = {};
+  queryingDian: Record<string, boolean> = {};
+  showInvoiceModal     = signal(false);
+  selectedInvoiceSale  = signal<PosSale | null>(null);
+  selectedInvoiceDetail = signal<PosInvoiceDetail | null>(null);
+  loadingInvoiceDetail = signal(false);
 
   sessionSales   = signal<PosSale[]>([]);
   loadingHistory = signal(false);
@@ -2477,7 +2936,15 @@ export class PosComponent implements OnInit, OnDestroy {
     const session = this.activeSession(); if (!session) return;
     this.loadingHistory.set(true);
     this.pos.getSales({ sessionId:session.id, limit:100 }).subscribe({
-      next: res => { this.sessionSales.set(res.data ?? []); this.loadingHistory.set(false); },
+      next: res => {
+        const sales = res.data ?? [];
+        this.sessionSales.set(sales);
+        if (this.selectedInvoiceSale()) {
+          const refreshed = sales.find(item => item.id === this.selectedInvoiceSale()!.id);
+          if (refreshed) this.selectedInvoiceSale.set(refreshed);
+        }
+        this.loadingHistory.set(false);
+      },
       error: () => this.loadingHistory.set(false),
     });
   }
@@ -2518,6 +2985,175 @@ export class PosComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => this.notify.error(err?.error?.message ?? 'Error al generar la factura'),
     });
+  }
+
+  openInvoiceModal(sale: PosSale) {
+    this.selectedInvoiceSale.set(sale);
+    this.selectedInvoiceDetail.set(null);
+    this.showInvoiceModal.set(true);
+    this.loadInvoiceDetail(sale);
+  }
+
+  submitInvoiceToDian(sale: PosSale) {
+    const invoiceId = sale.invoice?.id; if (!invoiceId) return;
+    this.sendingDian[sale.id] = true;
+    this.pos.submitInvoiceToDian(invoiceId).subscribe({
+      next: (res: any) => {
+        this.sendingDian[sale.id] = false;
+        const updatedInvoice = res?.data ?? res;
+        const zipKey = res?.dianZipKey ?? res?.data?.dianZipKey;
+        if (zipKey) {
+          this.notify.success(`Factura enviada a DIAN (ZipKey: ${zipKey.slice(0,8)}…)`);
+        } else {
+          this.notify.warning('Factura procesada — consulta el estado DIAN para confirmar.');
+        }
+        this.patchSaleInvoice(sale, updatedInvoice);
+        if (this.showHistory()) this.loadSessionSales();
+        this.refreshInvoiceContext(sale);
+      },
+      error: (err: any) => {
+        this.sendingDian[sale.id] = false;
+        this.notify.error(err?.error?.message ?? 'Error al enviar a la DIAN');
+      },
+    });
+  }
+
+  queryDianStatus(sale: PosSale) {
+    const invoiceId = sale.invoice?.id; if (!invoiceId) return;
+    this.queryingDian[sale.id] = true;
+    this.pos.queryInvoiceDianStatus(invoiceId).subscribe({
+      next: (res: any) => {
+        this.queryingDian[sale.id] = false;
+        const updated = res?.data ?? res;
+        const status = updated?.status ?? res?.status;
+        const code   = updated?.dianStatusCode ?? '—';
+        const msg    = updated?.dianStatusMsg  ?? '';
+        if (status === 'ACCEPTED_DIAN') {
+          this.notify.success('Factura aceptada por la DIAN');
+        } else if (status === 'REJECTED_DIAN') {
+          this.notify.error(`Rechazada por DIAN (${code}): ${msg.slice(0, 100)}`);
+        } else {
+          this.notify.info(`Estado DIAN: ${code} — ${msg || 'En proceso'}`);
+        }
+        this.patchSaleInvoice(sale, updated);
+        if (this.showHistory()) this.loadSessionSales();
+        this.refreshInvoiceContext(sale);
+      },
+      error: (err: any) => {
+        this.queryingDian[sale.id] = false;
+        this.notify.error(err?.error?.message ?? 'Error al consultar estado DIAN');
+      },
+    });
+  }
+
+  private loadInvoiceDetail(sale: PosSale) {
+    const invoiceId = sale.invoice?.id;
+    if (!invoiceId) return;
+    this.loadingInvoiceDetail.set(true);
+    this.pos.getInvoiceDetail(invoiceId).subscribe({
+      next: (detail: any) => {
+        this.selectedInvoiceDetail.set(detail?.data ?? detail);
+        this.loadingInvoiceDetail.set(false);
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.loadingInvoiceDetail.set(false);
+        this.selectedInvoiceDetail.set(null);
+      },
+    });
+  }
+
+  private refreshInvoiceContext(sale: PosSale) {
+    const refreshedSale = this.sessionSales().find(item => item.id === sale.id) ?? sale;
+    if (this.selectedInvoiceSale()?.id === sale.id) {
+      this.selectedInvoiceSale.set(refreshedSale);
+      this.loadInvoiceDetail(refreshedSale);
+    }
+    if (this.completedSale()?.id === sale.id) {
+      this.completedSale.set(refreshedSale);
+    }
+  }
+
+  private patchSaleInvoice(sale: PosSale, invoicePatch: any) {
+    if (!invoicePatch || !sale.invoice) return;
+    const mergeSale = (target: PosSale | null) => {
+      if (!target || target.id !== sale.id) return target;
+      return { ...target, invoice: { ...target.invoice, ...invoicePatch } };
+    };
+    this.sessionSales.update(items => items.map(item => mergeSale(item as PosSale) as PosSale));
+    this.selectedInvoiceSale.update(s => mergeSale(s));
+    this.completedSale.update(s => mergeSale(s));
+  }
+
+  downloadInvoiceXml(sale: PosSale) {
+    const invoice = sale.invoice;
+    if (!invoice?.id) return;
+    this.pos.getInvoiceXml(invoice.id).subscribe({
+      next: xml => {
+        const blob = new Blob([xml], { type: 'application/xml' });
+        const url = URL.createObjectURL(blob);
+        const downloadName = `${invoice.invoiceNumber || sale.saleNumber}.xml`;
+        const anchor = Object.assign(document.createElement('a'), { href: url, download: downloadName });
+        anchor.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.notify.error('XML no disponible aún para esta factura'),
+    });
+  }
+
+  openInvoicePdf(sale: PosSale) {
+    const invoiceId = sale.invoice?.id;
+    if (!invoiceId) return;
+    this.pos.getInvoicePdf(invoiceId).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
+        const preview = window.open(url, '_blank', 'width=1100,height=760,scrollbars=yes');
+        if (!preview) {
+          URL.revokeObjectURL(url);
+          this.notify.error('No se pudo abrir la vista previa de la factura');
+          return;
+        }
+        preview.addEventListener('beforeunload', () => URL.revokeObjectURL(url), { once: true });
+      },
+      error: () => this.notify.error('Error al generar la vista previa de la factura'),
+    });
+  }
+
+  markInvoicePaid(sale: PosSale) {
+    const invoice = sale.invoice;
+    if (!invoice?.id) return;
+    this.pos.markInvoicePaid(invoice.id).subscribe({
+      next: (updated: any) => {
+        this.notify.success('Factura marcada como pagada');
+        this.patchSaleInvoice(sale, updated?.data ?? updated ?? { status: 'PAID' });
+        if (this.showHistory()) this.loadSessionSales();
+        this.refreshInvoiceContext(sale);
+      },
+      error: (err: any) => this.notify.error(err?.error?.message ?? 'Error al marcar la factura como pagada'),
+    });
+  }
+
+  canMarkInvoicePaid(): boolean {
+    const status = this.selectedInvoiceDetail()?.status ?? this.selectedInvoiceSale()?.invoice?.status;
+    return !!status && !['PAID', 'CANCELLED'].includes(status);
+  }
+
+  copyText(text?: string | null) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(
+      () => this.notify.success('Copiado al portapapeles'),
+      () => this.notify.error('No se pudo copiar el valor'),
+    );
+  }
+
+  dianCodeDesc(code?: string): string {
+    return ({
+      '00': 'Procesado correctamente',
+      '0': 'Procesado correctamente',
+      '66': 'NSU no encontrado',
+      '90': 'TrackId no encontrado',
+      '99': 'Errores de validación',
+    } as Record<string, string>)[code ?? ''] ?? '';
   }
 
   openAddPaymentModal(sale: PosSale) {

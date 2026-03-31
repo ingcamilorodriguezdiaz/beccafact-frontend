@@ -22,8 +22,17 @@ interface Bank {
   isActive: boolean;
 }
 
+interface Branch {
+  id: string;
+  name: string;
+  isMain: boolean;
+  isActive: boolean;
+}
+
 interface Employee {
   id: string;
+  branchId?: string;
+  branch?: { id: string; name: string; isMain: boolean };
   firstName: string;
   lastName: string;
   documentType: string;
@@ -46,6 +55,7 @@ interface Employee {
 
 interface PayrollRecord {
   id: string;
+  branchId?: string;
   period: string;
   payDate: string;
   status: string;
@@ -505,6 +515,15 @@ type ViewMode  = 'table' | 'grid';
                    [(ngModel)]="empSearch" (ngModelChange)="onEmpSearch()" />
           </div>
           <div class="filters-bar__controls">
+            <div class="form-group-inline">
+              <label class="form-label-sm">Sucursal</label>
+              <select class="filter-select" [ngModel]="empBranchFilter()" (ngModelChange)="empBranchFilter.set($event); loadEmployees()">
+                <option value="">Todas</option>
+                @for (branch of branches(); track branch.id) {
+                  <option [value]="branch.id">{{ branch.name }}{{ branch.isMain ? ' (Principal)' : '' }}</option>
+                }
+              </select>
+            </div>
             <div class="filter-chips">
               <button class="chip" [class.chip--active]="empActive()===undefined" (click)="empActive.set(undefined);loadEmployees()">Todos</button>
               <button class="chip" [class.chip--active]="empActive()===true"      (click)="empActive.set(true);loadEmployees()">Activos</button>
@@ -533,6 +552,7 @@ type ViewMode  = 'table' | 'grid';
             <div class="content-shell__meta">
               <span class="content-chip">{{ employees().length }} colaboradores</span>
               <span class="content-chip content-chip--soft">{{ empActive() === undefined ? 'Todos' : empActive() ? 'Activos' : 'Inactivos' }}</span>
+              <span class="content-chip content-chip--soft">{{ selectedEmployeeBranchLabel() }}</span>
             </div>
           </div>
           <div class="table-card">
@@ -576,6 +596,7 @@ type ViewMode  = 'table' | 'grid';
                           <div>
                             <div class="emp-name">{{ e.firstName }} {{ e.lastName }}</div>
                             @if (e.email) { <div class="emp-sub">{{ e.email }}</div> }
+                            @if (e.branch?.name) { <div class="emp-sub">Sucursal: {{ e.branch?.name }}</div> }
                           </div>
                         </div>
                       </td>
@@ -650,6 +671,9 @@ type ViewMode  = 'table' | 'grid';
                     <div class="ec-av" [class.ec-av--off]="!e.isActive">{{ e.firstName[0] }}{{ e.lastName[0] }}</div>
                     <div class="ec-name">{{ e.firstName }} {{ e.lastName }}</div>
                     <div class="ec-pos">{{ e.position }}</div>
+                    @if (e.branch?.name) {
+                      <div class="ec-pos">Sucursal: {{ e.branch?.name }}</div>
+                    }
                     <span class="badge badge--neutral" style="margin-top:6px">{{ contractLabel(e.contractType) }}</span>
                   </div>
                   <div class="ec-info">
@@ -1339,8 +1363,23 @@ type ViewMode  = 'table' | 'grid';
               <div class="form-group"><label class="form-label">Fecha de ingreso *</label><input type="date" class="form-control" [(ngModel)]="empForm.hireDate" /></div>
             </div>
             <div class="form-row-2">
-              <div class="form-group"><label class="form-label">Correo electrónico</label><input type="email" class="form-control" [(ngModel)]="empForm.email" /></div>
+              <div class="form-group">
+                <label class="form-label">Sucursal</label>
+                <select class="form-control" [(ngModel)]="empForm.branchId">
+                  <option value="">Sucursal principal (por defecto)</option>
+                  @for (branch of branches(); track branch.id) {
+                    <option [value]="branch.id">{{ branch.name }}{{ branch.isMain ? ' (Principal)' : '' }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Correo electrónico</label>
+                <input type="email" class="form-control" [(ngModel)]="empForm.email" />
+              </div>
+            </div>
+            <div class="form-row-2">
               <div class="form-group"><label class="form-label">Teléfono</label><input type="text" class="form-control" [(ngModel)]="empForm.phone" /></div>
+              <div class="form-group"></div>
             </div>
             <!-- País y Departamento -->
             <div class="form-section-title">Ubicación</div>
@@ -2088,6 +2127,8 @@ export class PayrollComponent implements OnInit {
   showEmployeeModal = signal(false);
   editEmployeeId    = signal<string | null>(null);
   banks             = signal<Bank[]>([]);
+  branches          = signal<Branch[]>([]);
+  empBranchFilter   = signal('');
 
   private readonly GEO_API = `${environment.apiUrl}/location`;
   countries      = signal<GeoCountry[]>([]);
@@ -2117,6 +2158,12 @@ export class PayrollComponent implements OnInit {
   submittedPayrollCount = computed(() => this.records().filter(r => r.status === 'SUBMITTED' || r.status === 'ACCEPTED').length);
   currentNetPay         = computed(() => this.summary()?.totalNetPay ?? this.records().reduce((sum, r) => sum + Number(r.netPay || 0), 0));
   currentEmployerCost   = computed(() => this.summary()?.totalEmployerCost ?? this.records().reduce((sum, r) => sum + Number(r.totalEmployerCost || 0), 0));
+  selectedEmployeeBranchLabel = computed(() => {
+    const branchId = this.empBranchFilter();
+    if (!branchId) return 'Todas las sucursales';
+    const branch = this.branches().find(item => item.id === branchId);
+    return branch ? branch.name : 'Sucursal';
+  });
 
   payrollForm: any = this.emptyPayrollForm();
   empForm: any     = this.emptyEmpForm();
@@ -2125,6 +2172,7 @@ export class PayrollComponent implements OnInit {
   ngOnInit() {
     this.loadRecords();
     this.loadEmployees();
+    this.loadBranches();
     this.loadCountries();
     this.loadDepartments();
     this.muniSearch$.pipe(
@@ -2322,9 +2370,20 @@ export class PayrollComponent implements OnInit {
     const params: any = {};
     if (this.empSearch) params.search = this.empSearch;
     if (this.empActive() !== undefined) params.active = this.empActive();
+    if (this.empBranchFilter()) params.branchId = this.empBranchFilter();
     this.http.get<any>(`${this.api}/employees`, { params }).subscribe({
       next: r => { const res = r.data ?? r; this.employees.set(res.data ?? res); this.loadingEmployees.set(false); },
       error: () => { this.loadingEmployees.set(false); this.notify.error('Error al cargar empleados'); },
+    });
+  }
+
+  loadBranches() {
+    this.http.get<any>(`${environment.apiUrl}/branches`).subscribe({
+      next: res => {
+        const data = res.data ?? res;
+        this.branches.set((data ?? []).filter((branch: Branch) => branch.isActive));
+      },
+      error: () => this.notify.error('Error al cargar sucursales'),
     });
   }
 
@@ -2333,9 +2392,11 @@ export class PayrollComponent implements OnInit {
 
   openEmployeeModal(emp?: Employee) {
     this.loadBanks();
+    this.loadBranches();
     if (emp) {
       this.editEmployeeId.set(emp.id);
       this.empForm = {
+        branchId: emp.branchId ?? '',
         firstName: emp.firstName, lastName: emp.lastName,
         documentType: emp.documentType, documentNumber: emp.documentNumber,
         position: emp.position, contractType: emp.contractType,
@@ -2419,9 +2480,10 @@ export class PayrollComponent implements OnInit {
       this.notify.error('Completa los campos obligatorios (nombre, documento, cargo, fecha de ingreso)'); return;
     }
     this.saving.set(true);
+    const body = { ...this.empForm, branchId: this.empForm.branchId || undefined };
     const req = this.editEmployeeId()
-      ? this.http.put<any>(`${this.api}/employees/${this.editEmployeeId()}`, this.empForm)
-      : this.http.post<any>(`${this.api}/employees`, this.empForm);
+      ? this.http.put<any>(`${this.api}/employees/${this.editEmployeeId()}`, body)
+      : this.http.post<any>(`${this.api}/employees`, body);
     req.subscribe({
       next: () => { this.saving.set(false); this.closeEmployeeModal(); this.notify.success(this.editEmployeeId() ? 'Empleado actualizado' : 'Empleado creado'); this.loadEmployees(); },
       error: e => { this.saving.set(false); this.notify.error(e?.error?.message ?? 'Error'); },
@@ -2539,6 +2601,7 @@ export class PayrollComponent implements OnInit {
   }
   private emptyEmpForm() {
     return {
+      branchId: '',
       firstName: '', lastName: '', documentType: 'CC', documentNumber: '',
       position: '', contractType: 'INDEFINITE', baseSalary: 1_300_000,
       hireDate: '', email: '', phone: '',

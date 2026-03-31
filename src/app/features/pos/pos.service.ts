@@ -54,9 +54,59 @@ export interface PosSale {
   notes?: string;
   createdAt: string;
   invoiceId?: string;
-  invoice?: { id: string; invoiceNumber: string; status: string };
+  invoice?: {
+    id: string;
+    invoiceNumber: string;
+    status: string;
+    dianZipKey?: string;
+    dianStatusCode?: string;
+    dianStatusMsg?: string;
+    dianCufe?: string;
+    dianQrCode?: string;
+    dianSentAt?: string;
+  };
   customer?: { id: string; name: string; documentNumber: string; documentType?: string };
   items: PosSaleItem[];
+}
+
+export interface PosInvoiceDetail {
+  id: string;
+  invoiceNumber: string;
+  prefix?: string;
+  type: string;
+  status: string;
+  issueDate?: string;
+  dueDate?: string | null;
+  subtotal: number;
+  taxAmount: number;
+  discountAmount?: number;
+  total: number;
+  notes?: string | null;
+  currency?: string;
+  dianZipKey?: string;
+  dianStatusCode?: string;
+  dianStatusMsg?: string;
+  dianCufe?: string;
+  dianQrCode?: string;
+  dianSentAt?: string;
+  customer?: {
+    id: string;
+    name: string;
+    documentNumber: string;
+    documentType?: string;
+    email?: string;
+    phone?: string;
+  };
+  items?: Array<{
+    id: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    taxRate: number;
+    discount: number;
+    total: number;
+    product?: { id: string; name: string; sku: string; unit?: string };
+  }>;
 }
 
 export interface PosCashMovement {
@@ -141,6 +191,30 @@ export class PosApiService {
 
   generateInvoiceFromSale(saleId: string): Observable<any> {
     return this.http.post(`${this.base}/sales/${saleId}/invoice`, {});
+  }
+
+  submitInvoiceToDian(invoiceId: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/invoices/${invoiceId}/issue`, {});
+  }
+
+  queryInvoiceDianStatus(invoiceId: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/invoices/${invoiceId}/dian-status`, {});
+  }
+
+  getInvoiceDetail(invoiceId: string): Observable<PosInvoiceDetail> {
+    return this.http.get<PosInvoiceDetail>(`${environment.apiUrl}/invoices/${invoiceId}`);
+  }
+
+  getInvoiceXml(invoiceId: string): Observable<string> {
+    return this.http.get(`${environment.apiUrl}/invoices/${invoiceId}/xml`, { responseType: 'text' });
+  }
+
+  getInvoicePdf(invoiceId: string): Observable<Blob> {
+    return this.http.get(`${environment.apiUrl}/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
+  }
+
+  markInvoicePaid(invoiceId: string): Observable<any> {
+    return this.http.patch(`${environment.apiUrl}/invoices/${invoiceId}/paid`, {});
   }
 
   addPayment(saleId: string, dto: { amountPaid: number; paymentMethod: string; notes?: string }): Observable<PosSale> {

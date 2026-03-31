@@ -32,6 +32,7 @@ import { AuthService, UserBranch } from '../../../core/auth/auth.service';
               class="bsm-card"
               [class.bsm-card--main]="ub.branch.isMain"
               [class.bsm-card--inactive]="!ub.branch.isActive"
+              [class.bsm-card--active]="ub.branch.id === activeBranchId()"
               (click)="select(ub)">
 
               <div class="bsm-card-icon">
@@ -44,6 +45,9 @@ import { AuthService, UserBranch } from '../../../core/auth/auth.service';
               <div class="bsm-card-body">
                 <span class="bsm-card-name">{{ ub.branch.name }}</span>
                 <div class="bsm-card-badges">
+                  @if (ub.branch.id === activeBranchId()) {
+                    <span class="bsm-badge bsm-badge--active">Activa</span>
+                  }
                   @if (ub.branch.isMain) {
                     <span class="bsm-badge bsm-badge--main">Principal</span>
                   }
@@ -53,10 +57,17 @@ import { AuthService, UserBranch } from '../../../core/auth/auth.service';
                 </div>
               </div>
 
-              <svg class="bsm-arrow" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                <path fill-rule="evenodd"
-                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"/>
-              </svg>
+              @if (ub.branch.id === activeBranchId()) {
+                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" class="bsm-check">
+                  <path fill-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                </svg>
+              } @else {
+                <svg class="bsm-arrow" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                  <path fill-rule="evenodd"
+                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"/>
+                </svg>
+              }
             </button>
           }
         </div>
@@ -141,6 +152,11 @@ import { AuthService, UserBranch } from '../../../core/auth/auth.service';
     .bsm-card--inactive {
       opacity: 0.55;
     }
+    .bsm-card--active {
+      background: #eef4fb;
+      border-color: #1a407e;
+      box-shadow: 0 2px 12px rgba(26,64,126,0.1);
+    }
 
     .bsm-card-icon {
       width: 38px; height: 38px; border-radius: 10px;
@@ -163,11 +179,13 @@ import { AuthService, UserBranch } from '../../../core/auth/auth.service';
       font-size: 10.5px; font-weight: 700; padding: 2px 8px;
       border-radius: 9999px; letter-spacing: 0.03em;
     }
-    .bsm-badge--main    { background: #e8eef8; color: #1a407e; }
+    .bsm-badge--main     { background: #e8eef8; color: #1a407e; }
     .bsm-badge--inactive { background: #fee2e2; color: #991b1b; }
+    .bsm-badge--active   { background: #dcfce7; color: #166534; }
 
     .bsm-arrow { color: #9ab5cc; flex-shrink: 0; transition: color 0.15s; }
     .bsm-card:hover .bsm-arrow { color: #1a407e; }
+    .bsm-check { color: #16a34a; flex-shrink: 0; }
 
     /* ── Footer ── */
     .bsm-footer {
@@ -183,6 +201,8 @@ import { AuthService, UserBranch } from '../../../core/auth/auth.service';
 })
 export class BranchSelectorModalComponent {
   private auth = inject(AuthService);
+
+  activeBranchId = this.auth.activeBranchId;
 
   branches() {
     return this.auth.user()?.userBranches ?? [];
