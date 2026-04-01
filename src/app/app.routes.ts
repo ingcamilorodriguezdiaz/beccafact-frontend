@@ -30,28 +30,28 @@ export const routes: Routes = [
       {
         path: 'invoices',
         canActivate: [planGuard, roleGuard],
-        data: { feature: 'has_invoices', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO', 'CONTADOR', 'VIEWER'] },
+        data: { feature: 'has_invoices', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO', 'CONTADOR'] },
         loadChildren: () =>
           import('./features/invoices/invoices.routes').then((m) => m.INVOICE_ROUTES),
       },
       {
         path: 'inventory',
         canActivate: [planGuard, roleGuard],
-        data: { feature: 'has_inventory', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER'] },
+        data: { feature: 'has_inventory', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
         loadChildren: () =>
           import('./features/inventory/inventory.routes').then((m) => m.INVENTORY_ROUTES),
       },
       {
         path: 'customers',
         canActivate: [roleGuard],
-        data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO', 'CONTADOR', 'VIEWER'] },
+        data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO', 'CONTADOR'] },
         loadChildren: () =>
           import('./features/customers/customers.routes').then((m) => m.CUSTOMER_ROUTES),
       },
       {
         path: 'reports',
         canActivate: [planGuard, roleGuard],
-        data: { feature: 'has_reports', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR', 'VIEWER'] },
+        data: { feature: 'has_reports', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
         loadChildren: () =>
           import('./features/reports/reports.routes').then((m) => m.REPORTS_ROUTES),
       },
@@ -86,7 +86,7 @@ export const routes: Routes = [
       {
         path: 'sucursales',
         canActivate: [roleGuard],
-        data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO', 'VIEWER'] },
+        data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO'] },
         loadChildren: () =>
           import('./features/branches/branches.routes').then((m) => m.BRANCHES_ROUTES),
       },

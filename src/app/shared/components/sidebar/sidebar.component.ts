@@ -32,7 +32,7 @@ const NAV_ITEMS: NavItem[] = [
 
   // ── INVENTARIO ──────────────────────────────────────────────
   { label: 'Inventario',     iconId: 'inventory', route: '/inventory',    feature: 'has_inventory', roles: ['ADMIN','MANAGER','OPERATOR'],                        section: 'INVENTARIO' },
-  { label: 'Sucursales',     iconId: 'branches',  route: '/sucursales',                             roles: ['ADMIN','MANAGER','OPERATOR','CAJERO','VIEWER'],      section: 'INVENTARIO' },
+  { label: 'Sucursales',     iconId: 'branches',  route: '/sucursales',                             roles: ['ADMIN','MANAGER','OPERATOR','CAJERO'],               section: 'INVENTARIO' },
 
   // ── GESTIÓN ─────────────────────────────────────────────────
   { label: 'Nómina',         iconId: 'payroll',   route: '/payroll',      feature: 'has_payroll',   roles: ['ADMIN','MANAGER','CONTADOR'],                        section: 'GESTIÓN' },

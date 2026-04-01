@@ -1276,7 +1276,7 @@ export class SaCompaniesComponent implements OnInit {
   roleLabel(r: string) {
     // Primero busca en roles dinámicos del backend; fallback a mapa estático
     const found = this.availableRoles().find(role => role.name === r);
-    return found?.displayName ?? ({ ADMIN:'Admin', MANAGER:'Gerente', OPERATOR:'Operador', VIEWER:'Viewer' } as any)[r] ?? r;
+    return found?.displayName ?? ({ ADMIN:'Admin', MANAGER:'Gerente', OPERATOR:'Operador' } as any)[r] ?? r;
   }
   fmtCOP(v: number) {
     return new Intl.NumberFormat('es-CO', { style:'currency', currency:'COP', minimumFractionDigits:0 }).format(v);

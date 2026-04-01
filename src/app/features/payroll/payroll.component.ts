@@ -2378,7 +2378,7 @@ export class PayrollComponent implements OnInit {
   }
 
   loadBranches() {
-    this.http.get<any>(`${environment.apiUrl}/branches`).subscribe({
+    this.http.get<any>(`${environment.apiUrl}/payroll/branches`).subscribe({
       next: res => {
         const data = res.data ?? res;
         this.branches.set((data ?? []).filter((branch: Branch) => branch.isActive));

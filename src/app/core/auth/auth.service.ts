@@ -100,7 +100,6 @@ export class AuthService {
   readonly isOperator = computed(() => this._user()?.roles?.includes('OPERATOR') ?? false);
   readonly isCajero   = computed(() => this._user()?.roles?.includes('CAJERO') ?? false);
   readonly isContador = computed(() => this._user()?.roles?.includes('CONTADOR') ?? false);
-  readonly isViewer   = computed(() => this._user()?.roles?.includes('VIEWER') ?? false);
 
   /** Can manage (create/update/delete) — ADMIN or MANAGER */
   readonly canManage  = computed(() => this.isAdmin() || this.isManager() || this.isSuperAdmin());
