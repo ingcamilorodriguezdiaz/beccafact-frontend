@@ -1,6 +1,6 @@
 import {
   Component, OnInit, OnDestroy, signal, computed, inject,
-  ChangeDetectionStrategy, ChangeDetectorRef, ViewChild, ElementRef, afterNextRender,
+  ChangeDetectionStrategy, ChangeDetectorRef, ViewChild, ElementRef, afterNextRender, HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -26,7 +26,7 @@ interface Customer {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule],
   template: `
-<div class="pos-root">
+<div #posRoot class="pos-root" [class.pos-root--fullscreen]="isFullscreen()">
 
   <!-- ═══ SESSION BAR ═══ -->
   @if (activeSession()) {
@@ -71,6 +71,15 @@ interface Customer {
         </div>
       </div>
       <div class="session-actions">
+        <button class="sb-btn sb-btn--fullscreen" (click)="toggleFullscreen()" [attr.aria-pressed]="isFullscreen()" [title]="isFullscreen() ? 'Salir de pantalla completa' : 'Entrar en pantalla completa'">
+          @if (isFullscreen()) {
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M2.5 10a.5.5 0 01.5.5V13h2.5a.5.5 0 010 1h-3A.5.5 0 012 13.5v-3a.5.5 0 01.5-.5zm11 0a.5.5 0 01.5.5v3a.5.5 0 01-.5.5h-3a.5.5 0 010-1H13v-2.5a.5.5 0 01.5-.5zm-8-8A.5.5 0 015 2.5V5H2.5a.5.5 0 010-1h3A.5.5 0 016 4.5v-3a.5.5 0 01.5-.5zm8 0a.5.5 0 01.5.5v3A.5.5 0 0113.5 6h-3a.5.5 0 010-1H13V2.5a.5.5 0 01.5-.5z"/></svg>
+            Salir pantalla completa
+          } @else {
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M1.5 1A.5.5 0 012 1.5V4h2.5a.5.5 0 010 1h-3A.5.5 0 011 4.5v-3A.5.5 0 011.5 1zm13 0a.5.5 0 01.5.5v3a.5.5 0 01-1 0V2h-2.5a.5.5 0 010-1h3zM1 11.5a.5.5 0 011 0V14h2.5a.5.5 0 010 1h-3A.5.5 0 011 14.5v-3zm13 0a.5.5 0 011 0v3a.5.5 0 01-.5.5h-3a.5.5 0 010-1H14v-2.5z"/></svg>
+            Pantalla completa
+          }
+        </button>
         <button class="sb-btn" id="tour-pos-history" (click)="toggleHistory()">
           <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H4zm3 3a1 1 0 112 0v4a1 1 0 11-2 0V5z" clip-rule="evenodd"/></svg>
           Historial
@@ -540,7 +549,7 @@ interface Customer {
                   <td class="tc">
                     @if (sale.invoiceId && sale.invoice) {
                       <div class="inv-dian-cell">
-                        <span class="inv-chip inv-chip--sm">
+                        <span class="inv-chip inv-chip--sm inv-chip--number">
                           <svg viewBox="0 0 12 12" fill="currentColor" width="9"><path fill-rule="evenodd" d="M10 6a4 4 0 11-8 0 4 4 0 018 0zm-3.78-1.28a.75.75 0 00-1.06 1.06l1.5 1.5a.75.75 0 001.06 0l2.5-2.5a.75.75 0 00-1.06-1.06L6.25 5.69l-.97-.97z"/></svg>
                           {{ sale.invoice.invoiceNumber }}
                         </span>
@@ -586,12 +595,14 @@ interface Customer {
                   </td>
                   <td class="tc">
                     <div class="td-actions">
-                      <button class="tda-btn" (click)="printReceipt(sale.id)" title="Imprimir tirilla">
+                      <button class="tda-btn" (click)="printReceipt(sale.id)" title="Imprimir tirilla" aria-label="Imprimir tirilla">
                         <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M2.5 8a.5.5 0 100-1 .5.5 0 000 1z"/><path d="M5 1a2 2 0 00-2 2v2H2a2 2 0 00-2 2v3a2 2 0 002 2h1v1a2 2 0 002 2h6a2 2 0 002-2v-1h1a2 2 0 002-2V7a2 2 0 00-2-2h-1V3a2 2 0 00-2-2H5zM4 3a1 1 0 011-1h6a1 1 0 011 1v2H4V3zm1 5a2 2 0 00-2 2v1H2a1 1 0 01-1-1V7a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-1 1h-1v-1a2 2 0 00-2-2H5zm7 2v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3a1 1 0 011-1h6a1 1 0 011 1z"/></svg>
+                        <span>Imprimir</span>
                       </button>
                       @if (sale.status === 'COMPLETED' || sale.status === 'ADVANCE') {
-                        <button class="tda-btn danger" (click)="cancelSale(sale.id)" title="Cancelar venta">
+                        <button class="tda-btn danger" (click)="cancelSale(sale.id)" title="Cancelar venta" aria-label="Cancelar venta">
                           <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z"/></svg>
+                          <span>Cancelar</span>
                         </button>
                       }
                     </div>
@@ -1421,6 +1432,13 @@ interface Customer {
       overflow:hidden;
       font-family: var(--font-b, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
     }
+    .pos-root--fullscreen {
+      height:100vh;
+      background:
+        radial-gradient(circle at top left, rgba(0, 198, 160, 0.1), transparent 24%),
+        radial-gradient(circle at top right, rgba(26, 64, 126, 0.1), transparent 20%),
+        #edf4fb;
+    }
 
     /* ═══════════════════════════════════════
        SESSION BAR
@@ -1480,6 +1498,8 @@ interface Customer {
     .sb-btn:hover { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.22); color:#fff; }
     .sb-btn.danger { background:rgba(239,68,68,.16); border-color:rgba(254,202,202,.32); color:#fff; }
     .sb-btn.danger:hover { background:rgba(239,68,68,.22); }
+    .sb-btn--fullscreen { background:rgba(14,165,233,.18); border-color:rgba(125,211,252,.3); color:#effbff; }
+    .sb-btn--fullscreen:hover { background:rgba(14,165,233,.26); border-color:rgba(186,230,253,.44); }
 
     /* ═══════════════════════════════════════
        NO SESSION
@@ -1530,6 +1550,12 @@ interface Customer {
       overflow:hidden;
       align-items:stretch;
     }
+    .pos-root--fullscreen .pos-layout { padding:14px; gap:14px; }
+    .pos-root--fullscreen .products-panel,
+    .pos-root--fullscreen .checkout-panel { border-radius:20px; }
+    .pos-root--fullscreen .products-grid { grid-template-columns:repeat(auto-fill,minmax(184px,1fr)); gap:14px; }
+    .pos-root--fullscreen .checkout-shell { scroll-padding-bottom:132px; }
+    .pos-root--fullscreen .cart-hero { margin:0 16px 14px; }
 
     /* ══ Products Panel ══ */
     .products-panel {
@@ -2007,8 +2033,9 @@ interface Customer {
     .status-chip.status-refunded { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
     .status-chip.status-advance { background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
     .inv-chip { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
-    .inv-chip--sm { font-size:10px; padding:2px 6px; }
-    .inv-dian-cell { display:flex; flex-direction:column; align-items:center; gap:3px; }
+    .inv-chip--sm { font-size:10px; padding:4px 8px; }
+    .inv-chip--number { font-size:10.5px; font-weight:800; letter-spacing:.03em; box-shadow:inset 0 1px 0 rgba(255,255,255,.45); }
+    .inv-dian-cell { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:136px; }
     .dian-badge { display:inline-block; padding:2px 7px; border-radius:5px; font-size:10px; font-weight:700; white-space:nowrap; }
     .dian-accepted { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
     .dian-rejected { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
@@ -2107,10 +2134,11 @@ interface Customer {
     .it-disabled { opacity:.55; cursor:not-allowed !important; }
     .it-sub--warn { color:#d97706 !important; }
 
-    .td-actions { display:flex; align-items:center; justify-content:center; gap:5px; }
+    .td-actions { display:flex; align-items:center; justify-content:center; gap:8px; min-width:156px; }
     .history-link-btn {
       display:inline-flex; align-items:center; gap:6px;
-      padding:6px 10px; border-radius:999px; border:1px solid transparent;
+      justify-content:center; min-height:30px;
+      padding:6px 11px; border-radius:999px; border:1px solid transparent;
       font-size:11px; font-weight:700; cursor:pointer; transition:all .14s;
       background:#f8fafc; color:#1e3a8a;
     }
@@ -2123,10 +2151,10 @@ interface Customer {
     .history-link-btn--primary:hover:not(:disabled) { background:#dbeafe; }
     .history-link-btn--dian { background:#ecfeff; border-color:#a5f3fc; color:#0f766e; }
     .history-link-btn--dian:hover:not(:disabled) { background:#cffafe; border-color:#67e8f9; }
-    .tda-btn { width:28px; height:28px; border-radius:7px; background:#fff; border:1px solid #dce6f0; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .12s; }
-    .tda-btn:hover { background:#f8fafc; border-color:#93c5fd; color:#1a407e; }
-    .tda-btn.danger { border-color:#fecaca; color:#dc2626; }
-    .tda-btn.danger:hover { background:#fee2e2; }
+    .tda-btn { min-width:76px; height:32px; border-radius:9px; background:#fff; border:1px solid #dce6f0; color:#374151; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:0 10px; transition:all .12s; font-size:11px; font-weight:700; }
+    .tda-btn:hover { background:#f8fafc; border-color:#93c5fd; color:#1a407e; box-shadow:0 8px 18px rgba(26,64,126,.08); }
+    .tda-btn.danger { border-color:#fecaca; color:#dc2626; background:#fff5f5; }
+    .tda-btn.danger:hover { background:#fee2e2; border-color:#fca5a5; }
     .link-btn { background:none; border:none; color:#1a407e; font-size:12px; cursor:pointer; text-decoration:underline; padding:0; transition:color .12s; }
     .link-btn:hover { color:#2563eb; }
 
@@ -2628,6 +2656,7 @@ export class PosComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private customerSearch$ = new Subject<string>();
 
+  @ViewChild('posRoot') posRootRef?: ElementRef<HTMLDivElement>;
   @ViewChild('productSearchInput') productSearchInputRef?: ElementRef<HTMLInputElement>;
 
   activeSession    = signal<PosSession | null>(null);
@@ -2693,6 +2722,7 @@ export class PosComponent implements OnInit, OnDestroy {
   loadingInvoicePdfPreview = signal(false);
   downloadingInvoicePdf = signal(false);
   downloadingInvoiceZip = signal(false);
+  isFullscreen = signal(false);
 
   sessionSales   = signal<PosSale[]>([]);
   loadingHistory = signal(false);
@@ -2794,6 +2824,30 @@ export class PosComponent implements OnInit, OnDestroy {
       this.sessionElapsedSignal.set(Date.now().toString());
       this.cdr.markForCheck();
     }, 60_000);
+  }
+
+  @HostListener('document:fullscreenchange')
+  onFullscreenChange() {
+    const active = document.fullscreenElement === this.posRootRef?.nativeElement;
+    this.isFullscreen.set(active);
+    this.cdr.markForCheck();
+  }
+
+  async toggleFullscreen() {
+    const root = this.posRootRef?.nativeElement;
+    if (!root) return;
+    try {
+      if (document.fullscreenElement === root) {
+        await document.exitFullscreen();
+        return;
+      }
+      if (document.fullscreenElement && document.fullscreenElement !== root) {
+        await document.exitFullscreen();
+      }
+      await root.requestFullscreen();
+    } catch {
+      this.notify.error('No fue posible cambiar al modo de pantalla completa');
+    }
   }
 
   ngOnDestroy() {
