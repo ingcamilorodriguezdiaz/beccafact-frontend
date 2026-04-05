@@ -217,6 +217,14 @@ export class PosApiService {
     return this.http.get(`${environment.apiUrl}/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
   }
 
+  downloadInvoicePdf(invoiceId: string): Observable<Blob> {
+    return this.http.get(`${environment.apiUrl}/invoices/${invoiceId}/pdf/download`, { responseType: 'blob' });
+  }
+
+  downloadInvoiceZip(invoiceId: string): Observable<Blob> {
+    return this.http.get(`${environment.apiUrl}/invoices/${invoiceId}/zip`, { responseType: 'blob' });
+  }
+
   markInvoicePaid(invoiceId: string): Observable<any> {
     return this.http.patch(`${environment.apiUrl}/invoices/${invoiceId}/paid`, {});
   }

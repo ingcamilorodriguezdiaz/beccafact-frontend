@@ -640,12 +640,6 @@ interface InvoiceLine {
 
           <!-- Drawer footer -->
           <div class="drawer-footer">
-            @if (detailInvoice()!.dianCufe) {
-              <button class="btn btn-outline btn-sm" (click)="downloadXml(detailInvoice()!)">
-                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/></svg>
-                XML UBL 2.1
-              </button>
-            }
             <button class="btn btn-outline btn-sm" (click)="openPdfPreview(detailInvoice()!)" [disabled]="loadingPdf()">
               @if (loadingPdf()) { <span class="btn-spinner"></span> Generando... }
               @else {
@@ -653,6 +647,15 @@ interface InvoiceLine {
                 Vista previa
               }
             </button>
+            @if (detailInvoice()!.dianCufe) {
+              <button class="btn btn-outline btn-sm" (click)="downloadInvoiceZip(detailInvoice()!)" [disabled]="downloadingZip()">
+                @if (downloadingZip()) { <span class="btn-spinner"></span> Descargando... }
+                @else {
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/></svg>
+                  Descargar ZIP
+                }
+              </button>
+            }
             @if (detailInvoice()!.status === 'DRAFT') {
               <button class="btn btn-secondary btn-sm" (click)="openEditModal(detailInvoice()!)">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
@@ -717,6 +720,10 @@ interface InvoiceLine {
           </div>
           <div class="modal-footer">
             <span class="pdf-note">⚠ Las facturas en borrador incluyen marca de agua</span>
+            <button class="btn btn-primary" (click)="downloadPdf(detailInvoice()!)" [disabled]="downloadingPdf() || !detailInvoice()">
+              @if (downloadingPdf()) { <span class="btn-spinner"></span> Descargando... }
+              @else { Descargar PDF }
+            </button>
             <button class="btn btn-secondary" (click)="closePdfModal()">Cerrar</button>
           </div>
         </div>
@@ -1671,6 +1678,8 @@ export class InvoicesListComponent implements OnInit {
   pdfUrl        = signal<SafeResourceUrl | null>(null);
   objectUrl: string | null = null;
   loadingPdf    = signal(false);
+  downloadingPdf = signal(false);
+  downloadingZip = signal(false);
 
   // DIAN async state tracking
   sending  = signal<Record<string, boolean>>({});
@@ -1870,25 +1879,38 @@ export class InvoicesListComponent implements OnInit {
     });
   }
 
-  // ── DIAN: Descargar XML firmado ───────────────────────────────────────
-  downloadXml(inv: Invoice) {
-    this.http.get(`${this.API}/${inv.id}/xml`, { responseType:'text' }).subscribe({
-      next: xml => {
-        const blob = new Blob([xml], { type:'application/xml' });
-        const url  = URL.createObjectURL(blob);
-        const a    = Object.assign(document.createElement('a'), { href:url, download:`${inv.prefix}${inv.invoiceNumber}.xml` });
-        a.click(); URL.revokeObjectURL(url);
-      },
-      error: () => this.notify.error('XML no disponible aún para esta factura'),
-    });
-  }
-
   openPdfPreview(inv: Invoice) {
     this.loadingPdf.set(true); this.showPdfModal.set(true);
     const token = localStorage.getItem('access_token') ?? '';
     this.http.get(`${this.API}/${inv.id}/pdf`, { responseType:'blob', headers:{ Authorization:`Bearer ${token}` } }).subscribe({
       next: blob => { this.objectUrl = URL.createObjectURL(new Blob([blob], { type:'text/html' })); this.pdfUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(this.objectUrl)); this.loadingPdf.set(false); },
       error: () => { this.loadingPdf.set(false); this.notify.error('Error al generar la vista previa'); }
+    });
+  }
+  downloadPdf(inv: Invoice) {
+    this.downloadingPdf.set(true);
+    this.http.get(`${this.API}/${inv.id}/pdf/download`, { responseType:'blob' }).subscribe({
+      next: blob => {
+        this.triggerDownload(blob, `${inv.prefix}${inv.invoiceNumber}.pdf`);
+        this.downloadingPdf.set(false);
+      },
+      error: () => {
+        this.downloadingPdf.set(false);
+        this.notify.error('No fue posible descargar el PDF de la factura');
+      }
+    });
+  }
+  downloadInvoiceZip(inv: Invoice) {
+    this.downloadingZip.set(true);
+    this.http.get(`${this.API}/${inv.id}/zip`, { responseType:'blob' }).subscribe({
+      next: blob => {
+        this.triggerDownload(blob, `${inv.prefix}${inv.invoiceNumber}.zip`);
+        this.downloadingZip.set(false);
+      },
+      error: () => {
+        this.downloadingZip.set(false);
+        this.notify.error('No fue posible descargar el ZIP de la factura');
+      }
     });
   }
   closePdfModal() { if (this.objectUrl) { URL.revokeObjectURL(this.objectUrl); this.objectUrl = null; } this.pdfUrl.set(null); this.showPdfModal.set(false); }
@@ -1947,6 +1969,12 @@ export class InvoicesListComponent implements OnInit {
   }
   fmtCOP(v: number) { return new Intl.NumberFormat('es-CO',{ style:'currency', currency:'COP', minimumFractionDigits:0 }).format(v); }
   min(a: number, b: number) { return Math.min(a, b); }
+  private triggerDownload(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   private newLine(): InvoiceLine { return { productId:'', description:'', quantity:1, unitPrice:0, taxRate:19, discount:0 }; }
 
   // ── Notas Crédito / Débito ───────────────────────────────────────────

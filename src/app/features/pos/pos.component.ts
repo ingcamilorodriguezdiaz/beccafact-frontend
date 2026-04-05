@@ -5,6 +5,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpParams } from '@angular/common/http';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subject, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
@@ -1251,12 +1252,18 @@ interface Customer {
           }
           <button class="pos-dw-btn pos-dw-btn--outline" (click)="openInvoicePdf(selectedInvoiceSale()!)">
             <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M9.293 0H3.5A1.5 1.5 0 002 1.5v13A1.5 1.5 0 003.5 16h9a1.5 1.5 0 001.5-1.5V4.707L9.293 0zM9 1.5 12.5 5H9V1.5z"/><path d="M4.75 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z"/></svg>
-            Ver PDF
+            Vista previa
           </button>
-          <button class="pos-dw-btn pos-dw-btn--outline" (click)="downloadInvoiceXml(selectedInvoiceSale()!)">
+          <button class="pos-dw-btn pos-dw-btn--outline" (click)="downloadInvoicePdf(selectedInvoiceSale()!)" [disabled]="downloadingInvoicePdf()">
             <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path fill-rule="evenodd" d="M8 1a.75.75 0 01.75.75v6.19l1.72-1.72a.75.75 0 111.06 1.06L8.53 10.28a.75.75 0 01-1.06 0L4.47 7.28a.75.75 0 111.06-1.06l1.72 1.72V1.75A.75.75 0 018 1z"/><path d="M2.75 10.5a.75.75 0 00-.75.75v1A2.75 2.75 0 004.75 15h6.5A2.75 2.75 0 0014 12.25v-1a.75.75 0 00-1.5 0v1c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1a.75.75 0 00-.75-.75z"/></svg>
-            Descargar XML
+            {{ downloadingInvoicePdf() ? 'Descargando PDF...' : 'Descargar PDF' }}
           </button>
+          @if (selectedInvoiceSale()!.invoice?.dianCufe) {
+            <button class="pos-dw-btn pos-dw-btn--outline" (click)="downloadInvoiceZip(selectedInvoiceSale()!)" [disabled]="downloadingInvoiceZip()">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path fill-rule="evenodd" d="M8 1a.75.75 0 01.75.75v6.19l1.72-1.72a.75.75 0 111.06 1.06L8.53 10.28a.75.75 0 01-1.06 0L4.47 7.28a.75.75 0 111.06-1.06l1.72 1.72V1.75A.75.75 0 018 1z"/><path d="M2.75 10.5a.75.75 0 00-.75.75v1A2.75 2.75 0 004.75 15h6.5A2.75 2.75 0 0014 12.25v-1a.75.75 0 00-1.5 0v1c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1a.75.75 0 00-.75-.75z"/></svg>
+              {{ downloadingInvoiceZip() ? 'Descargando ZIP...' : 'Descargar ZIP' }}
+            </button>
+          }
           @if (selectedInvoiceSale()!.invoice && canMarkInvoicePaid()) {
             <button class="pos-dw-btn pos-dw-btn--success" (click)="markInvoicePaid(selectedInvoiceSale()!)">
               <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/></svg>
@@ -1266,6 +1273,36 @@ interface Customer {
           <button class="pos-dw-btn pos-dw-btn--ghost" (click)="showInvoiceModal.set(false)">Cerrar</button>
         </div>
 
+      </div>
+    </div>
+  }
+
+  @if (showInvoicePdfModal()) {
+    <div class="modal-overlay">
+      <div class="modal modal-pdf" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" style="color:#dc2626"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"/></svg>
+            Vista previa de factura
+          </h3>
+          <button class="modal-close" (click)="closeInvoicePdfModal()">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+          </button>
+        </div>
+        <div class="pdf-iframe-wrap">
+          @if (loadingInvoicePdfPreview()) {
+            <div class="pdf-loading"><div class="pdf-spinner"></div><p>Generando previsualización...</p></div>
+          } @else if (invoicePdfUrl()) {
+            <iframe [src]="invoicePdfUrl()!" class="pdf-iframe" frameborder="0"></iframe>
+          }
+        </div>
+        <div class="modal-footer">
+          <span class="pdf-note">⚠ Las facturas en borrador incluyen marca de agua</span>
+          <button class="btn btn-primary" (click)="selectedInvoiceSale() && downloadInvoicePdf(selectedInvoiceSale()!)" [disabled]="downloadingInvoicePdf() || !selectedInvoiceSale()">
+            {{ downloadingInvoicePdf() ? 'Descargando...' : 'Descargar PDF' }}
+          </button>
+          <button class="btn btn-secondary" (click)="closeInvoicePdfModal()">Cerrar</button>
+        </div>
       </div>
     </div>
   }
@@ -2055,8 +2092,8 @@ interface Customer {
     .pos-dw-copy { margin-left:8px; padding:3px 7px; border:none; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-size:10px; font-weight:700; cursor:pointer; }
     .pos-dw-copy--inline { margin-top:8px; margin-left:0; }
     .pos-dw-note { font-size:12.5px; color:#475569; line-height:1.6; white-space:pre-wrap; }
-    .pos-drawer-footer { display:flex; gap:8px; flex-wrap:wrap; padding:14px 20px; border-top:1px solid #f0f4f8; flex-shrink:0; background:#fafcff; }
-    .pos-dw-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .12s; border:none; }
+    .pos-drawer-footer { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; padding:14px 20px; border-top:1px solid #f0f4f8; flex-shrink:0; background:#fafcff; align-items:stretch; }
+    .pos-dw-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; width:100%; min-height:40px; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .12s; border:none; text-align:center; }
     .pos-dw-btn:disabled { opacity:.6; cursor:not-allowed; }
     .pos-dw-btn--primary { background:#1a407e; color:#fff; }
     .pos-dw-btn--primary:hover:not(:disabled) { background:#1e3a8a; }
@@ -2064,7 +2101,7 @@ interface Customer {
     .pos-dw-btn--outline:hover:not(:disabled) { border-color:#93c5fd; color:#1a407e; }
     .pos-dw-btn--success { background:#ecfdf5; border:1.5px solid #a7f3d0; color:#047857; }
     .pos-dw-btn--success:hover:not(:disabled) { background:#d1fae5; }
-    .pos-dw-btn--ghost { background:none; border:none; color:#94a3b8; }
+    .pos-dw-btn--ghost { background:none; border:1.5px dashed #dce6f0; color:#94a3b8; }
     .pos-dw-btn--ghost:hover { color:#374151; }
     /* Improved invoice toggle */
     .it-disabled { opacity:.55; cursor:not-allowed !important; }
@@ -2532,6 +2569,22 @@ interface Customer {
     .success-autoclosehint {
       font-size:10.5px; color:#9ca3af; margin-bottom:6px;
     }
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:720; display:flex; align-items:center; justify-content:center; padding:16px; }
+    .modal { background:#fff; border-radius:18px; width:min(960px, 100%); max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 26px 70px rgba(15,23,42,.28); border:1px solid #dbe4ee; }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 20px; border-bottom:1px solid #e5edf5; }
+    .modal-header h3 { display:flex; align-items:center; gap:10px; font-size:18px; font-weight:800; color:#102a43; margin:0; }
+    .modal-close { border:none; background:#f8fafc; color:#475569; width:34px; height:34px; border-radius:10px; cursor:pointer; display:grid; place-items:center; }
+    .modal-close:hover { background:#eef2f7; }
+    .modal-pdf { max-width:900px; height:90vh; }
+    .pdf-iframe-wrap { flex:1; overflow:hidden; background:#e5e7eb; min-height:420px; }
+    .pdf-iframe { width:100%; height:100%; border:none; }
+    .pdf-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:16px; color:#94a3b8; }
+    .pdf-spinner { width:40px; height:40px; border:4px solid #e2e8f0; border-top-color:#1a407e; border-radius:50%; animation:spin .8s linear infinite; }
+    .modal-footer { display:flex; align-items:center; gap:10px; padding:14px 18px; border-top:1px solid #e5edf5; background:#fff; }
+    .pdf-note { font-size:12px; color:#94a3b8; margin-right:auto; }
+    .btn { border:none; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer; }
+    .btn-primary { background:#1a407e; color:#fff; }
+    .btn-secondary { background:#eef2f7; color:#334155; }
     @media (max-width: 1200px) {
       .session-left { flex-direction:column; align-items:stretch; }
       .sb-stats { grid-template-columns:repeat(3, minmax(92px, 1fr)); }
@@ -2562,6 +2615,7 @@ interface Customer {
       .cart-header { flex-direction:column; align-items:flex-start; gap:10px; }
       .pm-grid { grid-template-columns:repeat(2,1fr); }
       .pos-dw-date-grid { grid-template-columns:1fr; }
+      .pos-drawer-footer { grid-template-columns:1fr; }
     }
   `],
 })
@@ -2569,6 +2623,7 @@ export class PosComponent implements OnInit, OnDestroy {
   private pos = inject(PosApiService);
   private http = inject(HttpClient);
   private notify = inject(NotificationService);
+  private sanitizer = inject(DomSanitizer);
   private cdr = inject(ChangeDetectorRef);
   private destroy$ = new Subject<void>();
   private customerSearch$ = new Subject<string>();
@@ -2632,6 +2687,12 @@ export class PosComponent implements OnInit, OnDestroy {
   selectedInvoiceSale  = signal<PosSale | null>(null);
   selectedInvoiceDetail = signal<PosInvoiceDetail | null>(null);
   loadingInvoiceDetail = signal(false);
+  showInvoicePdfModal = signal(false);
+  invoicePdfUrl = signal<SafeResourceUrl | null>(null);
+  invoicePdfObjectUrl: string | null = null;
+  loadingInvoicePdfPreview = signal(false);
+  downloadingInvoicePdf = signal(false);
+  downloadingInvoiceZip = signal(false);
 
   sessionSales   = signal<PosSale[]>([]);
   loadingHistory = signal(false);
@@ -3085,37 +3146,63 @@ export class PosComponent implements OnInit, OnDestroy {
     this.completedSale.update(s => mergeSale(s));
   }
 
-  downloadInvoiceXml(sale: PosSale) {
-    const invoice = sale.invoice;
-    if (!invoice?.id) return;
-    this.pos.getInvoiceXml(invoice.id).subscribe({
-      next: xml => {
-        const blob = new Blob([xml], { type: 'application/xml' });
-        const url = URL.createObjectURL(blob);
-        const downloadName = `${invoice.invoiceNumber || sale.saleNumber}.xml`;
-        const anchor = Object.assign(document.createElement('a'), { href: url, download: downloadName });
-        anchor.click();
-        URL.revokeObjectURL(url);
-      },
-      error: () => this.notify.error('XML no disponible aún para esta factura'),
-    });
-  }
-
   openInvoicePdf(sale: PosSale) {
     const invoiceId = sale.invoice?.id;
     if (!invoiceId) return;
+    this.loadingInvoicePdfPreview.set(true);
+    this.showInvoicePdfModal.set(true);
     this.pos.getInvoicePdf(invoiceId).subscribe({
       next: blob => {
-        const url = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
-        const preview = window.open(url, '_blank', 'width=1100,height=760,scrollbars=yes');
-        if (!preview) {
-          URL.revokeObjectURL(url);
-          this.notify.error('No se pudo abrir la vista previa de la factura');
-          return;
-        }
-        preview.addEventListener('beforeunload', () => URL.revokeObjectURL(url), { once: true });
+        if (this.invoicePdfObjectUrl) URL.revokeObjectURL(this.invoicePdfObjectUrl);
+        this.invoicePdfObjectUrl = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
+        this.invoicePdfUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(this.invoicePdfObjectUrl));
+        this.loadingInvoicePdfPreview.set(false);
       },
-      error: () => this.notify.error('Error al generar la vista previa de la factura'),
+      error: () => {
+        this.loadingInvoicePdfPreview.set(false);
+        this.showInvoicePdfModal.set(false);
+        this.notify.error('Error al generar la vista previa de la factura');
+      },
+    });
+  }
+  closeInvoicePdfModal() {
+    if (this.invoicePdfObjectUrl) {
+      URL.revokeObjectURL(this.invoicePdfObjectUrl);
+      this.invoicePdfObjectUrl = null;
+    }
+    this.invoicePdfUrl.set(null);
+    this.showInvoicePdfModal.set(false);
+  }
+  downloadInvoicePdf(sale: PosSale) {
+    const invoiceId = sale.invoice?.id;
+    const invoiceNumber = sale.invoice?.invoiceNumber || sale.saleNumber;
+    if (!invoiceId) return;
+    this.downloadingInvoicePdf.set(true);
+    this.pos.downloadInvoicePdf(invoiceId).subscribe({
+      next: blob => {
+        this.triggerDownload(blob, `${invoiceNumber}.pdf`);
+        this.downloadingInvoicePdf.set(false);
+      },
+      error: () => {
+        this.downloadingInvoicePdf.set(false);
+        this.notify.error('No fue posible descargar el PDF de la factura');
+      },
+    });
+  }
+  downloadInvoiceZip(sale: PosSale) {
+    const invoiceId = sale.invoice?.id;
+    const invoiceNumber = sale.invoice?.invoiceNumber || sale.saleNumber;
+    if (!invoiceId) return;
+    this.downloadingInvoiceZip.set(true);
+    this.pos.downloadInvoiceZip(invoiceId).subscribe({
+      next: blob => {
+        this.triggerDownload(blob, `${invoiceNumber}.zip`);
+        this.downloadingInvoiceZip.set(false);
+      },
+      error: () => {
+        this.downloadingInvoiceZip.set(false);
+        this.notify.error('No fue posible descargar el ZIP de la factura');
+      },
     });
   }
 
@@ -3144,6 +3231,12 @@ export class PosComponent implements OnInit, OnDestroy {
       () => this.notify.success('Copiado al portapapeles'),
       () => this.notify.error('No se pudo copiar el valor'),
     );
+  }
+  private triggerDownload(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const anchor = Object.assign(document.createElement('a'), { href: url, download: filename });
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   dianCodeDesc(code?: string): string {

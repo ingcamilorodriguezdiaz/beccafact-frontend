@@ -97,6 +97,13 @@ interface PayrollRecord {
   netPay: number;
   totalEmployerCost: number;
   notes?: string;
+  invoiceId?: string;
+  invoice?: {
+    id: string;
+    invoiceNumber?: string;
+    dianCufe?: string;
+    dianQrCode?: string;
+  };
   employees: Pick<Employee,'id'|'firstName'|'lastName'|'documentNumber'|'position'>;
 }
 
@@ -1008,6 +1015,10 @@ type ViewMode  = 'table' | 'grid';
 
             <!-- ── Drawer footer ──────────────────────────────────────────── -->
             <div class="drawer-footer">
+              <button class="btn btn--sm btn--secondary" (click)="openPayrollReceipt(r)" title="Imprimir comprobante de pago">
+                <span class="material-symbols-outlined" style="font-size:14px">receipt</span>
+                Comprobante
+              </button>
               @if (r.status === 'SUBMITTED' || r.status === 'ACCEPTED' || r.status === 'REJECTED') {
                 <button class="btn btn--sm btn--dl-xml" [disabled]="downloading()" (click)="downloadPayrollFile(r, 'xml')" title="Descargar XML firmado">
                   <span class="material-symbols-outlined" style="font-size:14px">code</span>
@@ -2346,6 +2357,26 @@ export class PayrollComponent implements OnInit {
         this.downloading.set(false);
         this.notify.error(e?.error?.message ?? 'Error al descargar el archivo');
       },
+    });
+  }
+
+  openPayrollReceipt(r: PayrollRecord) {
+    const token = localStorage.getItem('access_token') ?? '';
+    this.http.get(`${this.api}/records/${r.id}/receipt`, {
+      responseType: 'blob',
+      headers: { Authorization: `Bearer ${token}` },
+    }).subscribe({
+      next: blob => {
+        const objectUrl = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
+        const win = window.open(objectUrl, '_blank', 'width=900,height=700,scrollbars=yes');
+        if (!win) {
+          this.notify.error('No se pudo abrir el comprobante. Verifica los pop-ups.');
+          URL.revokeObjectURL(objectUrl);
+          return;
+        }
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+      },
+      error: e => this.notify.error(e?.error?.message ?? 'Error al generar el comprobante'),
     });
   }
 
