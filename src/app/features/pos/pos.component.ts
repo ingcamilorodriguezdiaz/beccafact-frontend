@@ -549,31 +549,40 @@ interface Customer {
                   <td class="tc">
                     @if (sale.invoiceId && sale.invoice) {
                       <div class="inv-dian-cell">
-                        <span class="inv-chip inv-chip--sm inv-chip--number">
-                          <svg viewBox="0 0 12 12" fill="currentColor" width="9"><path fill-rule="evenodd" d="M10 6a4 4 0 11-8 0 4 4 0 018 0zm-3.78-1.28a.75.75 0 00-1.06 1.06l1.5 1.5a.75.75 0 001.06 0l2.5-2.5a.75.75 0 00-1.06-1.06L6.25 5.69l-.97-.97z"/></svg>
-                          {{ sale.invoice.invoiceNumber }}
-                        </span>
-                        <button class="history-link-btn history-link-btn--neutral" (click)="openInvoiceModal(sale)">
-                          <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path d="M8 3C4.5 3 1.61 5.167.5 8c1.11 2.833 4 5 7.5 5s6.39-2.167 7.5-5c-1.11-2.833-4-5-7.5-5zm0 8.5A3.5 3.5 0 118 4.5a3.5 3.5 0 010 7zm0-1.5A2 2 0 108 6a2 2 0 000 4z"/></svg>
-                          Ver detalle
-                        </button>
-                        @if (sale.invoice.status === 'ACCEPTED_DIAN') {
-                          <span class="dian-badge dian-accepted">DIAN ✓</span>
-                        } @else if (sale.invoice.status === 'PAID') {
-                          <span class="dian-badge dian-paid">Pagada</span>
-                        } @else if (sale.invoice.status === 'REJECTED_DIAN') {
-                          <span class="dian-badge dian-rejected">DIAN ✗</span>
-                        } @else if (sale.invoice.status === 'SENT_DIAN') {
-                          <button class="history-link-btn history-link-btn--dian" (click)="queryDianStatus(sale)" [disabled]="queryingDian[sale.id]">
-                            <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path fill-rule="evenodd" d="M8 3a5 5 0 00-4.546 2.916.5.5 0 11-.908-.418 6 6 0 111.2 6.635.5.5 0 11.84-.542A5 5 0 108 3z"/><path d="M8.5 5.5a.5.5 0 00-1 0V8c0 .133.053.26.146.354l1.5 1.5a.5.5 0 00.708-.708L8.5 7.793V5.5z"/></svg>
-                            {{ queryingDian[sale.id] ? 'Consultando…' : 'Consultar DIAN' }}
+                        <div class="inv-dian-head">
+                          <span class="inv-chip inv-chip--sm inv-chip--number">
+                            <svg viewBox="0 0 12 12" fill="currentColor" width="9"><path fill-rule="evenodd" d="M10 6a4 4 0 11-8 0 4 4 0 018 0zm-3.78-1.28a.75.75 0 00-1.06 1.06l1.5 1.5a.75.75 0 001.06 0l2.5-2.5a.75.75 0 00-1.06-1.06L6.25 5.69l-.97-.97z"/></svg>
+                            {{ sale.invoice.invoiceNumber }}
+                          </span>
+                          @if (sale.invoice.status === 'ACCEPTED_DIAN') {
+                            <span class="dian-badge dian-accepted">DIAN ✓</span>
+                          } @else if (sale.invoice.status === 'PAID') {
+                            <span class="dian-badge dian-paid">Pagada</span>
+                          } @else if (sale.invoice.status === 'REJECTED_DIAN') {
+                            <span class="dian-badge dian-rejected">DIAN ✗</span>
+                          } @else if (sale.invoice.status === 'SENT_DIAN') {
+                            <span class="dian-badge dian-sent">En revisión</span>
+                          } @else {
+                            <span class="dian-badge dian-draft">Pendiente</span>
+                          }
+                        </div>
+                        <div class="inv-dian-actions">
+                          <button class="history-link-btn history-link-btn--neutral" (click)="openInvoiceModal(sale)">
+                            <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path d="M8 3C4.5 3 1.61 5.167.5 8c1.11 2.833 4 5 7.5 5s6.39-2.167 7.5-5c-1.11-2.833-4-5-7.5-5zm0 8.5A3.5 3.5 0 118 4.5a3.5 3.5 0 010 7zm0-1.5A2 2 0 108 6a2 2 0 000 4z"/></svg>
+                            Ver
                           </button>
-                        } @else {
-                          <button class="history-link-btn history-link-btn--dian" (click)="submitInvoiceToDian(sale)" [disabled]="sendingDian[sale.id]">
-                            <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path d="M8.5 1.5a.5.5 0 00-1 0v6.293L5.354 5.646a.5.5 0 10-.708.708l3 3a.498.498 0 00.708 0l3-3a.5.5 0 10-.708-.708L8.5 7.793V1.5z"/><path d="M2.5 10a.5.5 0 00-.5.5v1A2.5 2.5 0 004.5 14h7a2.5 2.5 0 002.5-2.5v-1a.5.5 0 00-1 0v1A1.5 1.5 0 0111.5 13h-7A1.5 1.5 0 013 11.5v-1a.5.5 0 00-.5-.5z"/></svg>
-                            {{ sendingDian[sale.id] ? 'Enviando…' : 'Enviar DIAN' }}
-                          </button>
-                        }
+                          @if (sale.invoice.status === 'SENT_DIAN') {
+                            <button class="history-link-btn history-link-btn--dian" (click)="queryDianStatus(sale)" [disabled]="queryingDian[sale.id]">
+                              <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path fill-rule="evenodd" d="M8 3a5 5 0 00-4.546 2.916.5.5 0 11-.908-.418 6 6 0 111.2 6.635.5.5 0 11.84-.542A5 5 0 108 3z"/><path d="M8.5 5.5a.5.5 0 00-1 0V8c0 .133.053.26.146.354l1.5 1.5a.5.5 0 00.708-.708L8.5 7.793V5.5z"/></svg>
+                              {{ queryingDian[sale.id] ? 'Consultando…' : 'Consultar' }}
+                            </button>
+                          } @else if (sale.invoice.status === 'DRAFT' || sale.invoice.status === 'ISSUED') {
+                            <button class="history-link-btn history-link-btn--dian" (click)="submitInvoiceToDian(sale)" [disabled]="sendingDian[sale.id]">
+                              <svg viewBox="0 0 16 16" fill="currentColor" width="12"><path d="M8.5 1.5a.5.5 0 00-1 0v6.293L5.354 5.646a.5.5 0 10-.708.708l3 3a.498.498 0 00.708 0l3-3a.5.5 0 10-.708-.708L8.5 7.793V1.5z"/><path d="M2.5 10a.5.5 0 00-.5.5v1A2.5 2.5 0 004.5 14h7a2.5 2.5 0 002.5-2.5v-1a.5.5 0 00-1 0v1A1.5 1.5 0 0111.5 13h-7A1.5 1.5 0 013 11.5v-1a.5.5 0 00-.5-.5z"/></svg>
+                              {{ sendingDian[sale.id] ? 'Enviando…' : 'Enviar' }}
+                            </button>
+                          }
+                        </div>
                       </div>
                     } @else if (sale.invoiceId) {
                       <span class="inv-chip">Vinculada</span>
@@ -2035,10 +2044,18 @@ interface Customer {
     .inv-chip { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
     .inv-chip--sm { font-size:10px; padding:4px 8px; }
     .inv-chip--number { font-size:10.5px; font-weight:800; letter-spacing:.03em; box-shadow:inset 0 1px 0 rgba(255,255,255,.45); }
-    .inv-dian-cell { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:136px; }
+    .inv-dian-cell {
+      display:flex; flex-direction:column; align-items:stretch; gap:8px; min-width:164px;
+      padding:8px 10px; border-radius:14px; background:linear-gradient(180deg,#ffffff 0%, #f8fbff 100%);
+      border:1px solid #e2e8f0; box-shadow:0 8px 22px rgba(15,23,42,.04);
+    }
+    .inv-dian-head { display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; }
+    .inv-dian-actions { display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
     .dian-badge { display:inline-block; padding:2px 7px; border-radius:5px; font-size:10px; font-weight:700; white-space:nowrap; }
     .dian-accepted { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
     .dian-rejected { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+    .dian-sent { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+    .dian-draft { background:#f3f4f6; color:#374151; border:1px solid #d1d5db; }
     .dian-btn { font-size:10.5px; padding:2px 6px; }
 
     /* Invoice success block in overlay */
@@ -2137,7 +2154,7 @@ interface Customer {
     .td-actions { display:flex; align-items:center; justify-content:center; gap:8px; min-width:156px; }
     .history-link-btn {
       display:inline-flex; align-items:center; gap:6px;
-      justify-content:center; min-height:30px;
+      justify-content:center; min-height:30px; min-width:72px;
       padding:6px 11px; border-radius:999px; border:1px solid transparent;
       font-size:11px; font-weight:700; cursor:pointer; transition:all .14s;
       background:#f8fafc; color:#1e3a8a;
