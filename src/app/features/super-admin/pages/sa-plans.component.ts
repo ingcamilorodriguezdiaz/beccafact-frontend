@@ -31,7 +31,8 @@ const GROUPS: { id: 'limits' | 'modules' | 'support'; label: string }[] = [
 // Keys prioritarias para las cards (no cambian con el catálogo)
 const CARD_PRIORITY = [
   'max_documents_per_month', 'max_users', 'max_products',
-  'has_invoices', 'has_inventory', 'has_reports', 'dian_enabled', 'priority_support',
+  'has_invoices', 'has_inventory', 'has_reports', 'dian_enabled',
+  'has_accounting', 'has_purchasing', 'priority_support',
 ];
 
 @Component({

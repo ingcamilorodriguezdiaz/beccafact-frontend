@@ -70,6 +70,13 @@ export const routes: Routes = [
           import('./features/cartera/cartera.routes').then((m) => m.CARTERA_ROUTES),
       },
       {
+        path: 'accounting',
+        canActivate: [planGuard, roleGuard],
+        data: { feature: 'has_accounting', roles: ['ADMIN', 'MANAGER', 'CONTADOR'] },
+        loadChildren: () =>
+          import('./features/accounting/accounting.routes').then((m) => m.ACCOUNTING_ROUTES),
+      },
+      {
         path: 'payroll',
         canActivate: [planGuard, roleGuard],
         data: { feature: 'has_payroll', roles: ['ADMIN', 'MANAGER', 'CONTADOR'] },
@@ -89,6 +96,20 @@ export const routes: Routes = [
         data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO'] },
         loadChildren: () =>
           import('./features/branches/branches.routes').then((m) => m.BRANCHES_ROUTES),
+      },
+      {
+        path: 'purchasing',
+        canActivate: [planGuard, roleGuard],
+        data: { feature: 'has_purchasing', roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
+        loadChildren: () =>
+          import('./features/purchasing/purchasing.routes').then((m) => m.PURCHASING_ROUTES),
+      },
+      {
+        path: 'quotes',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'] },
+        loadChildren: () =>
+          import('./features/quotes/quotes.routes').then((m) => m.QUOTES_ROUTES),
       },
       {
         path: 'settings',
