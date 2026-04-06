@@ -10,6 +10,9 @@ import { environment } from '../../../environments/environment';
 type AccountLevel = 1 | 2 | 3 | 4;
 type AccountNature = 'DEBIT' | 'CREDIT';
 type JournalStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
+type PeriodStatus = 'OPEN' | 'CLOSED';
+type DeleteJournalTarget = { id: string; number: string };
+type AccountingTab = 'accounts' | 'journals' | 'periods';
 
 interface Account {
   id: string;
@@ -45,6 +48,134 @@ interface JournalEntry {
   createdAt: string;
 }
 
+interface AccountingPeriod {
+  id: string;
+  name: string;
+  year: number;
+  month: number;
+  startDate: string;
+  endDate: string;
+  status: PeriodStatus;
+  isLocked: boolean;
+  closedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface TrialBalanceRow {
+  accountId: string;
+  code: string;
+  name: string;
+  level: number;
+  nature: AccountNature;
+  totalDebit: number;
+  totalCredit: number;
+  balance: number;
+}
+
+interface TrialBalanceResponse {
+  data: TrialBalanceRow[];
+  totals: {
+    debit: number;
+    credit: number;
+    balance: number;
+  };
+  dateFrom: string;
+  dateTo: string;
+}
+
+interface GeneralLedgerRow {
+  accountId: string;
+  code: string;
+  name: string;
+  level: number;
+  nature: AccountNature;
+  openingBalance: number;
+  periodDebit: number;
+  periodCredit: number;
+  endingBalance: number;
+}
+
+interface GeneralLedgerResponse {
+  data: GeneralLedgerRow[];
+  totals: {
+    openingBalance: number;
+    periodDebit: number;
+    periodCredit: number;
+    endingBalance: number;
+  };
+  dateFrom: string;
+  dateTo: string;
+}
+
+interface AccountAuxiliaryMovement {
+  entryId: string;
+  number: string;
+  date: string;
+  description: string;
+  reference?: string | null;
+  lineDescription?: string | null;
+  debit: number;
+  credit: number;
+  runningBalance: number;
+}
+
+interface AccountAuxiliaryResponse {
+  account: {
+    id: string;
+    code: string;
+    name: string;
+    level: number;
+    nature: AccountNature;
+  };
+  openingBalance: number;
+  totals: {
+    debit: number;
+    credit: number;
+    endingBalance: number;
+  };
+  data: AccountAuxiliaryMovement[];
+  dateFrom: string;
+  dateTo: string;
+}
+
+interface FinancialStatementRow {
+  accountId: string;
+  code: string;
+  name: string;
+  level: number;
+  amount: number;
+}
+
+interface FinancialStatementSection {
+  key: string;
+  label: string;
+  total: number;
+  rows: FinancialStatementRow[];
+}
+
+interface FinancialStatementsResponse {
+  balanceSheet: {
+    sections: FinancialStatementSection[];
+    totals: {
+      assets: number;
+      liabilities: number;
+      equity: number;
+      liabilitiesPlusEquity: number;
+    };
+  };
+  incomeStatement: {
+    sections: FinancialStatementSection[];
+    totals: {
+      revenues: number;
+      expenses: number;
+      netIncome: number;
+    };
+  };
+  dateFrom: string;
+  dateTo: string;
+}
+
 interface AccountForm {
   code: string;
   name: string;
@@ -65,6 +196,12 @@ interface JournalLineForm {
   description: string;
   debit: number | null;
   credit: number | null;
+}
+
+interface PeriodForm {
+  year: number | null;
+  month: number | null;
+  name: string;
 }
 
 interface PaginatedResponse<T> {
@@ -96,18 +233,18 @@ const LEVEL_LABELS: Record<number, string> = {
             <h2 class="page-title">Contabilidad</h2>
             <p class="page-subtitle">Gestiona el plan de cuentas PUC y los comprobantes contables con trazabilidad completa.</p>
           </div>
-          <button class="btn btn-primary" (click)="activeTab() === 'accounts' ? openAccountModal() : openJournalModal()">
+          <button class="btn btn-primary" (click)="openPrimaryAction()">
             <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
               <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
             </svg>
-            {{ activeTab() === 'accounts' ? 'Nueva Cuenta' : 'Nuevo Comprobante' }}
+            {{ activeTab() === 'accounts' ? 'Nueva Cuenta' : activeTab() === 'journals' ? 'Nuevo Comprobante' : 'Nuevo Período' }}
           </button>
         </div>
         <div class="hero-aside">
           <div class="hero-highlight">
-            <span class="hero-highlight-label">{{ activeTab() === 'accounts' ? 'Cuentas visibles' : 'Comprobantes' }}</span>
-            <strong>{{ activeTab() === 'accounts' ? totalAccounts() : totalJournals() }}</strong>
-            <small>{{ activeTab() === 'accounts' ? 'Plan de cuentas PUC activo' : 'Registros del período' }}</small>
+            <span class="hero-highlight-label">{{ activeTab() === 'accounts' ? 'Cuentas visibles' : activeTab() === 'journals' ? 'Comprobantes' : 'Períodos configurados' }}</span>
+            <strong>{{ activeTab() === 'accounts' ? totalAccounts() : activeTab() === 'journals' ? totalJournals() : periods().length }}</strong>
+            <small>{{ activeTab() === 'accounts' ? 'Plan de cuentas PUC activo' : activeTab() === 'journals' ? 'Registros del período' : 'Control de cierre y bloqueo contable' }}</small>
           </div>
           <div class="hero-mini-grid">
             <div class="hero-mini-card">
@@ -140,6 +277,12 @@ const LEVEL_LABELS: Record<number, string> = {
             <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
           </svg>
           Comprobantes
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'periods'" (click)="switchTab('periods')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v9a3 3 0 003 3h10a3 3 0 003-3V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm9 7H5v6a1 1 0 001 1h8a1 1 0 001-1V9z" clip-rule="evenodd"/>
+          </svg>
+          Períodos y Reportes
         </button>
       </div>
 
@@ -263,6 +406,11 @@ const LEVEL_LABELS: Record<number, string> = {
                           </svg>
                         }
                       </button>
+                      <button class="btn-icon btn-icon-danger" title="Eliminar cuenta" (click)="confirmDeleteAccount(acc)">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"/>
+                        </svg>
+                      </button>
                     </td>
                   </tr>
                 }
@@ -382,11 +530,23 @@ const LEVEL_LABELS: Record<number, string> = {
                         </svg>
                       </button>
                       @if (je.status === 'DRAFT') {
+                        <button class="btn-icon" title="Editar" (click)="openJournalModal(je)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                          </svg>
+                        </button>
                         <button class="btn-icon btn-icon-success" title="Contabilizar" (click)="postJournal(je)">
                           <svg viewBox="0 0 20 20" fill="currentColor" width="15">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
                           </svg>
                         </button>
+                        <button class="btn-icon btn-icon-danger" title="Eliminar" (click)="confirmDeleteJournal(je)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+                          </svg>
+                        </button>
+                      }
+                      @if (je.status === 'POSTED') {
                         <button class="btn-icon btn-icon-danger" title="Anular" (click)="confirmCancel(je)">
                           <svg viewBox="0 0 20 20" fill="currentColor" width="15">
                             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
@@ -417,6 +577,447 @@ const LEVEL_LABELS: Record<number, string> = {
             }
           }
         </div>
+      }
+
+      @if (activeTab() === 'periods') {
+        <section class="panel-grid">
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Períodos contables</p>
+                <h3>Control de apertura, cierre y bloqueo</h3>
+              </div>
+              <div class="panel-card__filters">
+                <select [(ngModel)]="periodFilterYear" (ngModelChange)="loadPeriods()" class="filter-select">
+                  <option value="">Todos los años</option>
+                  @for (year of periodYearOptions(); track year) {
+                    <option [value]="year">{{ year }}</option>
+                  }
+                </select>
+                <select [(ngModel)]="periodFilterStatus" (ngModelChange)="loadPeriods()" class="filter-select">
+                  <option value="">Todos los estados</option>
+                  <option value="OPEN">Abiertos</option>
+                  <option value="CLOSED">Cerrados</option>
+                </select>
+              </div>
+            </div>
+
+            @if (loadingPeriods()) {
+              <div class="table-loading">
+                @for (i of [1,2,3,4]; track i) {
+                  <div class="skeleton-row">
+                    <div class="sk sk-line" style="width:140px"></div>
+                    <div class="sk sk-line" style="width:90px"></div>
+                    <div class="sk sk-line" style="width:110px"></div>
+                    <div class="sk sk-line" style="width:90px"></div>
+                  </div>
+                }
+              </div>
+            } @else if (periods().length === 0) {
+              <div class="empty-state">
+                <p>No hay períodos contables configurados aún</p>
+                <button class="btn btn-primary btn-sm" (click)="openPeriodModal()">Crear primer período</button>
+              </div>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Período</th>
+                    <th>Rango</th>
+                    <th>Estado</th>
+                    <th>Bloqueo</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (period of periods(); track period.id) {
+                    <tr>
+                      <td>
+                        <div class="journal-desc">{{ period.name }}</div>
+                        <div class="text-muted">{{ period.year }}-{{ padMonth(period.month) }}</div>
+                      </td>
+                      <td class="text-muted">{{ formatDate(period.startDate) }} - {{ formatDate(period.endDate) }}</td>
+                      <td>
+                        <span class="journal-badge journal-{{ period.status === 'OPEN' ? 'draft' : 'cancelled' }}">
+                          {{ period.status === 'OPEN' ? 'Abierto' : 'Cerrado' }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="status-badge" [class.active]="!period.isLocked" [class.inactive]="period.isLocked">
+                          {{ period.isLocked ? 'Bloqueado' : 'Disponible' }}
+                        </span>
+                      </td>
+                      <td class="actions-cell">
+                        @if (period.status === 'OPEN' && !period.isLocked) {
+                          <button class="btn-icon" title="Bloquear" (click)="lockPeriod(period)">
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                              <path fill-rule="evenodd" d="M5 8V6a5 5 0 1110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2a3 3 0 10-6 0v2h6V6z" clip-rule="evenodd"/>
+                            </svg>
+                          </button>
+                        }
+                        @if (period.status === 'OPEN' && period.isLocked) {
+                          <button class="btn-icon" title="Desbloquear" (click)="unlockPeriod(period)">
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                              <path d="M13 7V6a3 3 0 10-6 0v2h6z"/>
+                              <path fill-rule="evenodd" d="M5 8a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2h-1V6a5 5 0 10-10 0v2H5z" clip-rule="evenodd"/>
+                            </svg>
+                          </button>
+                        }
+                        @if (period.status === 'OPEN') {
+                          <button class="btn-icon btn-icon-danger" title="Cerrar período" (click)="closePeriod(period)">
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-10.707a1 1 0 00-1.414-1.414L10 8.172 7.707 5.879a1 1 0 00-1.414 1.414L8.586 9.586l-2.293 2.293a1 1 0 101.414 1.414L10 11l2.293 2.293a1 1 0 001.414-1.414L11.414 9.586l2.293-2.293z" clip-rule="evenodd"/>
+                            </svg>
+                          </button>
+                        }
+                        @if (period.status === 'CLOSED') {
+                          <button class="btn-icon btn-icon-success" title="Reabrir período" (click)="reopenPeriod(period)">
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3a1 1 0 00.293.707l2 2a1 1 0 101.414-1.414L11 9.586V7z" clip-rule="evenodd"/>
+                            </svg>
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Balance de prueba</p>
+                <h3>Reporte por rango de fechas</h3>
+              </div>
+            </div>
+
+            <div class="filters-bar panel-card__report-filters">
+              <input type="date" [(ngModel)]="trialBalanceDateFrom" class="filter-select"/>
+              <input type="date" [(ngModel)]="trialBalanceDateTo" class="filter-select"/>
+              <select [(ngModel)]="trialBalanceLevel" class="filter-select">
+                <option value="">Todos los niveles</option>
+                <option value="1">Nivel 1</option>
+                <option value="2">Nivel 2</option>
+                <option value="3">Nivel 3</option>
+                <option value="4">Nivel 4</option>
+              </select>
+              <input type="text" [(ngModel)]="trialBalanceSearch" class="search-input search-input--compact" placeholder="Buscar cuenta o nombre"/>
+              <label class="check-inline">
+                <input type="checkbox" [(ngModel)]="trialBalanceIncludeZero"/>
+                Incluir cuentas sin movimiento
+              </label>
+              <button class="btn btn-primary btn-sm" [disabled]="loadingTrialBalance()" (click)="loadTrialBalance()">
+                {{ loadingTrialBalance() ? 'Consultando...' : 'Generar reporte' }}
+              </button>
+            </div>
+
+            <div class="report-summary">
+              <div class="hero-mini-card report-mini-card">
+                <span class="hero-mini-card__label">Débitos</span>
+                <strong>{{ formatCurrency(trialBalanceTotals().debit) }}</strong>
+              </div>
+              <div class="hero-mini-card report-mini-card">
+                <span class="hero-mini-card__label">Créditos</span>
+                <strong>{{ formatCurrency(trialBalanceTotals().credit) }}</strong>
+              </div>
+              <div class="hero-mini-card report-mini-card">
+                <span class="hero-mini-card__label">Balance</span>
+                <strong>{{ formatCurrency(trialBalanceTotals().balance) }}</strong>
+              </div>
+            </div>
+
+            @if (loadingTrialBalance()) {
+              <div class="table-loading">
+                @for (i of [1,2,3,4,5]; track i) {
+                  <div class="skeleton-row">
+                    <div class="sk sk-line" style="width:90px"></div>
+                    <div class="sk sk-line" style="width:200px"></div>
+                    <div class="sk sk-line" style="width:100px"></div>
+                    <div class="sk sk-line" style="width:100px"></div>
+                  </div>
+                }
+              </div>
+            } @else if (trialBalance().length === 0) {
+              <div class="empty-state">
+                <p>No hay movimientos contabilizados para el rango seleccionado</p>
+              </div>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Cuenta</th>
+                    <th>Nivel</th>
+                    <th class="text-right">Débito</th>
+                    <th class="text-right">Crédito</th>
+                    <th class="text-right">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of trialBalance(); track row.accountId) {
+                    <tr>
+                      <td><span class="code-badge" [class]="'code-level-' + row.level">{{ row.code }}</span></td>
+                      <td>{{ row.name }}</td>
+                      <td><span class="level-badge level-{{ row.level }}">N{{ row.level }}</span></td>
+                      <td class="text-right">{{ formatCurrency(row.totalDebit) }}</td>
+                      <td class="text-right">{{ formatCurrency(row.totalCredit) }}</td>
+                      <td class="text-right"><strong>{{ formatCurrency(row.balance) }}</strong></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Libro mayor</p>
+                <h3>Saldos por cuenta</h3>
+              </div>
+            </div>
+
+            <div class="filters-bar panel-card__report-filters">
+              <input type="date" [(ngModel)]="trialBalanceDateFrom" class="filter-select"/>
+              <input type="date" [(ngModel)]="trialBalanceDateTo" class="filter-select"/>
+              <select [(ngModel)]="trialBalanceLevel" class="filter-select">
+                <option value="">Todos los niveles</option>
+                <option value="1">Nivel 1</option>
+                <option value="2">Nivel 2</option>
+                <option value="3">Nivel 3</option>
+                <option value="4">Nivel 4</option>
+              </select>
+              <input type="text" [(ngModel)]="trialBalanceSearch" class="search-input search-input--compact" placeholder="Buscar cuenta o nombre"/>
+              <label class="check-inline">
+                <input type="checkbox" [(ngModel)]="trialBalanceIncludeZero"/>
+                Incluir cuentas sin movimiento
+              </label>
+              <button class="btn btn-primary btn-sm" [disabled]="loadingGeneralLedger()" (click)="loadGeneralLedger()">
+                {{ loadingGeneralLedger() ? 'Consultando...' : 'Generar mayor' }}
+              </button>
+            </div>
+
+            @if (loadingGeneralLedger()) {
+              <div class="table-loading">
+                @for (i of [1,2,3,4,5]; track i) {
+                  <div class="skeleton-row">
+                    <div class="sk sk-line" style="width:90px"></div>
+                    <div class="sk sk-line" style="width:180px"></div>
+                    <div class="sk sk-line" style="width:100px"></div>
+                    <div class="sk sk-line" style="width:100px"></div>
+                  </div>
+                }
+              </div>
+            } @else if (generalLedger().length === 0) {
+              <div class="empty-state">
+                <p>No hay datos para generar el libro mayor en el rango seleccionado</p>
+              </div>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Cuenta</th>
+                    <th class="text-right">Saldo inicial</th>
+                    <th class="text-right">Débitos</th>
+                    <th class="text-right">Créditos</th>
+                    <th class="text-right">Saldo final</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of generalLedger(); track row.accountId) {
+                    <tr>
+                      <td><span class="code-badge" [class]="'code-level-' + row.level">{{ row.code }}</span></td>
+                      <td>{{ row.name }}</td>
+                      <td class="text-right">{{ formatCurrency(row.openingBalance) }}</td>
+                      <td class="text-right">{{ formatCurrency(row.periodDebit) }}</td>
+                      <td class="text-right">{{ formatCurrency(row.periodCredit) }}</td>
+                      <td class="text-right"><strong>{{ formatCurrency(row.endingBalance) }}</strong></td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr class="totals-row">
+                    <td colspan="2"><strong>Totales</strong></td>
+                    <td class="text-right"><strong>{{ formatCurrency(generalLedgerTotals().openingBalance) }}</strong></td>
+                    <td class="text-right"><strong>{{ formatCurrency(generalLedgerTotals().periodDebit) }}</strong></td>
+                    <td class="text-right"><strong>{{ formatCurrency(generalLedgerTotals().periodCredit) }}</strong></td>
+                    <td class="text-right"><strong>{{ formatCurrency(generalLedgerTotals().endingBalance) }}</strong></td>
+                  </tr>
+                </tfoot>
+              </table>
+            }
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Auxiliar contable</p>
+                <h3>Movimientos detallados por cuenta</h3>
+              </div>
+            </div>
+
+            <div class="filters-bar panel-card__report-filters">
+              <select [(ngModel)]="accountAuxiliaryAccountId" class="filter-select">
+                <option value="">Selecciona una cuenta</option>
+                @for (account of allAccounts(); track account.id) {
+                  <option [value]="account.id">{{ account.code }} — {{ account.name }}</option>
+                }
+              </select>
+              <input type="date" [(ngModel)]="trialBalanceDateFrom" class="filter-select"/>
+              <input type="date" [(ngModel)]="trialBalanceDateTo" class="filter-select"/>
+              <button class="btn btn-primary btn-sm" [disabled]="loadingAccountAuxiliary()" (click)="loadAccountAuxiliary()">
+                {{ loadingAccountAuxiliary() ? 'Consultando...' : 'Consultar auxiliar' }}
+              </button>
+            </div>
+
+            @if (loadingAccountAuxiliary()) {
+              <div class="table-loading">
+                @for (i of [1,2,3,4]; track i) {
+                  <div class="skeleton-row">
+                    <div class="sk sk-line" style="width:90px"></div>
+                    <div class="sk sk-line" style="width:200px"></div>
+                    <div class="sk sk-line" style="width:90px"></div>
+                    <div class="sk sk-line" style="width:90px"></div>
+                  </div>
+                }
+              </div>
+            } @else if (!accountAuxiliary()) {
+              <div class="empty-state">
+                <p>Selecciona una cuenta y genera el auxiliar para ver los movimientos</p>
+              </div>
+            } @else {
+              <div class="report-summary">
+                <div class="hero-mini-card report-mini-card">
+                  <span class="hero-mini-card__label">Cuenta</span>
+                  <strong>{{ accountAuxiliary()!.account.code }}</strong>
+                </div>
+                <div class="hero-mini-card report-mini-card">
+                  <span class="hero-mini-card__label">Saldo inicial</span>
+                  <strong>{{ formatCurrency(accountAuxiliary()!.openingBalance) }}</strong>
+                </div>
+                <div class="hero-mini-card report-mini-card">
+                  <span class="hero-mini-card__label">Saldo final</span>
+                  <strong>{{ formatCurrency(accountAuxiliary()!.totals.endingBalance) }}</strong>
+                </div>
+              </div>
+
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Comprobante</th>
+                    <th>Descripción</th>
+                    <th class="text-right">Débito</th>
+                    <th class="text-right">Crédito</th>
+                    <th class="text-right">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (movement of accountAuxiliary()!.data; track movement.entryId + movement.number + movement.date) {
+                    <tr>
+                      <td>{{ formatDate(movement.date) }}</td>
+                      <td><span class="journal-number">{{ movement.number }}</span></td>
+                      <td>
+                        <div>{{ movement.description }}</div>
+                        @if (movement.lineDescription) {
+                          <div class="text-muted">{{ movement.lineDescription }}</div>
+                        }
+                      </td>
+                      <td class="text-right">{{ formatCurrency(movement.debit) }}</td>
+                      <td class="text-right">{{ formatCurrency(movement.credit) }}</td>
+                      <td class="text-right"><strong>{{ formatCurrency(movement.runningBalance) }}</strong></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Estados financieros</p>
+                <h3>Balance general y estado de resultados</h3>
+              </div>
+              <button class="btn btn-primary btn-sm" [disabled]="loadingFinancialStatements()" (click)="loadFinancialStatements()">
+                {{ loadingFinancialStatements() ? 'Consultando...' : 'Actualizar estados' }}
+              </button>
+            </div>
+
+            @if (loadingFinancialStatements()) {
+              <div class="table-loading">
+                @for (i of [1,2,3,4,5]; track i) {
+                  <div class="skeleton-row">
+                    <div class="sk sk-line" style="width:120px"></div>
+                    <div class="sk sk-line" style="width:220px"></div>
+                    <div class="sk sk-line" style="width:100px"></div>
+                  </div>
+                }
+              </div>
+            } @else if (!financialStatements()) {
+              <div class="empty-state">
+                <p>No hay información suficiente para construir los estados financieros</p>
+              </div>
+            } @else {
+              <div class="statements-grid">
+                <div class="statement-card">
+                  <div class="statement-card__head">
+                    <h4>Balance general</h4>
+                    <span>{{ trialBalanceDateTo }}</span>
+                  </div>
+                  @for (section of financialStatements()!.balanceSheet.sections; track section.key) {
+                    <div class="statement-section">
+                      <div class="statement-section__title">{{ section.label }}</div>
+                      @for (row of section.rows; track row.accountId) {
+                        <div class="statement-row">
+                          <span>{{ row.code }} · {{ row.name }}</span>
+                          <strong>{{ formatCurrency(row.amount) }}</strong>
+                        </div>
+                      }
+                      <div class="statement-row statement-row--total">
+                        <span>Total {{ section.label }}</span>
+                        <strong>{{ formatCurrency(section.total) }}</strong>
+                      </div>
+                    </div>
+                  }
+                  <div class="statement-row statement-row--grand">
+                    <span>Pasivo + Patrimonio</span>
+                    <strong>{{ formatCurrency(financialStatements()!.balanceSheet.totals.liabilitiesPlusEquity) }}</strong>
+                  </div>
+                </div>
+
+                <div class="statement-card">
+                  <div class="statement-card__head">
+                    <h4>Estado de resultados</h4>
+                    <span>{{ trialBalanceDateFrom }} al {{ trialBalanceDateTo }}</span>
+                  </div>
+                  @for (section of financialStatements()!.incomeStatement.sections; track section.key) {
+                    <div class="statement-section">
+                      <div class="statement-section__title">{{ section.label }}</div>
+                      @for (row of section.rows; track row.accountId) {
+                        <div class="statement-row">
+                          <span>{{ row.code }} · {{ row.name }}</span>
+                          <strong>{{ formatCurrency(row.amount) }}</strong>
+                        </div>
+                      }
+                      <div class="statement-row statement-row--total">
+                        <span>Total {{ section.label }}</span>
+                        <strong>{{ formatCurrency(section.total) }}</strong>
+                      </div>
+                    </div>
+                  }
+                  <div class="statement-row statement-row--grand">
+                    <span>Resultado neto</span>
+                    <strong>{{ formatCurrency(financialStatements()!.incomeStatement.totals.netIncome) }}</strong>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
       }
 
     </div>
@@ -472,7 +1073,7 @@ const LEVEL_LABELS: Record<number, string> = {
                 <label>Cuenta Padre (opcional)</label>
                 <select [(ngModel)]="accountForm.parentId" class="form-control">
                   <option value="">— Sin padre —</option>
-                  @for (acc of allAccounts(); track acc.id) {
+                  @for (acc of getAvailableParentAccounts(); track acc.id) {
                     <option [value]="acc.id">{{ acc.code }} — {{ acc.name }}</option>
                   }
                 </select>
@@ -490,6 +1091,54 @@ const LEVEL_LABELS: Record<number, string> = {
       </div>
     }
 
+    @if (showPeriodModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal-sm" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Nuevo período contable</h3>
+            <button class="drawer-close" (click)="closePeriodModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Año *</label>
+                <select [(ngModel)]="periodForm.year" class="form-control">
+                  <option [ngValue]="null">— Seleccionar año —</option>
+                  @for (year of periodYearOptions(); track year) {
+                    <option [ngValue]="year">{{ year }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Mes *</label>
+                <select [(ngModel)]="periodForm.month" class="form-control">
+                  <option [ngValue]="null">— Seleccionar mes —</option>
+                  @for (month of monthOptions(); track month.value) {
+                    <option [ngValue]="month.value">{{ month.label }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Nombre</label>
+              <input type="text" [(ngModel)]="periodForm.name" class="form-control" placeholder="Ej: Abril 2026"/>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closePeriodModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="savingPeriod()" (click)="savePeriod()">
+              {{ savingPeriod() ? 'Guardando...' : 'Crear período' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- ══════════════════════════════════════════════════════════════════════
          MODAL: NUEVO COMPROBANTE
          ══════════════════════════════════════════════════════════════════════ -->
@@ -497,7 +1146,7 @@ const LEVEL_LABELS: Record<number, string> = {
       <div class="modal-overlay">
         <div class="modal modal-lg" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h3>Nuevo comprobante contable</h3>
+            <h3>{{ editingJournalId() ? 'Editar comprobante contable' : 'Nuevo comprobante contable' }}</h3>
             <button class="drawer-close" (click)="closeJournalModal()">
               <svg viewBox="0 0 20 20" fill="currentColor" width="18">
                 <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
@@ -552,10 +1201,10 @@ const LEVEL_LABELS: Record<number, string> = {
                         <input type="text" [(ngModel)]="line.description" class="form-control form-control-sm" placeholder="Concepto"/>
                       </td>
                       <td>
-                        <input type="number" [(ngModel)]="line.debit" class="form-control form-control-sm text-right" placeholder="0" min="0"/>
+                        <input type="number" [(ngModel)]="line.debit" (ngModelChange)="recalculateJournalBalance()" class="form-control form-control-sm text-right" placeholder="0" min="0"/>
                       </td>
                       <td>
-                        <input type="number" [(ngModel)]="line.credit" class="form-control form-control-sm text-right" placeholder="0" min="0"/>
+                        <input type="number" [(ngModel)]="line.credit" (ngModelChange)="recalculateJournalBalance()" class="form-control form-control-sm text-right" placeholder="0" min="0"/>
                       </td>
                       <td>
                         @if (journalForm.lines.length > 2) {
@@ -585,11 +1234,11 @@ const LEVEL_LABELS: Record<number, string> = {
             <div class="balance-indicator" [class.balanced]="isBalanced()" [class.unbalanced]="!isBalanced()">
               <div class="balance-row">
                 <span>Total Débitos:</span>
-                <strong>{{ formatCurrency(totalDebit()) }}</strong>
+                <strong>{{ formatCurrency(journalTotalDebit()) }}</strong>
               </div>
               <div class="balance-row">
                 <span>Total Créditos:</span>
-                <strong>{{ formatCurrency(totalCredit()) }}</strong>
+                <strong>{{ formatCurrency(journalTotalCredit()) }}</strong>
               </div>
               <div class="balance-status">
                 @if (isBalanced()) {
@@ -601,7 +1250,7 @@ const LEVEL_LABELS: Record<number, string> = {
                   <svg viewBox="0 0 20 20" fill="currentColor" width="16">
                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"/>
                   </svg>
-                  Diferencia: {{ formatCurrency(Math.abs(totalDebit() - totalCredit())) }}
+                  Diferencia: {{ formatCurrency(Math.abs(journalTotalDebit() - journalTotalCredit())) }}
                 }
               </div>
             </div>
@@ -610,7 +1259,7 @@ const LEVEL_LABELS: Record<number, string> = {
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeJournalModal()">Cancelar</button>
             <button class="btn btn-primary" [disabled]="savingJournal() || !isBalanced()" (click)="saveJournal()">
-              {{ savingJournal() ? 'Guardando...' : 'Crear comprobante' }}
+              {{ savingJournal() ? 'Guardando...' : (editingJournalId() ? 'Guardar cambios' : 'Crear comprobante') }}
             </button>
           </div>
         </div>
@@ -697,10 +1346,49 @@ const LEVEL_LABELS: Record<number, string> = {
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="detailJournal.set(null)">Cerrar</button>
             @if (detailJournal()!.status === 'DRAFT') {
+              <button class="btn btn-secondary" (click)="openJournalModal(detailJournal()!)">Editar</button>
               <button class="btn btn-primary" [disabled]="savingJournal()" (click)="postJournal(detailJournal()!)">
                 {{ savingJournal() ? 'Procesando...' : 'Contabilizar' }}
               </button>
             }
+            @if (detailJournal()!.status === 'POSTED') {
+              <button class="btn btn-danger" [disabled]="savingJournal()" (click)="confirmCancel(detailJournal()!)">Anular</button>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (deleteJournalTarget()) {
+      <div class="modal-overlay">
+        <div class="modal modal-sm" (click)="$event.stopPropagation()">
+          <div class="modal-header"><h3>Eliminar comprobante</h3></div>
+          <div class="modal-body">
+            <p>¿Deseas eliminar el comprobante <strong>{{ deleteJournalTarget()!.number }}</strong>? Solo los comprobantes en borrador pueden eliminarse.</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="deleteJournalTarget.set(null)">Cancelar</button>
+            <button class="btn btn-danger" [disabled]="savingJournal()" (click)="doDeleteJournal()">
+              {{ savingJournal() ? 'Eliminando...' : 'Sí, eliminar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (deleteAccountTarget()) {
+      <div class="modal-overlay">
+        <div class="modal modal-sm" (click)="$event.stopPropagation()">
+          <div class="modal-header"><h3>Eliminar cuenta</h3></div>
+          <div class="modal-body">
+            <p>¿Deseas eliminar la cuenta <strong>{{ deleteAccountTarget()!.code }} — {{ deleteAccountTarget()!.name }}</strong>?</p>
+            <p>Si la cuenta ya tiene movimientos, el sistema la dejará inactiva para conservar la integridad contable.</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="deleteAccountTarget.set(null)">Cancelar</button>
+            <button class="btn btn-danger" [disabled]="savingAccount()" (click)="doDeleteAccount()">
+              {{ savingAccount() ? 'Procesando...' : 'Sí, eliminar' }}
+            </button>
           </div>
         </div>
       </div>
@@ -890,7 +1578,43 @@ const LEVEL_LABELS: Record<number, string> = {
     .search-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; }
     .search-input { width:100%; min-height:44px; padding:8px 12px 8px 36px; border:1px solid #dce6f0; border-radius:12px; font-size:14px; outline:none; background:#fff; box-shadow:0 8px 20px rgba(12,28,53,.03); }
     .search-input:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,.08); }
+    .search-input--compact { min-height:44px; padding-left:12px; }
     .filter-select { min-height:44px; padding:8px 12px; border:1px solid #dce6f0; border-radius:12px; font-size:14px; outline:none; background:#fff; color:#374151; box-shadow:0 8px 20px rgba(12,28,53,.03); }
+
+    .panel-grid { display:grid; gap:18px; }
+    .panel-card { padding:18px; overflow:visible; }
+    .panel-card__header {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      margin-bottom:16px;
+    }
+    .panel-card__header h3 { margin:0; font-family:'Sora',sans-serif; font-size:18px; letter-spacing:-.04em; color:#0c1c35; }
+    .panel-card__filters { display:flex; gap:12px; flex-wrap:wrap; }
+    .panel-card__report-filters { margin-bottom:16px; }
+    .report-summary { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-bottom:16px; }
+    .report-mini-card { background:#f8fbff; border:1px solid #dce6f0; }
+    .report-mini-card strong { color:#0c1c35; }
+    .statements-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
+    .statement-card { border:1px solid #dce6f0; border-radius:18px; padding:16px; background:#fbfdff; }
+    .statement-card__head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .statement-card__head h4 { margin:0; font-family:'Sora',sans-serif; font-size:16px; color:#0c1c35; }
+    .statement-card__head span { font-size:12px; color:#64748b; }
+    .statement-section { border-top:1px solid #e8eef8; padding-top:12px; margin-top:12px; }
+    .statement-section__title { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#1a407e; margin-bottom:10px; }
+    .statement-row { display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-size:13px; color:#334155; }
+    .statement-row strong { color:#0f172a; }
+    .statement-row--total { border-top:1px dashed #cbd5e1; margin-top:8px; padding-top:10px; font-weight:700; }
+    .statement-row--grand { border-top:2px solid #bfdbfe; margin-top:14px; padding-top:12px; font-size:14px; font-weight:800; color:#1a407e; }
+    .check-inline {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      color:#475569;
+      min-height:44px;
+    }
 
     /* ── Tabla ────────────────────────────────────────────────────────────── */
     .table-card { background:#fff; border:1px solid #dce6f0; border-radius:18px; overflow:hidden; box-shadow:0 16px 28px rgba(12,28,53,.05); }
@@ -1042,6 +1766,10 @@ const LEVEL_LABELS: Record<number, string> = {
       .filters-head { flex-direction:column; align-items:flex-start; }
       .filters-bar { gap:8px; }
       .search-wrap { max-width:100%; flex:1 1 100%; }
+      .panel-card__header { flex-direction:column; align-items:stretch; }
+      .panel-card__filters { width:100%; }
+      .report-summary { grid-template-columns:1fr; }
+      .statements-grid { grid-template-columns:1fr; }
       .form-row { grid-template-columns:1fr; }
       .detail-grid { grid-template-columns:1fr; }
     }
@@ -1066,9 +1794,14 @@ export class AccountingComponent implements OnInit {
   // ── URLs base ────────────────────────────────────────────────────────────────
   private readonly ACCOUNTS_API = `${environment.apiUrl}/accounting/accounts`;
   private readonly JOURNALS_API = `${environment.apiUrl}/accounting/journal-entries`;
+  private readonly PERIODS_API = `${environment.apiUrl}/accounting/periods`;
+  private readonly TRIAL_BALANCE_API = `${environment.apiUrl}/accounting/reports/trial-balance`;
+  private readonly GENERAL_LEDGER_API = `${environment.apiUrl}/accounting/reports/general-ledger`;
+  private readonly ACCOUNT_AUXILIARY_API = `${environment.apiUrl}/accounting/reports/account-auxiliary`;
+  private readonly FINANCIAL_STATEMENTS_API = `${environment.apiUrl}/accounting/reports/financial-statements`;
 
   // ── Pestaña activa ───────────────────────────────────────────────────────────
-  activeTab = signal<'accounts' | 'journals'>('accounts');
+  activeTab = signal<AccountingTab>('accounts');
 
   // ── Plan de cuentas ──────────────────────────────────────────────────────────
   accounts       = signal<Account[]>([]);
@@ -1088,6 +1821,31 @@ export class AccountingComponent implements OnInit {
   editingAccountId  = signal<string | null>(null);
   accountForm: AccountForm = this.emptyAccountForm();
 
+  // ── Períodos contables y reportes ────────────────────────────────────────────
+  periods = signal<AccountingPeriod[]>([]);
+  loadingPeriods = signal(false);
+  savingPeriod = signal(false);
+  showPeriodModal = signal(false);
+  periodForm: PeriodForm = this.emptyPeriodForm();
+  periodFilterYear = '';
+  periodFilterStatus = '';
+  trialBalance = signal<TrialBalanceRow[]>([]);
+  loadingTrialBalance = signal(false);
+  trialBalanceTotals = signal({ debit: 0, credit: 0, balance: 0 });
+  trialBalanceDateFrom = '';
+  trialBalanceDateTo = '';
+  trialBalanceLevel = '';
+  trialBalanceSearch = '';
+  trialBalanceIncludeZero = false;
+  generalLedger = signal<GeneralLedgerRow[]>([]);
+  loadingGeneralLedger = signal(false);
+  generalLedgerTotals = signal({ openingBalance: 0, periodDebit: 0, periodCredit: 0, endingBalance: 0 });
+  accountAuxiliary = signal<AccountAuxiliaryResponse | null>(null);
+  loadingAccountAuxiliary = signal(false);
+  accountAuxiliaryAccountId = '';
+  financialStatements = signal<FinancialStatementsResponse | null>(null);
+  loadingFinancialStatements = signal(false);
+
   // ── Comprobantes ─────────────────────────────────────────────────────────────
   journals       = signal<JournalEntry[]>([]);
   loadingJournals = signal(false);
@@ -1104,21 +1862,17 @@ export class AccountingComponent implements OnInit {
   // ── KPIs de comprobantes ─────────────────────────────────────────────────────
   postedCount = computed(() => this.journals().filter(j => j.status === 'POSTED').length);
   draftCount  = computed(() => this.journals().filter(j => j.status === 'DRAFT').length);
-
   // ── Modales de comprobante ───────────────────────────────────────────────────
   showJournalModal = signal(false);
+  editingJournalId = signal<string | null>(null);
   detailJournal    = signal<JournalEntry | null>(null);
   cancelTarget     = signal<JournalEntry | null>(null);
+  deleteJournalTarget = signal<DeleteJournalTarget | null>(null);
+  deleteAccountTarget = signal<Account | null>(null);
   journalForm: JournalForm = this.emptyJournalForm();
-
-  // ── Totales del asiento en tiempo real ───────────────────────────────────────
-  totalDebit  = computed(() => this.journalForm.lines.reduce((s, l) => s + (Number(l.debit)  || 0), 0));
-  totalCredit = computed(() => this.journalForm.lines.reduce((s, l) => s + (Number(l.credit) || 0), 0));
-  isBalanced  = computed(() => {
-    const d = this.totalDebit();
-    const c = this.totalCredit();
-    return d > 0 && c > 0 && Math.abs(d - c) < 0.01;
-  });
+  journalTotalDebit = signal(0);
+  journalTotalCredit = signal(0);
+  journalIsBalanced = signal(false);
 
   // Exponemos Math para el template
   readonly Math = Math;
@@ -1127,15 +1881,35 @@ export class AccountingComponent implements OnInit {
   constructor(private http: HttpClient, private notify: NotificationService) {}
 
   ngOnInit() {
+    this.initializeTrialBalanceRange();
     this.loadAccounts();
     this.loadAllAccounts();
     this.loadJournals();
+    this.loadPeriods();
+    this.loadTrialBalance();
+    this.loadGeneralLedger();
+    this.loadFinancialStatements();
+    this.recalculateJournalBalance();
   }
 
   // ── Cambio de pestaña ────────────────────────────────────────────────────────
 
-  switchTab(tab: 'accounts' | 'journals') {
+  switchTab(tab: AccountingTab) {
     this.activeTab.set(tab);
+  }
+
+  openPrimaryAction() {
+    if (this.activeTab() === 'accounts') {
+      this.openAccountModal();
+      return;
+    }
+
+    if (this.activeTab() === 'journals') {
+      this.openJournalModal();
+      return;
+    }
+
+    this.openPeriodModal();
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -1217,6 +1991,14 @@ export class AccountingComponent implements OnInit {
       this.notify.warning('Código, nombre, nivel y naturaleza son obligatorios');
       return;
     }
+    if (Number(f.level) === 1 && f.parentId) {
+      this.notify.warning('Las cuentas de nivel 1 no deben tener cuenta padre');
+      return;
+    }
+    if (Number(f.level) > 1 && !f.parentId) {
+      this.notify.warning(`Las cuentas de nivel ${f.level} deben tener cuenta padre`);
+      return;
+    }
     this.savingAccount.set(true);
     const body: Record<string, any> = {
       code:     f.code.trim(),
@@ -1252,6 +2034,277 @@ export class AccountingComponent implements OnInit {
         this.loadAccounts();
       },
       error: (e) => this.notify.error(e?.error?.message ?? 'Error al cambiar estado'),
+    });
+  }
+
+  confirmDeleteAccount(account: Account) {
+    this.deleteAccountTarget.set(account);
+  }
+
+  doDeleteAccount() {
+    const account = this.deleteAccountTarget();
+    if (!account) return;
+    this.savingAccount.set(true);
+    this.http.delete(`${this.ACCOUNTS_API}/${account.id}`).subscribe({
+      next: () => {
+        this.notify.success('Cuenta procesada correctamente');
+        this.savingAccount.set(false);
+        this.deleteAccountTarget.set(null);
+        this.loadAccounts();
+        this.loadAllAccounts();
+      },
+      error: (e) => {
+        this.savingAccount.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al eliminar la cuenta');
+      },
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // PERÍODOS CONTABLES Y BALANCE DE PRUEBA
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  loadPeriods() {
+    this.loadingPeriods.set(true);
+    const params: Record<string, string> = {};
+    if (this.periodFilterYear) params['year'] = this.periodFilterYear;
+    if (this.periodFilterStatus) params['status'] = this.periodFilterStatus;
+
+    this.http.get<AccountingPeriod[]>(this.PERIODS_API, { params }).subscribe({
+      next: (data) => {
+        this.periods.set(data ?? []);
+        this.loadingPeriods.set(false);
+      },
+      error: (e) => {
+        this.loadingPeriods.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al cargar períodos contables');
+      },
+    });
+  }
+
+  openPeriodModal() {
+    this.periodForm = this.emptyPeriodForm();
+    this.showPeriodModal.set(true);
+  }
+
+  closePeriodModal() {
+    this.showPeriodModal.set(false);
+    this.periodForm = this.emptyPeriodForm();
+  }
+
+  savePeriod() {
+    if (!this.periodForm.year || !this.periodForm.month) {
+      this.notify.warning('Debes seleccionar año y mes del período');
+      return;
+    }
+
+    this.savingPeriod.set(true);
+    const body = {
+      year: this.periodForm.year,
+      month: this.periodForm.month,
+      name: this.periodForm.name.trim() || undefined,
+    };
+
+    this.http.post<AccountingPeriod>(this.PERIODS_API, body).subscribe({
+      next: () => {
+        this.notify.success('Período contable creado');
+        this.savingPeriod.set(false);
+        this.closePeriodModal();
+        this.loadPeriods();
+      },
+      error: (e) => {
+        this.savingPeriod.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al crear el período');
+      },
+    });
+  }
+
+  closePeriod(period: AccountingPeriod) {
+    if (!confirm(`¿Deseas cerrar el período ${period.name}? No debe tener comprobantes en borrador.`)) {
+      return;
+    }
+
+    this.savingPeriod.set(true);
+    this.http.patch<AccountingPeriod>(`${this.PERIODS_API}/${period.id}/close`, {}).subscribe({
+      next: () => {
+        this.notify.success('Período cerrado correctamente');
+        this.savingPeriod.set(false);
+        this.loadPeriods();
+      },
+      error: (e) => {
+        this.savingPeriod.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al cerrar el período');
+      },
+    });
+  }
+
+  reopenPeriod(period: AccountingPeriod) {
+    if (!confirm(`¿Deseas reabrir el período ${period.name}?`)) {
+      return;
+    }
+
+    this.savingPeriod.set(true);
+    this.http.patch<AccountingPeriod>(`${this.PERIODS_API}/${period.id}/reopen`, {}).subscribe({
+      next: () => {
+        this.notify.success('Período reabierto');
+        this.savingPeriod.set(false);
+        this.loadPeriods();
+      },
+      error: (e) => {
+        this.savingPeriod.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al reabrir el período');
+      },
+    });
+  }
+
+  lockPeriod(period: AccountingPeriod) {
+    if (!confirm(`¿Deseas bloquear el período ${period.name}?`)) {
+      return;
+    }
+
+    this.savingPeriod.set(true);
+    this.http.patch<AccountingPeriod>(`${this.PERIODS_API}/${period.id}/lock`, {}).subscribe({
+      next: () => {
+        this.notify.success('Período bloqueado');
+        this.savingPeriod.set(false);
+        this.loadPeriods();
+      },
+      error: (e) => {
+        this.savingPeriod.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al bloquear el período');
+      },
+    });
+  }
+
+  unlockPeriod(period: AccountingPeriod) {
+    if (!confirm(`¿Deseas desbloquear el período ${period.name}?`)) {
+      return;
+    }
+
+    this.savingPeriod.set(true);
+    this.http.patch<AccountingPeriod>(`${this.PERIODS_API}/${period.id}/unlock`, {}).subscribe({
+      next: () => {
+        this.notify.success('Período desbloqueado');
+        this.savingPeriod.set(false);
+        this.loadPeriods();
+      },
+      error: (e) => {
+        this.savingPeriod.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al desbloquear el período');
+      },
+    });
+  }
+
+  loadTrialBalance() {
+    if (!this.trialBalanceDateFrom || !this.trialBalanceDateTo) {
+      this.notify.warning('Selecciona un rango de fechas para generar el balance de prueba');
+      return;
+    }
+
+    this.loadingTrialBalance.set(true);
+    const params: Record<string, string> = {
+      dateFrom: this.trialBalanceDateFrom,
+      dateTo: this.trialBalanceDateTo,
+      includeZero: String(this.trialBalanceIncludeZero),
+    };
+    if (this.trialBalanceLevel) params['level'] = this.trialBalanceLevel;
+    if (this.trialBalanceSearch.trim()) params['search'] = this.trialBalanceSearch.trim();
+
+    this.http.get<TrialBalanceResponse>(this.TRIAL_BALANCE_API, { params }).subscribe({
+      next: (response) => {
+        this.trialBalance.set(response.data ?? []);
+        this.trialBalanceTotals.set(response.totals ?? { debit: 0, credit: 0, balance: 0 });
+        this.loadingTrialBalance.set(false);
+      },
+      error: (e) => {
+        this.loadingTrialBalance.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al generar el balance de prueba');
+      },
+    });
+  }
+
+  loadGeneralLedger() {
+    if (!this.trialBalanceDateFrom || !this.trialBalanceDateTo) {
+      this.notify.warning('Selecciona un rango de fechas para generar el libro mayor');
+      return;
+    }
+
+    this.loadingGeneralLedger.set(true);
+    const params: Record<string, string> = {
+      dateFrom: this.trialBalanceDateFrom,
+      dateTo: this.trialBalanceDateTo,
+      includeZero: String(this.trialBalanceIncludeZero),
+    };
+    if (this.trialBalanceLevel) params['level'] = this.trialBalanceLevel;
+    if (this.trialBalanceSearch.trim()) params['search'] = this.trialBalanceSearch.trim();
+
+    this.http.get<GeneralLedgerResponse>(this.GENERAL_LEDGER_API, { params }).subscribe({
+      next: (response) => {
+        this.generalLedger.set(response.data ?? []);
+        this.generalLedgerTotals.set(
+          response.totals ?? { openingBalance: 0, periodDebit: 0, periodCredit: 0, endingBalance: 0 },
+        );
+        this.loadingGeneralLedger.set(false);
+      },
+      error: (e) => {
+        this.loadingGeneralLedger.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al generar el libro mayor');
+      },
+    });
+  }
+
+  loadAccountAuxiliary() {
+    if (!this.accountAuxiliaryAccountId) {
+      this.notify.warning('Selecciona una cuenta para consultar el auxiliar');
+      return;
+    }
+
+    if (!this.trialBalanceDateFrom || !this.trialBalanceDateTo) {
+      this.notify.warning('Selecciona un rango de fechas para consultar el auxiliar');
+      return;
+    }
+
+    this.loadingAccountAuxiliary.set(true);
+    this.http.get<AccountAuxiliaryResponse>(this.ACCOUNT_AUXILIARY_API, {
+      params: {
+        accountId: this.accountAuxiliaryAccountId,
+        dateFrom: this.trialBalanceDateFrom,
+        dateTo: this.trialBalanceDateTo,
+      },
+    }).subscribe({
+      next: (response) => {
+        this.accountAuxiliary.set(response);
+        this.loadingAccountAuxiliary.set(false);
+      },
+      error: (e) => {
+        this.loadingAccountAuxiliary.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al consultar el auxiliar');
+      },
+    });
+  }
+
+  loadFinancialStatements() {
+    if (!this.trialBalanceDateFrom || !this.trialBalanceDateTo) {
+      this.notify.warning('Selecciona un rango de fechas para generar los estados financieros');
+      return;
+    }
+
+    this.loadingFinancialStatements.set(true);
+    const params: Record<string, string> = {
+      dateFrom: this.trialBalanceDateFrom,
+      dateTo: this.trialBalanceDateTo,
+    };
+    if (this.trialBalanceLevel) params['level'] = this.trialBalanceLevel;
+
+    this.http.get<FinancialStatementsResponse>(this.FINANCIAL_STATEMENTS_API, { params }).subscribe({
+      next: (response) => {
+        this.financialStatements.set(response);
+        this.loadingFinancialStatements.set(false);
+      },
+      error: (e) => {
+        this.loadingFinancialStatements.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al generar los estados financieros');
+      },
     });
   }
 
@@ -1298,22 +2351,63 @@ export class AccountingComponent implements OnInit {
     return range;
   }
 
-  openJournalModal() {
-    this.journalForm = this.emptyJournalForm();
-    this.showJournalModal.set(true);
+  openJournalModal(entry?: JournalEntry) {
+    if (!entry) {
+      this.editingJournalId.set(null);
+      this.journalForm = this.emptyJournalForm();
+      this.recalculateJournalBalance();
+      this.showJournalModal.set(true);
+      return;
+    }
+
+    if (entry.status !== 'DRAFT') {
+      this.notify.warning('Solo se pueden editar comprobantes en borrador');
+      return;
+    }
+
+    const openWithEntry = (full: JournalEntry) => {
+      this.editingJournalId.set(full.id);
+      this.journalForm = {
+        date: this.asInputDate(full.date),
+        description: full.description ?? '',
+        reference: full.reference ?? '',
+        lines: (full.lines ?? []).map((line) => ({
+          accountId: line.accountId,
+          description: line.description ?? '',
+          debit: Number(line.debit ?? 0) || null,
+          credit: Number(line.credit ?? 0) || null,
+        })),
+      };
+      this.recalculateJournalBalance();
+      this.showJournalModal.set(true);
+    };
+
+    if (!entry.lines) {
+      this.http.get<JournalEntry>(`${this.JOURNALS_API}/${entry.id}`).subscribe({
+        next: (full) => openWithEntry(full),
+        error: (e) => this.notify.error(e?.error?.message ?? 'No fue posible cargar el comprobante para editar'),
+      });
+      return;
+    }
+
+    openWithEntry(entry);
   }
 
   closeJournalModal() {
     this.showJournalModal.set(false);
+    this.editingJournalId.set(null);
     this.journalForm = this.emptyJournalForm();
+    this.recalculateJournalBalance();
   }
 
   addLine() {
     this.journalForm.lines.push({ accountId: '', description: '', debit: null, credit: null });
+    this.recalculateJournalBalance();
   }
 
   removeLine(index: number) {
     this.journalForm.lines.splice(index, 1);
+    this.recalculateJournalBalance();
   }
 
   saveJournal() {
@@ -1338,17 +2432,22 @@ export class AccountingComponent implements OnInit {
       date:        f.date,
       description: f.description.trim(),
       reference:   f.reference?.trim() || undefined,
-      lines: f.lines.map(l => ({
+      lines: f.lines.map((l, index) => ({
         accountId:   l.accountId,
         description: l.description?.trim() || undefined,
         debit:       Number(l.debit)  || 0,
         credit:      Number(l.credit) || 0,
+        position:    index + 1,
       })),
     };
 
-    this.http.post<JournalEntry>(this.JOURNALS_API, body).subscribe({
+    const request$ = this.editingJournalId()
+      ? this.http.put<JournalEntry>(`${this.JOURNALS_API}/${this.editingJournalId()}`, body)
+      : this.http.post<JournalEntry>(this.JOURNALS_API, body);
+
+    request$.subscribe({
       next: () => {
-        this.notify.success('Comprobante creado exitosamente');
+        this.notify.success(this.editingJournalId() ? 'Comprobante actualizado exitosamente' : 'Comprobante creado exitosamente');
         this.savingJournal.set(false);
         this.closeJournalModal();
         this.loadJournals();
@@ -1397,11 +2496,35 @@ export class AccountingComponent implements OnInit {
         this.notify.success('Comprobante anulado');
         this.savingJournal.set(false);
         this.cancelTarget.set(null);
+        this.detailJournal.set(null);
         this.loadJournals();
       },
       error: (e) => {
         this.savingJournal.set(false);
         this.notify.error(e?.error?.message ?? 'Error al anular el comprobante');
+      },
+    });
+  }
+
+  confirmDeleteJournal(je: JournalEntry) {
+    this.deleteJournalTarget.set({ id: je.id, number: je.number });
+  }
+
+  doDeleteJournal() {
+    const target = this.deleteJournalTarget();
+    if (!target) return;
+    this.savingJournal.set(true);
+    this.http.delete(`${this.JOURNALS_API}/${target.id}`).subscribe({
+      next: () => {
+        this.notify.success('Comprobante eliminado');
+        this.savingJournal.set(false);
+        this.deleteJournalTarget.set(null);
+        this.detailJournal.set(null);
+        this.loadJournals();
+      },
+      error: (e) => {
+        this.savingJournal.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al eliminar el comprobante');
       },
     });
   }
@@ -1419,6 +2542,52 @@ export class AccountingComponent implements OnInit {
       CANCELLED: 'Anulado',
     };
     return map[status] ?? status;
+  }
+
+  periodYearOptions(): number[] {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 6 }, (_, index) => currentYear - 2 + index);
+  }
+
+  monthOptions() {
+    return [
+      { value: 1, label: 'Enero' },
+      { value: 2, label: 'Febrero' },
+      { value: 3, label: 'Marzo' },
+      { value: 4, label: 'Abril' },
+      { value: 5, label: 'Mayo' },
+      { value: 6, label: 'Junio' },
+      { value: 7, label: 'Julio' },
+      { value: 8, label: 'Agosto' },
+      { value: 9, label: 'Septiembre' },
+      { value: 10, label: 'Octubre' },
+      { value: 11, label: 'Noviembre' },
+      { value: 12, label: 'Diciembre' },
+    ];
+  }
+
+  padMonth(month: number): string {
+    return String(month).padStart(2, '0');
+  }
+
+  totalDebit(): number {
+    return this.journalTotalDebit();
+  }
+
+  totalCredit(): number {
+    return this.journalTotalCredit();
+  }
+
+  isBalanced(): boolean {
+    return this.journalIsBalanced();
+  }
+
+  recalculateJournalBalance() {
+    const debit = this.journalForm.lines.reduce((sum, line) => sum + (Number(line.debit) || 0), 0);
+    const credit = this.journalForm.lines.reduce((sum, line) => sum + (Number(line.credit) || 0), 0);
+    this.journalTotalDebit.set(debit);
+    this.journalTotalCredit.set(credit);
+    this.journalIsBalanced.set(debit > 0 && credit > 0 && Math.abs(debit - credit) < 0.01);
   }
 
   /** Formatea un valor numérico como moneda colombiana COP */
@@ -1442,6 +2611,27 @@ export class AccountingComponent implements OnInit {
 
   min(a: number, b: number): number { return Math.min(a, b); }
 
+  getAvailableParentAccounts(): Account[] {
+    const level = Number(this.accountForm.level || 0);
+    if (!level || level <= 1) return [];
+    return this.allAccounts().filter((acc) => acc.level === level - 1 && acc.id !== this.editingAccountId());
+  }
+
+  private asInputDate(value: string): string {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 10);
+  }
+
+  private initializeTrialBalanceRange() {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    this.trialBalanceDateFrom = this.asInputDate(start.toISOString());
+    this.trialBalanceDateTo = this.asInputDate(end.toISOString());
+  }
+
   // ── Valores por defecto ───────────────────────────────────────────────────────
 
   private emptyAccountForm(): AccountForm {
@@ -1458,6 +2648,15 @@ export class AccountingComponent implements OnInit {
         { accountId: '', description: '', debit: null, credit: null },
         { accountId: '', description: '', debit: null, credit: null },
       ],
+    };
+  }
+
+  private emptyPeriodForm(): PeriodForm {
+    const current = new Date();
+    return {
+      year: current.getFullYear(),
+      month: current.getMonth() + 1,
+      name: '',
     };
   }
 
