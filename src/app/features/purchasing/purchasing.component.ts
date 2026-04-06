@@ -1081,10 +1081,10 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
       padding:22px;
       border-radius:28px;
       background:
-        radial-gradient(circle at top left, rgba(99,102,241,.18), transparent 26%),
-        radial-gradient(circle at bottom right, rgba(16,185,129,.16), transparent 28%),
-        linear-gradient(135deg, #1e1b4b 0%, #312e81 52%, #065f46 100%);
-      box-shadow:0 24px 48px rgba(12,12,40,.18);
+        radial-gradient(circle at top left, rgba(127,183,255,.18), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(45,212,191,.16), transparent 28%),
+        linear-gradient(135deg, #0d2344 0%, #16386a 52%, #0f7a72 100%);
+      box-shadow:0 24px 48px rgba(12,28,53,.18);
       color:#fff;
     }
     .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
@@ -1095,7 +1095,7 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
       font-weight:800;
       text-transform:uppercase;
       letter-spacing:.16em;
-      color:#a5b4fc;
+      color:#a5c8ff;
     }
     .page-title { font-family:'Sora',sans-serif; font-size:32px; line-height:1.02; font-weight:800; color:#fff; margin:0 0 10px; letter-spacing:-.05em; }
     .page-subtitle { font-size:14px; color:rgba(236,244,255,.8); margin:0; line-height:1.6; }
@@ -1126,7 +1126,7 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     /* ── KPI strip ─────────────────────────────────────────────── */
     .kpi-strip { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:14px; margin-bottom:18px; }
     .kpi-card { display:flex; align-items:flex-start; gap:14px; padding:16px 18px; border-radius:20px; background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); border:1px solid #dce6f0; box-shadow:0 16px 28px rgba(12,28,53,.05); }
-    .kpi-card__icon { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #ede9fe, #e0efff); color:#4c1d95; flex-shrink:0; }
+    .kpi-card__icon { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #e0efff, #eefbf7); color:#1a407e; flex-shrink:0; }
     .kpi-card__label { display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#7b8fa8; margin-bottom:6px; }
     .kpi-card__value { font-family:'Sora',sans-serif; font-size:22px; line-height:1.1; letter-spacing:-.05em; color:#0c1c35; }
 
@@ -1142,13 +1142,13 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     .search-wrap { flex:1; position:relative; max-width:380px; min-width:160px; }
     .search-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; }
     .search-input { width:100%; min-height:40px; padding:7px 12px 7px 36px; border:1px solid #dce6f0; border-radius:10px; font-size:14px; outline:none; background:#fff; box-shadow:0 4px 10px rgba(12,28,53,.03); }
-    .search-input:focus { border-color:#4c1d95; box-shadow:0 0 0 3px rgba(76,29,149,0.08); }
+    .search-input:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,0.08); }
     .filter-select { min-height:40px; padding:7px 12px; border:1px solid #dce6f0; border-radius:10px; font-size:13.5px; outline:none; background:#fff; color:#374151; box-shadow:0 4px 10px rgba(12,28,53,.03); }
     .view-toggle { display:flex; gap:2px; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; background:#fff; box-shadow:0 8px 18px rgba(12,28,53,.03); }
     .view-toggle button { padding:9px 11px; background:#fff; border:none; cursor:pointer; color:#9ca3af; transition:all .15s; }
-    .view-toggle button:hover { background:#f0f4f9; color:#4c1d95; }
-    .view-toggle button.active { background:#4c1d95; color:#fff; }
-    .results-pill { padding:7px 12px; border-radius:999px; background:#ede9fe; border:1px solid #c4b5fd; color:#5b21b6; font-size:12px; font-weight:700; white-space:nowrap; margin-left:auto; }
+    .view-toggle button:hover { background:#f0f4f9; color:#1a407e; }
+    .view-toggle button.active { background:#1a407e; color:#fff; }
+    .results-pill { padding:7px 12px; border-radius:999px; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-size:12px; font-weight:700; white-space:nowrap; margin-left:auto; }
 
     /* ── Tabla ─────────────────────────────────────────────────── */
     .table-card { background:#fff; border:1px solid #dce6f0; border-radius:18px; overflow:hidden; box-shadow:0 16px 28px rgba(12,28,53,.05); }
@@ -1163,20 +1163,20 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 
     /* ── Celdas de entidad ─────────────────────────────────────── */
     .entity-cell { display:flex; align-items:center; gap:10px; }
-    .entity-avatar { width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,#4c1d95,#065f46); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:'Sora',sans-serif; }
+    .entity-avatar { width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,#1a407e,#00c6a0); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:'Sora',sans-serif; }
     .entity-avatar--sm { width:28px; height:28px; font-size:10px; border-radius:6px; }
     .entity-name { font-weight:600; color:#0c1c35; font-size:14px; }
     .entity-sub { font-size:12px; color:#9ca3af; margin-top:1px; }
 
     /* ── Badges ────────────────────────────────────────────────── */
-    .doc-badge { background:#ede9fe; color:#4c1d95; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; }
+    .doc-badge { background:#e0efff; color:#1a407e; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; }
     .doc-number { font-family:monospace; font-size:13px; color:#374151; }
     .text-muted { color:#9ca3af; }
     .term-badge { font-size:12px; color:#065f46; background:#d1fae5; padding:3px 8px; border-radius:6px; font-weight:600; }
     .status-badge { padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; }
     .status-badge.active { background:#d1fae5; color:#065f46; }
     .status-badge.inactive { background:#fee2e2; color:#991b1b; }
-    .order-number { font-family:monospace; font-weight:700; color:#4c1d95; font-size:13px; }
+    .order-number { font-family:monospace; font-weight:700; color:#1a407e; font-size:13px; }
     .amount-cell { font-weight:700; color:#0c1c35; font-family:'Sora',sans-serif; font-size:13px; }
 
     /* Estados de orden coloreados */
@@ -1190,7 +1190,7 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     /* ── Acciones ──────────────────────────────────────────────── */
     .actions-cell { text-align:right; white-space:nowrap; }
     .btn-icon { background:#fff; border:1px solid #dce6f0; padding:7px; border-radius:10px; cursor:pointer; color:#9ca3af; transition:all .15s; box-shadow:0 4px 12px rgba(12,28,53,.03); }
-    .btn-icon:hover { background:#f0f4ff; color:#4c1d95; border-color:#c4b5fd; }
+    .btn-icon:hover { background:#f0f6ff; color:#1a407e; border-color:#93c5fd; }
     .btn-icon-danger:hover { background:#fee2e2; color:#dc2626; border-color:#fca5a5; }
 
     /* ── Grid views ───────────────────────────────────────────── */
@@ -1206,12 +1206,12 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
       flex-direction:column;
       box-shadow:0 12px 26px rgba(12,28,53,.04);
     }
-    .customer-card:hover, .order-card:hover { box-shadow:0 18px 32px rgba(76,29,149,.1); transform:translateY(-3px); border-color:#c4b5fd; }
+    .customer-card:hover, .order-card:hover { box-shadow:0 18px 32px rgba(26,64,126,.1); transform:translateY(-3px); border-color:#93c5fd; }
     .customer-card--inactive { opacity:.76; border-color:#f0d4d4; background:#fdfafa; }
     .customer-card--skeleton, .order-card--skeleton { pointer-events:none; }
     .cc-status { position:absolute; top:12px; right:12px; }
     .cc-top { display:flex; flex-direction:column; align-items:center; text-align:center; padding:6px 0 12px; }
-    .cc-avatar { width:52px; height:52px; border-radius:12px; background:linear-gradient(135deg,#4c1d95,#065f46); color:#fff; font-size:16px; font-weight:700; display:flex; align-items:center; justify-content:center; font-family:'Sora',sans-serif; margin-bottom:10px; }
+    .cc-avatar { width:52px; height:52px; border-radius:12px; background:linear-gradient(135deg,#1a407e,#00c6a0); color:#fff; font-size:16px; font-weight:700; display:flex; align-items:center; justify-content:center; font-family:'Sora',sans-serif; margin-bottom:10px; }
     .cc-name { font-size:14px; font-weight:700; color:#0c1c35; line-height:1.3; margin-bottom:4px; }
     .cc-doc { font-size:11.5px; color:#9ca3af; display:flex; align-items:center; gap:5px; justify-content:center; }
     .cc-info { border-top:1px solid #f0f4f8; padding-top:10px; margin-bottom:12px; display:flex; flex-direction:column; gap:5px; flex:1; }
@@ -1223,7 +1223,7 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     .cc-actions { display:flex; gap:6px; align-items:center; border-top:1px solid #f0f4f8; padding-top:10px; }
     .cc-actions .btn { flex:1; justify-content:center; }
     .order-card__head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:14px; }
-    .order-card__number { font-family:'Sora',sans-serif; font-size:18px; line-height:1.1; color:#4c1d95; letter-spacing:-.04em; }
+    .order-card__number { font-family:'Sora',sans-serif; font-size:18px; line-height:1.1; color:#1a407e; letter-spacing:-.04em; }
     .order-card__date { font-size:12px; color:#9ca3af; margin-top:4px; }
     .order-card__customer { display:flex; align-items:center; gap:10px; padding:12px 0; border-top:1px solid #f0f4f8; border-bottom:1px solid #f0f4f8; }
     .order-card__meta { display:flex; flex-direction:column; gap:8px; padding:12px 0; flex:1; }
@@ -1240,8 +1240,8 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     .pagination-info { font-size:13px; color:#9ca3af; }
     .pagination-btns { display:flex; gap:4px; }
     .btn-page { padding:5px 10px; border:1px solid #dce6f0; border-radius:6px; background:#fff; font-size:13px; cursor:pointer; color:#374151; min-width:32px; display:flex; align-items:center; justify-content:center; }
-    .btn-page:hover:not(:disabled) { background:#f0f4f9; border-color:#4c1d95; color:#4c1d95; }
-    .btn-page.active { background:#4c1d95; border-color:#4c1d95; color:#fff; }
+    .btn-page:hover:not(:disabled) { background:#f0f4f9; border-color:#1a407e; color:#1a407e; }
+    .btn-page.active { background:#1a407e; border-color:#1a407e; color:#fff; }
     .btn-page:disabled { opacity:.4; cursor:default; }
 
     /* ── Skeleton ──────────────────────────────────────────────── */
@@ -1281,9 +1281,9 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     .form-group { margin-bottom:14px; }
     .form-group label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:6px; }
     .form-control { width:100%; padding:9px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; background:#fff; color:#0c1c35; box-sizing:border-box; }
-    .form-control:focus { border-color:#4c1d95; box-shadow:0 0 0 3px rgba(76,29,149,0.08); }
+    .form-control:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,0.08); }
     .form-textarea { resize:vertical; min-height:72px; }
-    .form-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#4c1d95; margin:0; padding-bottom:6px; border-bottom:1px solid #e8eef8; }
+    .form-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#1a407e; margin:0; padding-bottom:6px; border-bottom:1px solid #e8eef8; }
 
     /* ── Líneas de orden ────────────────────────────────────────── */
     .lines-section { margin-top:8px; }
@@ -1302,7 +1302,7 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     .order-totals-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; font-size:14px; color:#374151; }
     .order-totals-row strong { font-weight:700; color:#0c1c35; }
     .order-totals-row--total { border-top:1px solid #dce6f0; margin-top:6px; padding-top:10px; font-size:15px; font-weight:700; color:#0c1c35; }
-    .order-totals-row--total strong { font-family:'Sora',sans-serif; font-size:18px; color:#4c1d95; }
+    .order-totals-row--total strong { font-family:'Sora',sans-serif; font-size:18px; color:#1a407e; }
 
     /* ── Detalle de orden ───────────────────────────────────────── */
     .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
@@ -1310,13 +1310,13 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     .detail-item strong { font-size:14px; color:#0c1c35; }
     .detail-section { margin-top:16px; }
     .detail-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:10px; }
-    .detail-notes { display:flex; align-items:flex-start; gap:8px; padding:10px 12px; background:#faf9ff; border-radius:8px; border:1px solid #ede9fe; font-size:13px; color:#374151; margin-bottom:12px; }
-    .detail-notes svg { flex-shrink:0; color:#7c3aed; margin-top:1px; }
+    .detail-notes { display:flex; align-items:flex-start; gap:8px; padding:10px 12px; background:#eff6ff; border-radius:8px; border:1px solid #bfdbfe; font-size:13px; color:#374151; margin-bottom:12px; }
+    .detail-notes svg { flex-shrink:0; color:#1d4ed8; margin-top:1px; }
 
     /* ── Botones ───────────────────────────────────────────────── */
     .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; white-space:nowrap; }
-    .btn-primary { background:#4c1d95; color:#fff; }
-    .btn-primary:hover:not(:disabled) { background:#3b1580; }
+    .btn-primary { background:#1a407e; color:#fff; }
+    .btn-primary:hover:not(:disabled) { background:#153569; }
     .btn-primary:disabled { opacity:.6; cursor:default; }
     .btn-secondary { background:#f0f4f9; color:#374151; border:1px solid #dce6f0; }
     .btn-secondary:hover { background:#e8eef8; }

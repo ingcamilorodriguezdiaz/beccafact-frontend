@@ -739,9 +739,9 @@ const LEVEL_LABELS: Record<number, string> = {
       padding:22px;
       border-radius:28px;
       background:
-        radial-gradient(circle at top left, rgba(99,102,241,.18), transparent 26%),
-        radial-gradient(circle at bottom right, rgba(59,130,246,.16), transparent 28%),
-        linear-gradient(135deg, #0d1f44 0%, #1e2d6a 52%, #1a3a7c 100%);
+        radial-gradient(circle at top left, rgba(127,183,255,.18), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(45,212,191,.16), transparent 28%),
+        linear-gradient(135deg, #0d2344 0%, #16386a 52%, #0f7a72 100%);
       box-shadow:0 24px 48px rgba(12,28,53,.16);
       color:#fff;
     }
@@ -753,7 +753,7 @@ const LEVEL_LABELS: Record<number, string> = {
       font-weight:800;
       text-transform:uppercase;
       letter-spacing:.16em;
-      color:#a5b4fc;
+      color:#a5c8ff;
     }
     .page-title { font-family:'Sora',sans-serif; font-size:32px; line-height:1.02; font-weight:800; color:#fff; margin:0 0 10px; letter-spacing:-.05em; }
     .page-subtitle { font-size:14px; color:rgba(236,244,255,.8); margin:0; line-height:1.6; }
@@ -771,7 +771,7 @@ const LEVEL_LABELS: Record<number, string> = {
       font-weight:800;
       text-transform:uppercase;
       letter-spacing:.14em;
-      color:#c7d2fe;
+      color:#a5c8ff;
       margin-bottom:8px;
     }
     .hero-highlight strong {
@@ -866,7 +866,7 @@ const LEVEL_LABELS: Record<number, string> = {
       font-weight:800;
       letter-spacing:.14em;
       text-transform:uppercase;
-      color:#6366f1;
+      color:#1a407e;
     }
     .filters-head h3 {
       margin:0;
@@ -889,7 +889,7 @@ const LEVEL_LABELS: Record<number, string> = {
     .search-wrap { flex:1; position:relative; max-width:420px; min-width:180px; }
     .search-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; }
     .search-input { width:100%; min-height:44px; padding:8px 12px 8px 36px; border:1px solid #dce6f0; border-radius:12px; font-size:14px; outline:none; background:#fff; box-shadow:0 8px 20px rgba(12,28,53,.03); }
-    .search-input:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.08); }
+    .search-input:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,.08); }
     .filter-select { min-height:44px; padding:8px 12px; border:1px solid #dce6f0; border-radius:12px; font-size:14px; outline:none; background:#fff; color:#374151; box-shadow:0 8px 20px rgba(12,28,53,.03); }
 
     /* ── Tabla ────────────────────────────────────────────────────────────── */
@@ -947,7 +947,7 @@ const LEVEL_LABELS: Record<number, string> = {
     .pagination-info { font-size:13px; color:#9ca3af; }
     .pagination-btns { display:flex; gap:4px; }
     .btn-page { padding:5px 10px; border:1px solid #dce6f0; border-radius:6px; background:#fff; font-size:13px; cursor:pointer; color:#374151; min-width:32px; display:flex; align-items:center; justify-content:center; }
-    .btn-page:hover:not(:disabled) { background:#f0f4f9; border-color:#6366f1; color:#6366f1; }
+    .btn-page:hover:not(:disabled) { background:#f0f4f9; border-color:#1a407e; color:#1a407e; }
     .btn-page.active { background:#1a407e; border-color:#1a407e; color:#fff; }
     .btn-page:disabled { opacity:.4; cursor:default; }
 
@@ -979,9 +979,9 @@ const LEVEL_LABELS: Record<number, string> = {
     .form-group { margin-bottom:14px; }
     .form-group label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:6px; }
     .form-control { width:100%; padding:9px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; background:#fff; color:#0c1c35; box-sizing:border-box; }
-    .form-control:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.08); }
+    .form-control:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,.08); }
     .form-control-sm { padding:6px 10px; font-size:13px; }
-    .form-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#6366f1; margin:16px 0 10px; padding-bottom:6px; border-bottom:1px solid #e8eef8; }
+    .form-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#1a407e; margin:16px 0 10px; padding-bottom:6px; border-bottom:1px solid #e8eef8; }
 
     /* ── Tabla de líneas del asiento ──────────────────────────────────────── */
     .lines-table-wrap { overflow-x:auto; margin-bottom:10px; border:1px solid #dce6f0; border-radius:10px; }
