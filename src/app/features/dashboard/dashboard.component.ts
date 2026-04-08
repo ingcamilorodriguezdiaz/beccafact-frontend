@@ -158,6 +158,43 @@ import { environment } from '../../../environments/environment';
               </article>
             }
 
+            @if (hasQuotes()) {
+              <article class="db__module db__module--cyan">
+                <div class="db__module-top">
+                  <div class="db__module-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20">
+                      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 3 14 8 19 8"/>
+                      <path d="M9 13h6"/>
+                      <path d="M9 17h4"/>
+                    </svg>
+                  </div>
+                  <span class="db__module-badge">Cotizaciones</span>
+                </div>
+
+                <div class="db__module-value">{{ quotesData().totalQuotes }}</div>
+                <p class="db__module-copy">Embudo comercial activo con seguimiento y aprobaciones en curso.</p>
+
+                <div class="db__module-pairs">
+                  <div>
+                    <small>Pendientes</small>
+                    <strong [class.db__module-pairs--warn]="quotesData().pendingApprovals > 0">{{ quotesData().pendingApprovals }}</strong>
+                  </div>
+                  <div>
+                    <small>Conversión</small>
+                    <strong>{{ quotesData().conversionRate }}%</strong>
+                  </div>
+                </div>
+
+                <div class="db__module-actions">
+                  @if (canCreateQuote()) {
+                    <a routerLink="/quotes" class="db__module-btn">Nueva cotización</a>
+                  }
+                  <a routerLink="/quotes" class="db__module-link">Ver pipeline</a>
+                </div>
+              </article>
+            }
+
             @if (hasPos()) {
               <article class="db__module db__module--teal">
                 <div class="db__module-top">
@@ -262,6 +299,41 @@ import { environment } from '../../../environments/environment';
               </article>
             }
 
+            @if (hasPurchasing()) {
+              <article class="db__module db__module--emerald">
+                <div class="db__module-top">
+                  <div class="db__module-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20">
+                      <path d="M6 7h15l-1.5 8h-12z"/>
+                      <path d="M6 7 5 4H2"/>
+                      <circle cx="9" cy="20" r="1.5"/>
+                      <circle cx="18" cy="20" r="1.5"/>
+                    </svg>
+                  </div>
+                  <span class="db__module-badge">Compras</span>
+                </div>
+
+                <div class="db__module-value">{{ purchasingData().ordersTotal | currency:'COP':'$':'1.0-0' }}</div>
+                <p class="db__module-copy">Abastecimiento del periodo con órdenes, recepciones y control operativo.</p>
+
+                <div class="db__module-pairs">
+                  <div>
+                    <small>Órdenes</small>
+                    <strong>{{ purchasingData().ordersCount }}</strong>
+                  </div>
+                  <div>
+                    <small>Recibidas</small>
+                    <strong>{{ purchasingData().receivedCount }}</strong>
+                  </div>
+                </div>
+
+                <div class="db__module-actions">
+                  <a routerLink="/purchasing" class="db__module-btn">Gestionar compras</a>
+                  <a routerLink="/purchasing" class="db__module-link">Ver trazabilidad</a>
+                </div>
+              </article>
+            }
+
             @if (hasInventory()) {
               <article class="db__module db__module--violet">
                 <div class="db__module-top">
@@ -292,6 +364,43 @@ import { environment } from '../../../environments/environment';
                 <div class="db__module-actions">
                   <a routerLink="/inventory" class="db__module-btn">Administrar catálogo</a>
                   <a routerLink="/inventory" class="db__module-link">Ver inventario</a>
+                </div>
+              </article>
+            }
+
+            @if (hasAccounting()) {
+              <article class="db__module db__module--slate">
+                <div class="db__module-top">
+                  <div class="db__module-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20">
+                      <path d="M4 5h16"/>
+                      <path d="M4 12h16"/>
+                      <path d="M4 19h16"/>
+                      <path d="M9 5v14"/>
+                    </svg>
+                  </div>
+                  <span class="db__module-badge">Contabilidad</span>
+                </div>
+
+                <div class="db__module-value">{{ accountingData().entriesCount }}</div>
+                <p class="db__module-copy">Comprobantes y estructura contable listos para cierre y control.</p>
+
+                <div class="db__module-pairs">
+                  <div>
+                    <small>Borradores</small>
+                    <strong [class.db__module-pairs--warn]="accountingData().draftEntries > 0">{{ accountingData().draftEntries }}</strong>
+                  </div>
+                  <div>
+                    <small>PUC</small>
+                    <strong>{{ accountingData().accountsCount }}</strong>
+                  </div>
+                </div>
+
+                <div class="db__module-actions">
+                  @if (canCreateAccountingEntry()) {
+                    <a routerLink="/accounting" class="db__module-btn">Nuevo comprobante</a>
+                  }
+                  <a routerLink="/accounting" class="db__module-link">Ver reportes</a>
                 </div>
               </article>
             }
@@ -817,8 +926,16 @@ import { environment } from '../../../environments/environment';
       background: radial-gradient(circle, #60a5fa 0%, transparent 65%);
     }
 
+    .db__module--cyan::before {
+      background: radial-gradient(circle, #22d3ee 0%, transparent 65%);
+    }
+
     .db__module--teal::before {
       background: radial-gradient(circle, #2dd4bf 0%, transparent 65%);
+    }
+
+    .db__module--emerald::before {
+      background: radial-gradient(circle, #34d399 0%, transparent 65%);
     }
 
     .db__module--purple::before {
@@ -831,6 +948,10 @@ import { environment } from '../../../environments/environment';
 
     .db__module--violet::before {
       background: radial-gradient(circle, #8b5cf6 0%, transparent 65%);
+    }
+
+    .db__module--slate::before {
+      background: radial-gradient(circle, #64748b 0%, transparent 65%);
     }
 
     .db__module-top {
@@ -856,9 +977,19 @@ import { environment } from '../../../environments/environment';
       color: #1d4ed8;
     }
 
+    .db__module--cyan .db__module-icon {
+      background: #cffafe;
+      color: #0f766e;
+    }
+
     .db__module--teal .db__module-icon {
       background: #ccfbf1;
       color: #0f766e;
+    }
+
+    .db__module--emerald .db__module-icon {
+      background: #d1fae5;
+      color: #047857;
     }
 
     .db__module--purple .db__module-icon {
@@ -874,6 +1005,11 @@ import { environment } from '../../../environments/environment';
     .db__module--violet .db__module-icon {
       background: #ede9fe;
       color: #5b21b6;
+    }
+
+    .db__module--slate .db__module-icon {
+      background: #e2e8f0;
+      color: #334155;
     }
 
     .db__module-badge {
@@ -1226,14 +1362,22 @@ export class DashboardComponent implements OnInit {
   carteraData = signal({ totalCartera: 0, totalOverdue: 0 });
   posData = signal({ totalSales: 0, totalTransactions: 0 });
   payrollData = signal({ totalNet: 0, employeeCount: 0 });
+  quotesData = signal({ totalQuotes: 0, pendingApprovals: 0, conversionRate: 0, followUpCount: 0 });
+  purchasingData = signal({ ordersCount: 0, ordersTotal: 0, receivedCount: 0, partialCount: 0 });
+  accountingData = signal({ accountsCount: 0, entriesCount: 0, draftEntries: 0, postedEntries: 0 });
 
-  hasInvoices = computed(() => this.auth.hasFeature('has_invoices')());
-  hasPos = computed(() => this.auth.hasFeature('has_pos')() && this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'OPERATOR'])());
+  hasInvoices = computed(() => this.auth.hasFeature('has_invoices')() && this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO', 'CONTADOR'])());
+  hasQuotes = computed(() => this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'])());
+  hasPos = computed(() => this.auth.hasFeature('has_pos')() && this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO'])());
   hasPayroll = computed(() => this.auth.hasFeature('has_payroll')() && this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'CONTADOR'])());
-  hasCartera = computed(() => this.auth.hasFeature('has_cartera')() && this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'CONTADOR'])());
-  hasInventory = computed(() => this.auth.hasFeature('has_inventory')());
+  hasCartera = computed(() => this.auth.hasFeature('has_cartera')() && this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'])());
+  hasPurchasing = computed(() => this.auth.hasFeature('has_purchasing')() && this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'OPERATOR', 'CONTADOR'])());
+  hasAccounting = computed(() => this.auth.hasFeature('has_accounting')() && this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'CONTADOR'])());
+  hasInventory = computed(() => this.auth.hasFeature('has_inventory')() && this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'OPERATOR'])());
 
-  canCreateInvoice = computed(() => this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'OPERATOR'])());
+  canCreateInvoice = computed(() => this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO', 'CONTADOR'])());
+  canCreateQuote = computed(() => this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'OPERATOR'])());
+  canCreateAccountingEntry = computed(() => this.auth.hasAnyRole(['ADMIN', 'MANAGER', 'CONTADOR'])());
   canManagePayroll = computed(() => this.auth.hasAnyRole(['ADMIN', 'MANAGER'])());
   isAdminOrManager = computed(() => this.auth.hasAnyRole(['ADMIN', 'MANAGER'])());
   canSeeLockedModules = computed(() => this.auth.hasAnyRole(['ADMIN'])());
@@ -1321,13 +1465,26 @@ export class DashboardComponent implements OnInit {
       actions.push({ label: 'Emitir factura', caption: 'Comienza una venta', route: '/invoices' });
     }
 
+    if (this.hasQuotes()) {
+      actions.push({
+        label: this.canCreateQuote() ? 'Nueva cotización' : 'Ver cotizaciones',
+        caption: 'Seguimiento comercial activo',
+        route: '/quotes',
+        ghost: true,
+      });
+    }
+
     if (this.hasPos()) {
       actions.push({ label: 'Abrir POS', caption: 'Venta rápida en caja', route: '/pos', ghost: true });
     } else if (this.hasInventory()) {
       actions.push({ label: 'Revisar inventario', caption: 'Catálogo y stock', route: '/inventory', ghost: true });
     }
 
-    return actions;
+    if (this.hasPurchasing()) {
+      actions.push({ label: 'Abrir compras', caption: 'Solicitudes y órdenes', route: '/purchasing', ghost: true });
+    }
+
+    return actions.slice(0, 4);
   });
 
   insights = computed(() => {
@@ -1361,6 +1518,36 @@ export class DashboardComponent implements OnInit {
       });
     }
 
+    if (this.hasQuotes()) {
+      items.push({
+        title: this.quotesData().pendingApprovals > 0 ? 'Aprobaciones comerciales pendientes' : 'Embudo comercial estable',
+        description: this.quotesData().pendingApprovals > 0
+          ? `${this.quotesData().pendingApprovals} cotizaciones requieren revisión o aprobación.`
+          : `${this.quotesData().totalQuotes} cotizaciones activas con conversión de ${this.quotesData().conversionRate}%.`,
+        tone: this.quotesData().pendingApprovals > 0 ? 'warn' : 'good',
+      });
+    }
+
+    if (this.hasPurchasing()) {
+      items.push({
+        title: this.purchasingData().partialCount > 0 ? 'Recepciones pendientes' : 'Compras en curso',
+        description: this.purchasingData().partialCount > 0
+          ? `${this.purchasingData().partialCount} órdenes siguen con recepción parcial.`
+          : `${this.purchasingData().ordersCount} órdenes por ${this.money(this.purchasingData().ordersTotal)} en el periodo.`,
+        tone: this.purchasingData().partialCount > 0 ? 'warn' : 'info',
+      });
+    }
+
+    if (this.hasAccounting()) {
+      items.push({
+        title: this.accountingData().draftEntries > 0 ? 'Comprobantes por contabilizar' : 'Contabilidad al día',
+        description: this.accountingData().draftEntries > 0
+          ? `${this.accountingData().draftEntries} comprobantes siguen en borrador y ${this.accountingData().postedEntries} ya están contabilizados.`
+          : `${this.accountingData().postedEntries} comprobantes contabilizados con ${this.accountingData().accountsCount} cuentas activas en el PUC.`,
+        tone: this.accountingData().draftEntries > 0 ? 'warn' : 'good',
+      });
+    }
+
     if (this.hasPayroll()) {
       items.push({
         title: 'Pulso de nómina',
@@ -1383,6 +1570,33 @@ export class DashboardComponent implements OnInit {
         route: '/customers',
       },
     ];
+
+    if (this.hasQuotes()) {
+      items.push({
+        label: 'Seguimiento comercial',
+        copy: 'Consulta aprobaciones, pipeline y actividad de cotizaciones.',
+        short: 'QTS',
+        route: '/quotes',
+      });
+    }
+
+    if (this.hasPurchasing()) {
+      items.push({
+        label: 'Controlar compras',
+        copy: 'Monitorea solicitudes, órdenes y recepciones del abastecimiento.',
+        short: 'BUY',
+        route: '/purchasing',
+      });
+    }
+
+    if (this.hasAccounting()) {
+      items.push({
+        label: 'Revisar contabilidad',
+        copy: 'Consulta comprobantes, PUC y reportes contables clave.',
+        short: 'ACC',
+        route: '/accounting',
+      });
+    }
 
     if (this.hasFeature('has_reports')) {
       items.push({
@@ -1430,6 +1644,20 @@ export class DashboardComponent implements OnInit {
       items.push({
         name: 'Nómina',
         copy: 'Centraliza liquidación, cálculo y seguimiento del equipo.',
+      });
+    }
+
+    if (!this.hasPurchasing()) {
+      items.push({
+        name: 'Compras',
+        copy: 'Activa abastecimiento con solicitudes, órdenes, recepciones y control de proveedores.',
+      });
+    }
+
+    if (!this.hasAccounting()) {
+      items.push({
+        name: 'Contabilidad',
+        copy: 'Desbloquea PUC, comprobantes, períodos y reportes financieros del ERP.',
       });
     }
 
@@ -1484,7 +1712,10 @@ export class DashboardComponent implements OnInit {
   ngOnInit() {
     this.loadUsage();
     this.loadReports();
+    if (this.hasQuotes()) this.loadQuotes();
     if (this.hasCartera()) this.loadCartera();
+    if (this.hasPurchasing()) this.loadPurchasing();
+    if (this.hasAccounting()) this.loadAccounting();
     if (this.hasPos()) this.loadPos();
     if (this.hasPayroll()) this.loadPayroll();
   }
@@ -1520,6 +1751,83 @@ export class DashboardComponent implements OnInit {
       next: (res) => {
         const s = (res?.data ?? res)?.summary ?? (res?.data ?? res)?.resumen ?? {};
         this.carteraData.set({ totalCartera: s.totalCartera ?? 0, totalOverdue: s.totalOverdue ?? s.totalVencido ?? 0 });
+      },
+      error: () => {},
+    });
+  }
+
+  private loadQuotes() {
+    this.http.get<any>(`${environment.apiUrl}/quotes/analytics/summary`).subscribe({
+      next: (res) => {
+        const d = res?.data ?? res;
+        this.quotesData.set({
+          totalQuotes: d?.totalQuotes ?? 0,
+          pendingApprovals: d?.pendingApprovals ?? 0,
+          conversionRate: d?.conversionRate ?? 0,
+          followUpCount: d?.followUpCount ?? 0,
+        });
+      },
+      error: () => {},
+    });
+  }
+
+  private loadPurchasing() {
+    this.http.get<any>(`${environment.apiUrl}/purchasing/reports/analytics`).subscribe({
+      next: (res) => {
+        const d = res?.data ?? res;
+        const kpi = d?.kpis ?? d?.summary ?? d ?? {};
+        this.purchasingData.set({
+          ordersCount: kpi?.ordersCount ?? 0,
+          ordersTotal: kpi?.ordersTotal ?? 0,
+          receivedCount: kpi?.receivedCount ?? 0,
+          partialCount: kpi?.partialCount ?? 0,
+        });
+      },
+      error: () => {},
+    });
+  }
+
+  private loadAccounting() {
+    this.http.get<any>(`${environment.apiUrl}/accounting/accounts`, { params: { page: 1, limit: 1 } }).subscribe({
+      next: (res) => {
+        const d = res?.data ?? res;
+        this.accountingData.update((state) => ({
+          ...state,
+          accountsCount: d?.total ?? 0,
+        }));
+      },
+      error: () => {},
+    });
+
+    this.http.get<any>(`${environment.apiUrl}/accounting/journal-entries`, { params: { page: 1, limit: 1 } }).subscribe({
+      next: (res) => {
+        const d = res?.data ?? res;
+        this.accountingData.update((state) => ({
+          ...state,
+          entriesCount: d?.total ?? 0,
+        }));
+      },
+      error: () => {},
+    });
+
+    this.http.get<any>(`${environment.apiUrl}/accounting/journal-entries`, { params: { page: 1, limit: 1, status: 'DRAFT' } }).subscribe({
+      next: (res) => {
+        const d = res?.data ?? res;
+        this.accountingData.update((state) => ({
+          ...state,
+          draftEntries: d?.total ?? 0,
+        }));
+      },
+      error: () => {},
+    });
+
+    this.http.get<any>(`${environment.apiUrl}/accounting/journal-entries`, { params: { page: 1, limit: 1, status: 'POSTED' } }).subscribe({
+      next: (res) => {
+        const d = res?.data ?? res;
+        this.accountingData.update((state) => ({
+          ...state,
+          postedEntries: d?.total ?? 0,
+        }));
       },
       error: () => {},
     });

@@ -24,6 +24,36 @@ interface PurchasingCustomer {
 }
 
 type OrderStatus = 'DRAFT' | 'SENT' | 'RECEIVED' | 'PARTIAL' | 'CANCELLED';
+type RequestStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'ORDERED' | 'CANCELLED';
+type ReceiptStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
+type PurchaseInvoiceStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
+type AccountPayableStatus = 'OPEN' | 'PARTIAL' | 'PAID' | 'CANCELLED';
+type AccountPayableScheduleStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'CANCELLED';
+type PayablePaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'MIXED';
+type PurchaseAdvanceStatus = 'OPEN' | 'PARTIAL' | 'APPLIED' | 'CANCELLED';
+type PurchaseAdjustmentStatus = 'PENDING_APPROVAL' | 'APPLIED' | 'REJECTED';
+type PurchaseAdjustmentType = 'RETURN' | 'CREDIT_NOTE' | 'DEBIT_NOTE' | 'RECEIPT_REVERSAL' | 'INVOICE_REVERSAL' | 'PAYMENT_REVERSAL';
+type SupplierQuoteStatus = 'RECEIVED' | 'AWARDED' | 'REJECTED' | 'EXPIRED';
+type FrameworkAgreementStatus = 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+type PurchaseBudgetStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED';
+
+interface PurchaseBudget {
+  id: string;
+  number: string;
+  title: string;
+  status: PurchaseBudgetStatus;
+  amount: number;
+  committedAmount: number;
+  executedAmount: number;
+  availableAmount: number;
+  startDate: string;
+  endDate?: string;
+  area?: string;
+  costCenter?: string;
+  projectCode?: string;
+  notes?: string;
+  createdAt: string;
+}
 
 interface OrderLine {
   description: string;
@@ -39,12 +69,275 @@ interface PurchaseOrder {
   issueDate: string;
   dueDate?: string;
   customer: { id: string; name: string; documentNumber: string; email?: string; phone?: string; address?: string };
+  budgetId?: string;
+  budget?: { id: string; number: string; title: string } | null;
+  requestingArea?: string;
+  costCenter?: string;
+  projectCode?: string;
   status: OrderStatus;
   notes?: string;
   lines?: OrderLine[];
   subtotal: number;
   taxAmount: number;
   total: number;
+  createdAt: string;
+}
+
+interface PurchaseRequestLine {
+  id?: string;
+  description: string;
+  quantity: number;
+  estimatedUnitPrice?: number | null;
+  position: number;
+}
+
+interface PurchaseRequest {
+  id: string;
+  number: string;
+  status: RequestStatus;
+  requestDate: string;
+  neededByDate?: string;
+  notes?: string;
+  budgetId?: string;
+  budget?: { id: string; number: string; title: string } | null;
+  requestingArea?: string;
+  costCenter?: string;
+  projectCode?: string;
+  itemsCount?: number;
+  customer?: { id: string; name: string; documentNumber: string } | null;
+  approval?: { id: string; status: 'PENDING' | 'APPROVED' | 'REJECTED'; reason?: string; rejectedReason?: string | null } | null;
+  linkedOrders?: Array<{ id: string; orderNumber: string; status: OrderStatus; total: number }>;
+  items?: PurchaseRequestLine[];
+  createdAt: string;
+}
+
+interface PurchaseReceiptLine {
+  orderItemId?: string;
+  description: string;
+  orderedQuantity?: number | null;
+  receivedQuantity: number | null;
+  position: number;
+}
+
+interface PurchaseReceipt {
+  id: string;
+  number: string;
+  status: ReceiptStatus;
+  receiptDate: string;
+  orderId: string;
+  orderNumber: string;
+  orderStatus?: OrderStatus;
+  customer?: { id: string; name: string; documentNumber?: string } | null;
+  itemsCount?: number;
+  items?: PurchaseReceiptLine[];
+  createdAt: string;
+}
+
+interface PurchaseInvoiceLine {
+  orderItemId?: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  taxRate: number;
+  discount: number;
+  total?: number;
+  position: number;
+}
+
+interface PurchaseInvoice {
+  id: string;
+  number: string;
+  supplierInvoiceNumber: string;
+  status: PurchaseInvoiceStatus;
+  issueDate: string;
+  dueDate?: string;
+  notes?: string;
+  subtotal: number;
+  taxAmount: number;
+  total: number;
+  itemsCount?: number;
+  purchaseOrderId?: string;
+  orderNumber?: string;
+  receiptId?: string;
+  customerId: string;
+  customer?: { id: string; name: string; documentNumber?: string; email?: string } | null;
+  accountPayable?: { id: string; number: string; status: AccountPayableStatus; balance: number } | null;
+  items?: PurchaseInvoiceLine[];
+  createdAt: string;
+}
+
+interface AccountPayablePayment {
+  id: string;
+  number: string;
+  paymentDate: string;
+  amount: number;
+  paymentMethod: PayablePaymentMethod;
+  reference?: string;
+  notes?: string;
+}
+
+interface AccountPayableSchedule {
+  id: string;
+  number: string;
+  dueDate: string;
+  amount: number;
+  paidAmount: number;
+  balance: number;
+  status: AccountPayableScheduleStatus;
+  notes?: string;
+}
+
+interface AccountPayable {
+  id: string;
+  number: string;
+  concept: string;
+  status: AccountPayableStatus;
+  issueDate: string;
+  dueDate?: string;
+  originalAmount: number;
+  paidAmount: number;
+  balance: number;
+  isOverdue?: boolean;
+  customerId: string;
+  customer?: { id: string; name: string; documentNumber?: string; email?: string } | null;
+  purchaseInvoiceId?: string;
+  invoiceNumber?: string;
+  supplierInvoiceNumber?: string;
+  paymentsCount?: number;
+  payments?: AccountPayablePayment[];
+  schedules?: AccountPayableSchedule[];
+  advances?: Array<{ id: string; purchaseAdvanceId: string; advanceNumber: string; amount: number; applicationDate: string; paymentMethod?: PayablePaymentMethod }>;
+}
+
+interface PurchaseAdvance {
+  id: string;
+  number: string;
+  status: PurchaseAdvanceStatus;
+  issueDate: string;
+  amount: number;
+  appliedAmount: number;
+  balance: number;
+  paymentMethod: PayablePaymentMethod;
+  reference?: string;
+  notes?: string;
+  customerId: string;
+  customer?: { id: string; name: string; documentNumber?: string; email?: string } | null;
+  applicationsCount?: number;
+  applications?: Array<{ id: string; payableNumber: string; amount: number; applicationDate: string; notes?: string }>;
+}
+
+interface PurchasingAnalyticsSummary {
+  ordersCount: number;
+  ordersTotal: number;
+  averageOrder: number;
+  receivedCount: number;
+  partialCount: number;
+  cancelledCount: number;
+}
+
+interface PurchasingAnalyticsReport {
+  summary: PurchasingAnalyticsSummary;
+  supplierPerformance: Array<{ id: string; name: string; ordersCount: number; totalSpend: number; avgLeadTimeDays: number }>;
+  topProducts: Array<{ productId?: string; productName: string; quantity: number; totalSpend: number }>;
+  spendByArea: Array<{ area: string; costCenter: string; ordersCount: number; totalSpend: number }>;
+  budgetVsActual: Array<{ id: string; number: string; title: string; budgetAmount: number; executedAmount: number; availableAmount: number; executionPct: number }>;
+}
+
+interface PurchasingTraceabilityRow {
+  requestId: string;
+  requestNumber: string;
+  requestStatus: string;
+  requestDate: string;
+  customerName?: string;
+  orderId?: string;
+  orderNumber?: string;
+  orderStatus?: string;
+  issueDate?: string;
+  orderTotal: number;
+  receiptsCount: number;
+  postedReceiptsCount: number;
+  invoicesCount: number;
+  payablesCount: number;
+  pendingBalance: number;
+  completionStage: string;
+}
+
+interface PurchaseAdjustment {
+  id: string;
+  type: PurchaseAdjustmentType;
+  status: PurchaseAdjustmentStatus;
+  customerId: string;
+  customer?: { id: string; name: string } | null;
+  receiptId?: string;
+  purchaseInvoiceId?: string;
+  accountPayableId?: string;
+  paymentId?: string;
+  receiptNumber?: string;
+  invoiceNumber?: string;
+  payableNumber?: string;
+  paymentNumber?: string;
+  amount: number;
+  reason: string;
+  notes?: string;
+  rejectedReason?: string;
+  createdAt: string;
+}
+
+interface SupplierQuoteLine {
+  requestItemId?: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  taxRate: number;
+  total: number;
+  position: number;
+}
+
+interface SupplierQuote {
+  id: string;
+  number: string;
+  status: SupplierQuoteStatus;
+  purchaseRequestId?: string;
+  requestNumber?: string;
+  validUntil?: string;
+  leadTimeDays?: number;
+  paymentTermDays?: number;
+  notes?: string;
+  subtotal: number;
+  taxAmount: number;
+  total: number;
+  score?: number | null;
+  itemsCount?: number;
+  customerId: string;
+  customer?: { id: string; name: string; documentNumber?: string } | null;
+  items?: SupplierQuoteLine[];
+  createdAt: string;
+}
+
+interface FrameworkAgreementLine {
+  productId?: string;
+  description: string;
+  unitPrice: number;
+  taxRate: number;
+  minQuantity?: number | null;
+  notes?: string;
+  position: number;
+}
+
+interface FrameworkAgreement {
+  id: string;
+  number: string;
+  status: FrameworkAgreementStatus;
+  title: string;
+  startDate: string;
+  endDate?: string;
+  paymentTermDays?: number;
+  leadTimeDays?: number;
+  notes?: string;
+  itemsCount?: number;
+  customerId: string;
+  customer?: { id: string; name: string } | null;
+  items?: FrameworkAgreementLine[];
   createdAt: string;
 }
 
@@ -62,10 +355,155 @@ interface CustomerForm {
 
 interface OrderForm {
   customerId: string;
+  budgetId: string;
+  requestingArea: string;
+  costCenter: string;
+  projectCode: string;
   issueDate: string;
   dueDate: string;
   notes: string;
   lines: OrderLineForm[];
+}
+
+interface RequestForm {
+  customerId: string;
+  budgetId: string;
+  requestingArea: string;
+  costCenter: string;
+  projectCode: string;
+  requestDate: string;
+  neededByDate: string;
+  notes: string;
+  items: RequestLineForm[];
+}
+
+interface RequestLineForm {
+  description: string;
+  quantity: number | null;
+  estimatedUnitPrice: number | null;
+}
+
+interface ReceiptForm {
+  orderId: string;
+  receiptDate: string;
+  notes: string;
+  items: ReceiptLineForm[];
+}
+
+interface ReceiptLineForm {
+  orderItemId?: string;
+  description: string;
+  orderedQuantity?: number | null;
+  receivedQuantity: number | null;
+}
+
+interface PurchaseInvoiceForm {
+  customerId: string;
+  purchaseOrderId: string;
+  receiptId: string;
+  supplierInvoiceNumber: string;
+  issueDate: string;
+  dueDate: string;
+  notes: string;
+  items: PurchaseInvoiceLineForm[];
+}
+
+interface PurchaseInvoiceLineForm {
+  orderItemId?: string;
+  description: string;
+  quantity: number | null;
+  unitPrice: number | null;
+  taxRate: number;
+  discount: number;
+}
+
+interface PayablePaymentForm {
+  paymentDate: string;
+  amount: number | null;
+  paymentMethod: PayablePaymentMethod;
+  reference: string;
+  notes: string;
+}
+
+interface PayableScheduleForm {
+  schedules: Array<{ dueDate: string; amount: number | null; notes: string }>;
+}
+
+interface PurchaseAdvanceForm {
+  customerId: string;
+  issueDate: string;
+  amount: number | null;
+  paymentMethod: PayablePaymentMethod;
+  reference: string;
+  notes: string;
+}
+
+interface PurchaseAdvanceApplyForm {
+  accountPayableId: string;
+  amount: number | null;
+  notes: string;
+}
+
+interface PurchaseAdjustmentForm {
+  customerId: string;
+  type: PurchaseAdjustmentType;
+  receiptId: string;
+  purchaseInvoiceId: string;
+  accountPayableId: string;
+  paymentId: string;
+  amount: number | null;
+  reason: string;
+  notes: string;
+}
+
+interface SupplierQuoteForm {
+  customerId: string;
+  purchaseRequestId: string;
+  validUntil: string;
+  leadTimeDays: number | null;
+  paymentTermDays: number | null;
+  notes: string;
+  items: SupplierQuoteLineForm[];
+}
+
+interface SupplierQuoteLineForm {
+  requestItemId?: string;
+  description: string;
+  quantity: number | null;
+  unitPrice: number | null;
+  taxRate: number;
+}
+
+interface FrameworkAgreementForm {
+  customerId: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  paymentTermDays: number | null;
+  leadTimeDays: number | null;
+  notes: string;
+  items: FrameworkAgreementLineForm[];
+}
+
+interface FrameworkAgreementLineForm {
+  productId?: string;
+  description: string;
+  unitPrice: number | null;
+  taxRate: number;
+  minQuantity: number | null;
+  notes: string;
+}
+
+interface PurchaseBudgetForm {
+  title: string;
+  status: PurchaseBudgetStatus;
+  amount: number | null;
+  startDate: string;
+  endDate: string;
+  area: string;
+  costCenter: string;
+  projectCode: string;
+  notes: string;
 }
 
 interface OrderLineForm {
@@ -93,6 +531,68 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   CANCELLED: 'Cancelada',
 };
 
+const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
+  DRAFT: 'Borrador',
+  PENDING_APPROVAL: 'Pendiente aprobación',
+  APPROVED: 'Aprobada',
+  REJECTED: 'Rechazada',
+  ORDERED: 'Convertida a orden',
+  CANCELLED: 'Cancelada',
+};
+
+const RECEIPT_STATUS_LABELS: Record<ReceiptStatus, string> = {
+  DRAFT: 'Borrador',
+  POSTED: 'Registrada',
+  CANCELLED: 'Cancelada',
+};
+
+const PURCHASE_INVOICE_STATUS_LABELS: Record<PurchaseInvoiceStatus, string> = {
+  DRAFT: 'Borrador',
+  POSTED: 'Contabilizada',
+  CANCELLED: 'Cancelada',
+};
+
+const ACCOUNT_PAYABLE_STATUS_LABELS: Record<AccountPayableStatus, string> = {
+  OPEN: 'Abierta',
+  PARTIAL: 'Parcial',
+  PAID: 'Pagada',
+  CANCELLED: 'Cancelada',
+};
+
+const PURCHASE_ADJUSTMENT_STATUS_LABELS: Record<PurchaseAdjustmentStatus, string> = {
+  PENDING_APPROVAL: 'Pendiente aprobación',
+  APPLIED: 'Aplicado',
+  REJECTED: 'Rechazado',
+};
+
+const PURCHASE_ADJUSTMENT_TYPE_LABELS: Record<PurchaseAdjustmentType, string> = {
+  RETURN: 'Devolución',
+  CREDIT_NOTE: 'Nota crédito',
+  DEBIT_NOTE: 'Nota débito',
+  RECEIPT_REVERSAL: 'Reversión recepción',
+  INVOICE_REVERSAL: 'Reversión factura',
+  PAYMENT_REVERSAL: 'Reversión pago',
+};
+
+const SUPPLIER_QUOTE_STATUS_LABELS: Record<SupplierQuoteStatus, string> = {
+  RECEIVED: 'Recibida',
+  AWARDED: 'Adjudicada',
+  REJECTED: 'Rechazada',
+  EXPIRED: 'Expirada',
+};
+
+const FRAMEWORK_AGREEMENT_STATUS_LABELS: Record<FrameworkAgreementStatus, string> = {
+  ACTIVE: 'Activo',
+  EXPIRED: 'Expirado',
+  SUSPENDED: 'Suspendido',
+};
+
+const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
+  DRAFT: 'Borrador',
+  ACTIVE: 'Activo',
+  CLOSED: 'Cerrado',
+};
+
 @Component({
   selector: 'app-purchasing',
   standalone: true,
@@ -113,18 +613,58 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
               <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
               Nuevo Cliente
             </button>
-          } @else {
+          } @else if (activeTab() === 'requests') {
+            <button class="btn btn-primary" (click)="openRequestModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+              Nueva Solicitud
+            </button>
+          } @else if (activeTab() === 'orders') {
             <button class="btn btn-primary" (click)="openOrderModal()">
               <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
               Nueva Orden
+            </button>
+          } @else if (activeTab() === 'receipts') {
+            <button class="btn btn-primary" (click)="openReceiptModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+              Nueva Recepción
+            </button>
+          } @else if (activeTab() === 'purchaseInvoices') {
+            <button class="btn btn-primary" (click)="openPurchaseInvoiceModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+              Nueva Factura
+            </button>
+          } @else if (activeTab() === 'purchaseAdvances') {
+            <button class="btn btn-primary" (click)="openPurchaseAdvanceModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v2h2a1 1 0 110 2h-2v2a1 1 0 11-2 0V7H7a1 1 0 110-2h2V3a1 1 0 011-1zm-5 9a2 2 0 00-2 2v2a3 3 0 003 3h8a3 3 0 003-3v-2a2 2 0 00-2-2H5z" clip-rule="evenodd"/></svg>
+              Nuevo Anticipo
+            </button>
+          } @else if (activeTab() === 'budgets') {
+            <button class="btn btn-primary" (click)="openPurchaseBudgetModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+              Nuevo Presupuesto
+            </button>
+          } @else if (activeTab() === 'adjustments') {
+            <button class="btn btn-primary" (click)="openPurchaseAdjustmentModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+              Nuevo Ajuste
+            </button>
+          } @else if (activeTab() === 'supplierQuotes') {
+            <button class="btn btn-primary" (click)="openSupplierQuoteModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+              Nueva Cotización
+            </button>
+          } @else if (activeTab() === 'frameworkAgreements') {
+            <button class="btn btn-primary" (click)="openFrameworkAgreementModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+              Nuevo Acuerdo
             </button>
           }
         </div>
         <div class="hero-aside">
           <div class="hero-highlight">
             <span class="hero-highlight-label">Total visible</span>
-            <strong>{{ activeTab() === 'customers' ? totalCustomers() : totalOrders() }}</strong>
-            <small>{{ activeTab() === 'customers' ? 'Clientes registrados' : 'Órdenes de compra' }}</small>
+            <strong>{{ activeTab() === 'customers' ? totalCustomers() : activeTab() === 'budgets' ? totalPurchaseBudgets() : activeTab() === 'requests' ? totalRequests() : activeTab() === 'orders' ? totalOrders() : activeTab() === 'receipts' ? totalReceipts() : activeTab() === 'purchaseInvoices' ? totalPurchaseInvoices() : activeTab() === 'accountsPayable' ? totalAccountsPayable() : activeTab() === 'purchaseAdvances' ? totalPurchaseAdvances() : activeTab() === 'adjustments' ? totalPurchaseAdjustments() : activeTab() === 'supplierQuotes' ? totalSupplierQuotes() : activeTab() === 'analytics' ? totalTraceability() : totalFrameworkAgreements() }}</strong>
+            <small>{{ activeTab() === 'customers' ? 'Clientes registrados' : activeTab() === 'budgets' ? 'Presupuestos disponibles para compras' : activeTab() === 'requests' ? 'Solicitudes de compra' : activeTab() === 'orders' ? 'Órdenes de compra' : activeTab() === 'receipts' ? 'Recepciones registradas' : activeTab() === 'purchaseInvoices' ? 'Facturas de proveedor' : activeTab() === 'accountsPayable' ? 'Cuentas por pagar' : activeTab() === 'purchaseAdvances' ? 'Anticipos a proveedor' : activeTab() === 'adjustments' ? 'Ajustes de compra' : activeTab() === 'supplierQuotes' ? 'Ofertas comparables por solicitud' : activeTab() === 'analytics' ? 'Filas trazables del proceso' : 'Acuerdos vigentes con proveedor' }}</small>
           </div>
           <div class="hero-mini-grid">
             <div class="hero-mini-card">
@@ -132,12 +672,12 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
               <strong>{{ activeCustomers() }}</strong>
             </div>
             <div class="hero-mini-card">
-              <span class="hero-mini-card__label">Recibidas</span>
-              <strong>{{ receivedOrders() }}</strong>
+              <span class="hero-mini-card__label">Aprobaciones</span>
+              <strong>{{ pendingRequests() }}</strong>
             </div>
             <div class="hero-mini-card">
-              <span class="hero-mini-card__label">Pendientes</span>
-              <strong>{{ pendingOrders() }}</strong>
+              <span class="hero-mini-card__label">Recepciones / CxP</span>
+              <strong>{{ activeTab() === 'accountsPayable' ? openPayables() : activeTab() === 'purchaseAdvances' ? totalPurchaseAdvances() : postedReceipts() }}</strong>
             </div>
           </div>
         </div>
@@ -189,9 +729,49 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
           <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
           Clientes
         </button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'budgets'" (click)="switchTab('budgets')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v1H4V4zm0 3h12v9a2 2 0 01-2 2H6a2 2 0 01-2-2V7zm3 2a1 1 0 000 2h6a1 1 0 100-2H7zm0 3a1 1 0 100 2h3a1 1 0 100-2H7z"/></svg>
+          Presupuestos
+        </button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'requests'" (click)="switchTab('requests')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8.414A2 2 0 0013.414 7L10 3.586A2 2 0 008.586 3H4zm5 4a1 1 0 10-2 0v1H6a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2H9V7z" clip-rule="evenodd"/></svg>
+          Solicitudes
+        </button>
         <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'orders'" (click)="switchTab('orders')">
           <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
           Órdenes de Compra
+        </button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'receipts'" (click)="switchTab('receipts')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 4a2 2 0 012-2h8a2 2 0 011.414.586l2 2A2 2 0 0117 6v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm4 4a1 1 0 000 2h6a1 1 0 100-2H7zm0 4a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
+          Recepciones
+        </button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'purchaseInvoices'" (click)="switchTab('purchaseInvoices')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7.414A2 2 0 0016.414 6l-2.414-2.414A2 2 0 0012.586 3H5zm2 5a1 1 0 000 2h6a1 1 0 100-2H7zm0 4a1 1 0 100 2h4a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
+          Facturas Proveedor
+        </button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'accountsPayable'" (click)="switchTab('accountsPayable')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v2H4V4zm0 4h12v8a2 2 0 01-2 2H6a2 2 0 01-2-2V8zm3 2a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg>
+          Cuentas por Pagar
+        </button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'purchaseAdvances'" (click)="switchTab('purchaseAdvances')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M10 2a1 1 0 011 1v2h2a1 1 0 110 2h-2v2a1 1 0 11-2 0V7H7a1 1 0 110-2h2V3a1 1 0 011-1z"/><path d="M4 11a2 2 0 012-2h8a2 2 0 012 2v4a3 3 0 01-3 3H7a3 3 0 01-3-3v-4z"/></svg>
+          Anticipos
+        </button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'adjustments'" (click)="switchTab('adjustments')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.268a7.001 7.001 0 013.95 1.636l.896-.518a1 1 0 111 1.732l-.897.518a7.036 7.036 0 010 3.728l.897.518a1 1 0 01-1 1.732l-.896-.518A7.001 7.001 0 0111 15.732V17a1 1 0 11-2 0v-1.268a7.001 7.001 0 01-3.95-1.636l-.896.518a1 1 0 01-1-1.732l.897-.518a7.036 7.036 0 010-3.728l-.897-.518a1 1 0 111-1.732l.896.518A7.001 7.001 0 019 4.268V3a1 1 0 011-1zm0 5a3 3 0 100 6 3 3 0 000-6z" clip-rule="evenodd"/></svg>
+          Ajustes
+        </button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'supplierQuotes'" (click)="switchTab('supplierQuotes')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v3H4V4zm0 5h12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V9zm3 2a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg>
+          Cotizaciones Proveedor
+        </button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'frameworkAgreements'" (click)="switchTab('frameworkAgreements')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V8l-5-5H4zm8 1.414L16.586 9H13a1 1 0 01-1-1V4.414zM6 11a1 1 0 000 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
+          Acuerdos Marco
+        </button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'analytics'" (click)="switchTab('analytics')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M3 3h2v14H3V3zm6 5h2v9H9V8zm6-4h2v13h-2V4z"/></svg>
+          Analítica
         </button>
       </div>
 
@@ -218,6 +798,15 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
                 <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
               </button>
             </div>
+          }
+
+          @if (activeTab() === 'budgets') {
+            <select [(ngModel)]="filterBudgetStatus" (ngModelChange)="loadPurchaseBudgets()" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="DRAFT">Borrador</option>
+              <option value="ACTIVE">Activo</option>
+              <option value="CLOSED">Cerrado</option>
+            </select>
           }
 
           @if (activeTab() === 'orders') {
@@ -247,9 +836,221 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
             </div>
           }
 
-          <div class="results-pill">{{ activeTab() === 'customers' ? totalCustomers() : totalOrders() }} resultados</div>
+          @if (activeTab() === 'requests') {
+            <select [(ngModel)]="filterRequestStatus" (ngModelChange)="loadRequests()" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="DRAFT">Borrador</option>
+              <option value="PENDING_APPROVAL">Pendiente aprobación</option>
+              <option value="APPROVED">Aprobada</option>
+              <option value="REJECTED">Rechazada</option>
+              <option value="ORDERED">Convertida</option>
+              <option value="CANCELLED">Cancelada</option>
+            </select>
+          }
+
+          @if (activeTab() === 'receipts') {
+            <select [(ngModel)]="filterReceiptStatus" (ngModelChange)="loadReceipts()" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="POSTED">Registradas</option>
+              <option value="DRAFT">Borrador</option>
+              <option value="CANCELLED">Cancelada</option>
+            </select>
+            <select [(ngModel)]="filterOrderId" (ngModelChange)="loadReceipts()" class="filter-select">
+              <option value="">Todas las órdenes</option>
+              @for (o of orders(); track o.id) {
+                <option [value]="o.id">{{ o.orderNumber }}</option>
+              }
+            </select>
+          }
+
+          @if (activeTab() === 'purchaseInvoices') {
+            <select [(ngModel)]="filterPurchaseInvoiceStatus" (ngModelChange)="loadPurchaseInvoices()" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="DRAFT">Borrador</option>
+              <option value="POSTED">Contabilizada</option>
+              <option value="CANCELLED">Cancelada</option>
+            </select>
+            <select [(ngModel)]="filterCustomerId" (ngModelChange)="loadPurchaseInvoices()" class="filter-select">
+              <option value="">Todos los clientes</option>
+              @for (c of allCustomers(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          }
+
+          @if (activeTab() === 'accountsPayable') {
+            <select [(ngModel)]="filterPayableStatus" (ngModelChange)="loadAccountsPayable()" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="OPEN">Abiertas</option>
+              <option value="PARTIAL">Parciales</option>
+              <option value="PAID">Pagadas</option>
+              <option value="CANCELLED">Canceladas</option>
+            </select>
+            <select [(ngModel)]="filterCustomerId" (ngModelChange)="loadAccountsPayable()" class="filter-select">
+              <option value="">Todos los clientes</option>
+              @for (c of allCustomers(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          }
+
+          @if (activeTab() === 'purchaseAdvances') {
+            <select [(ngModel)]="filterAdvanceStatus" (ngModelChange)="loadPurchaseAdvances()" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="OPEN">Abierto</option>
+              <option value="PARTIAL">Aplicado parcial</option>
+              <option value="APPLIED">Aplicado</option>
+              <option value="CANCELLED">Cancelado</option>
+            </select>
+            <select [(ngModel)]="filterCustomerId" (ngModelChange)="loadPurchaseAdvances()" class="filter-select">
+              <option value="">Todos los clientes</option>
+              @for (c of allCustomers(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          }
+
+          @if (activeTab() === 'adjustments') {
+            <select [(ngModel)]="filterAdjustmentStatus" (ngModelChange)="loadPurchaseAdjustments()" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="PENDING_APPROVAL">Pendiente aprobación</option>
+              <option value="APPLIED">Aplicados</option>
+              <option value="REJECTED">Rechazados</option>
+            </select>
+            <select [(ngModel)]="filterAdjustmentType" (ngModelChange)="loadPurchaseAdjustments()" class="filter-select">
+              <option value="">Todos los tipos</option>
+              <option value="RETURN">Devolución</option>
+              <option value="CREDIT_NOTE">Nota crédito</option>
+              <option value="DEBIT_NOTE">Nota débito</option>
+              <option value="RECEIPT_REVERSAL">Reversión recepción</option>
+              <option value="INVOICE_REVERSAL">Reversión factura</option>
+              <option value="PAYMENT_REVERSAL">Reversión pago</option>
+            </select>
+            <select [(ngModel)]="filterCustomerId" (ngModelChange)="loadPurchaseAdjustments()" class="filter-select">
+              <option value="">Todos los clientes</option>
+              @for (c of allCustomers(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          }
+
+          @if (activeTab() === 'supplierQuotes') {
+            <select [(ngModel)]="filterSupplierQuoteStatus" (ngModelChange)="loadSupplierQuotes()" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="RECEIVED">Recibidas</option>
+              <option value="AWARDED">Adjudicadas</option>
+              <option value="REJECTED">Rechazadas</option>
+              <option value="EXPIRED">Expiradas</option>
+            </select>
+            <select [(ngModel)]="filterCustomerId" (ngModelChange)="loadSupplierQuotes()" class="filter-select">
+              <option value="">Todos los clientes</option>
+              @for (c of allCustomers(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          }
+
+          @if (activeTab() === 'frameworkAgreements') {
+            <select [(ngModel)]="filterFrameworkAgreementStatus" (ngModelChange)="loadFrameworkAgreements()" class="filter-select">
+              <option value="">Todos los estados</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="EXPIRED">Expirados</option>
+              <option value="SUSPENDED">Suspendidos</option>
+            </select>
+            <select [(ngModel)]="filterCustomerId" (ngModelChange)="loadFrameworkAgreements()" class="filter-select">
+              <option value="">Todos los clientes</option>
+              @for (c of allCustomers(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          }
+
+          @if (activeTab() === 'analytics') {
+            <input type="date" [(ngModel)]="filterDateFrom" (ngModelChange)="loadAnalytics()" class="filter-select" title="Desde"/>
+            <input type="date" [(ngModel)]="filterDateTo" (ngModelChange)="loadAnalytics()" class="filter-select" title="Hasta"/>
+          }
+
+          <div class="results-pill">{{ activeTab() === 'customers' ? totalCustomers() : activeTab() === 'budgets' ? totalPurchaseBudgets() : activeTab() === 'requests' ? totalRequests() : activeTab() === 'orders' ? totalOrders() : activeTab() === 'receipts' ? totalReceipts() : activeTab() === 'purchaseInvoices' ? totalPurchaseInvoices() : activeTab() === 'accountsPayable' ? totalAccountsPayable() : activeTab() === 'purchaseAdvances' ? totalPurchaseAdvances() : activeTab() === 'adjustments' ? totalPurchaseAdjustments() : activeTab() === 'supplierQuotes' ? totalSupplierQuotes() : activeTab() === 'analytics' ? totalTraceability() : totalFrameworkAgreements() }} resultados</div>
         </div>
       </section>
+
+          @if (activeTab() === 'budgets') {
+        <div class="table-card">
+          @if (loadingPurchaseBudgets()) {
+            <div class="table-loading">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="skeleton-row">
+                  <div class="sk sk-line" style="width:120px"></div>
+                  <div class="sk sk-line" style="width:200px"></div>
+                  <div class="sk sk-line" style="width:140px"></div>
+                  <div class="sk sk-line" style="width:100px"></div>
+                </div>
+              }
+            </div>
+          } @else if (purchaseBudgets().length === 0) {
+            <div class="empty-state">
+              <p>{{ searchText ? 'Sin resultados para "' + searchText + '"' : 'No hay presupuestos de compra registrados' }}</p>
+              @if (!searchText) {
+                <button class="btn btn-primary btn-sm" (click)="openPurchaseBudgetModal()">Crear primer presupuesto</button>
+              }
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>Presupuesto</th>
+                  <th>Vigencia</th>
+                  <th>Monto</th>
+                  <th>Comprometido</th>
+                  <th>Ejecutado</th>
+                  <th>Disponible</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (budget of purchaseBudgets(); track budget.id) {
+                  <tr>
+                    <td><span class="order-number">{{ budget.number }}</span></td>
+                    <td>
+                      <div class="entity-name">{{ budget.title }}</div>
+                      <div class="entity-sub">{{ budget.costCenter || 'Sin centro de costo' }} · {{ budget.projectCode || 'Sin proyecto' }}</div>
+                    </td>
+                    <td>{{ formatDate(budget.startDate) }} · {{ budget.endDate ? formatDate(budget.endDate) : 'Abierto' }}</td>
+                    <td class="amount-cell">{{ formatCurrency(budget.amount) }}</td>
+                    <td>{{ formatCurrency(budget.committedAmount) }}</td>
+                    <td>{{ formatCurrency(budget.executedAmount) }}</td>
+                    <td class="amount-cell">{{ formatCurrency(budget.availableAmount) }}</td>
+                    <td>
+                      <span class="order-status-badge order-status-{{ budget.status.toLowerCase() }}">
+                        {{ purchaseBudgetStatusLabel(budget.status) }}
+                      </span>
+                    </td>
+                    <td class="actions-cell">
+                      <button class="btn-icon" title="Editar" (click)="openPurchaseBudgetModal(budget)">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (totalPagesPurchaseBudgets() > 1) {
+              <div class="pagination">
+                <span class="pagination-info">{{ (pagePurchaseBudgets()-1)*limit + 1 }}–{{ min(pagePurchaseBudgets()*limit, totalPurchaseBudgets()) }} de {{ totalPurchaseBudgets() }}</span>
+                <div class="pagination-btns">
+                  <button class="btn-page" [disabled]="pagePurchaseBudgets() === 1" (click)="setPagePurchaseBudgets(pagePurchaseBudgets()-1)">‹</button>
+                  @for (p of pageRangePurchaseBudgets(); track p) {
+                    <button class="btn-page" [class.active]="p === pagePurchaseBudgets()" (click)="setPagePurchaseBudgets(p)">{{ p }}</button>
+                  }
+                  <button class="btn-page" [disabled]="pagePurchaseBudgets() === totalPagesPurchaseBudgets()" (click)="setPagePurchaseBudgets(pagePurchaseBudgets()+1)">›</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
 
       <!-- ══ PESTAÑA CLIENTES ═══════════════════════════════════ -->
       @if (activeTab() === 'customers') {
@@ -459,6 +1260,94 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
         }
       }
 
+      <!-- ══ PESTAÑA SOLICITUDES DE COMPRA ═════════════════════ -->
+      @if (activeTab() === 'requests') {
+        <div class="table-card">
+          @if (loadingRequests()) {
+            <div class="table-loading">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="skeleton-row">
+                  <div class="sk sk-line" style="width:120px"></div>
+                  <div class="sk sk-line" style="width:120px"></div>
+                  <div class="sk sk-line" style="width:180px"></div>
+                  <div class="sk sk-line" style="width:90px"></div>
+                </div>
+              }
+            </div>
+          } @else if (requests().length === 0) {
+            <div class="empty-state">
+              <p>{{ searchText ? 'Sin resultados para "' + searchText + '"' : 'No hay solicitudes de compra registradas' }}</p>
+              @if (!searchText) {
+                <button class="btn btn-primary btn-sm" (click)="openRequestModal()">Crear primera solicitud</button>
+              }
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N° Solicitud</th>
+                  <th>Fecha</th>
+                  <th>Cliente sugerido</th>
+                  <th>Estado</th>
+                  <th>Ítems</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of requests(); track r.id) {
+                  <tr>
+                    <td><span class="order-number">{{ r.number }}</span></td>
+                    <td class="text-muted">{{ formatDate(r.requestDate) }}</td>
+                    <td>{{ r.customer?.name || 'Sin cliente' }}</td>
+                    <td>
+                      <span class="order-status-badge order-status-{{ r.status.toLowerCase() }}">
+                        {{ requestStatusLabel(r.status) }}
+                      </span>
+                    </td>
+                    <td>{{ r.itemsCount || r.items?.length || 0 }}</td>
+                    <td class="actions-cell">
+                      @if (r.status === 'DRAFT' || r.status === 'REJECTED') {
+                        <button class="btn-icon" title="Editar" (click)="openRequestModal(r)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                        </button>
+                        <button class="btn-icon" title="Solicitar aprobación" (click)="requestRequestApproval(r)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3a1 1 0 00.293.707l2 2a1 1 0 001.414-1.414L11 9.586V7z" clip-rule="evenodd"/></svg>
+                        </button>
+                      }
+                      @if (r.approval?.status === 'PENDING') {
+                        <button class="btn-icon" title="Aprobar" (click)="approveRequest(r)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        </button>
+                        <button class="btn-icon" title="Rechazar" (click)="rejectRequest(r)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.536-10.95a1 1 0 10-1.414-1.415L10 7.757 7.879 5.636A1 1 0 106.464 7.05L8.586 9.17l-2.122 2.122a1 1 0 001.415 1.414L10 10.586l2.121 2.12a1 1 0 001.415-1.413L11.414 9.17l2.122-2.121z" clip-rule="evenodd"/></svg>
+                        </button>
+                      }
+                      @if (r.status === 'APPROVED') {
+                        <button class="btn-icon" title="Convertir a orden" (click)="convertRequestToOrder(r)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V8z" clip-rule="evenodd"/></svg>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (totalPagesRequests() > 1) {
+              <div class="pagination">
+                <span class="pagination-info">{{ (pageRequests()-1)*limit + 1 }}–{{ min(pageRequests()*limit, totalRequests()) }} de {{ totalRequests() }}</span>
+                <div class="pagination-btns">
+                  <button class="btn-page" [disabled]="pageRequests() === 1" (click)="setPageRequests(pageRequests()-1)">‹</button>
+                  @for (p of pageRangeRequests(); track p) {
+                    <button class="btn-page" [class.active]="p === pageRequests()" (click)="setPageRequests(p)">{{ p }}</button>
+                  }
+                  <button class="btn-page" [disabled]="pageRequests() === totalPagesRequests()" (click)="setPageRequests(pageRequests()+1)">›</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
       <!-- ══ PESTAÑA ÓRDENES DE COMPRA ═════════════════════════ -->
       @if (activeTab() === 'orders') {
         @if (ordersViewMode() === 'table') {
@@ -646,6 +1535,696 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
         }
       }
 
+      <!-- ══ PESTAÑA RECEPCIONES ═══════════════════════════════ -->
+      @if (activeTab() === 'receipts') {
+        <div class="table-card">
+          @if (loadingReceipts()) {
+            <div class="table-loading">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="skeleton-row">
+                  <div class="sk sk-line" style="width:120px"></div>
+                  <div class="sk sk-line" style="width:140px"></div>
+                  <div class="sk sk-line" style="width:180px"></div>
+                  <div class="sk sk-line" style="width:90px"></div>
+                </div>
+              }
+            </div>
+          } @else if (receipts().length === 0) {
+            <div class="empty-state">
+              <p>{{ searchText ? 'Sin resultados para "' + searchText + '"' : 'No hay recepciones registradas' }}</p>
+              @if (!searchText) {
+                <button class="btn btn-primary btn-sm" (click)="openReceiptModal()">Registrar primera recepción</button>
+              }
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N° Recepción</th>
+                  <th>Fecha</th>
+                  <th>Orden</th>
+                  <th>Cliente</th>
+                  <th>Estado</th>
+                  <th>Ítems</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of receipts(); track r.id) {
+                  <tr>
+                    <td><span class="order-number">{{ r.number }}</span></td>
+                    <td class="text-muted">{{ formatDate(r.receiptDate) }}</td>
+                    <td>{{ r.orderNumber }}</td>
+                    <td>{{ r.customer?.name || '—' }}</td>
+                    <td>
+                      <span class="order-status-badge order-status-{{ r.status.toLowerCase() }}">
+                        {{ receiptStatusLabel(r.status) }}
+                      </span>
+                    </td>
+                    <td>{{ r.itemsCount || r.items?.length || 0 }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (totalPagesReceipts() > 1) {
+              <div class="pagination">
+                <span class="pagination-info">{{ (pageReceipts()-1)*limit + 1 }}–{{ min(pageReceipts()*limit, totalReceipts()) }} de {{ totalReceipts() }}</span>
+                <div class="pagination-btns">
+                  <button class="btn-page" [disabled]="pageReceipts() === 1" (click)="setPageReceipts(pageReceipts()-1)">‹</button>
+                  @for (p of pageRangeReceipts(); track p) {
+                    <button class="btn-page" [class.active]="p === pageReceipts()" (click)="setPageReceipts(p)">{{ p }}</button>
+                  }
+                  <button class="btn-page" [disabled]="pageReceipts() === totalPagesReceipts()" (click)="setPageReceipts(pageReceipts()+1)">›</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'purchaseInvoices') {
+        <div class="table-card">
+          @if (loadingPurchaseInvoices()) {
+            <div class="table-loading">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="skeleton-row">
+                  <div class="sk sk-line" style="width:120px"></div>
+                  <div class="sk sk-line" style="width:160px"></div>
+                  <div class="sk sk-line" style="width:180px"></div>
+                  <div class="sk sk-line" style="width:90px"></div>
+                </div>
+              }
+            </div>
+          } @else if (purchaseInvoices().length === 0) {
+            <div class="empty-state">
+              <p>{{ searchText ? 'Sin resultados para "' + searchText + '"' : 'No hay facturas de proveedor registradas' }}</p>
+              @if (!searchText) {
+                <button class="btn btn-primary btn-sm" (click)="openPurchaseInvoiceModal()">Crear primera factura</button>
+              }
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Interno</th>
+                  <th>Factura proveedor</th>
+                  <th>Fecha</th>
+                  <th>Cliente</th>
+                  <th>Estado</th>
+                  <th>Total</th>
+                  <th>CxP</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (invoice of purchaseInvoices(); track invoice.id) {
+                  <tr>
+                    <td><span class="order-number">{{ invoice.number }}</span></td>
+                    <td>{{ invoice.supplierInvoiceNumber }}</td>
+                    <td>{{ formatDate(invoice.issueDate) }}</td>
+                    <td>{{ invoice.customer?.name || '—' }}</td>
+                    <td>
+                      <span class="order-status-badge order-status-{{ invoice.status.toLowerCase() }}">
+                        {{ purchaseInvoiceStatusLabel(invoice.status) }}
+                      </span>
+                    </td>
+                    <td class="amount-cell">{{ formatCurrency(invoice.total) }}</td>
+                    <td>{{ invoice.accountPayable?.number || 'Pendiente' }}</td>
+                    <td class="actions-cell">
+                      @if (invoice.status === 'DRAFT') {
+                        <button class="btn-icon" title="Contabilizar" [disabled]="saving()" (click)="postPurchaseInvoice(invoice)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.25-3.25a1 1 0 111.414-1.414l2.543 2.543 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (totalPagesPurchaseInvoices() > 1) {
+              <div class="pagination">
+                <span class="pagination-info">{{ (pagePurchaseInvoices()-1)*limit + 1 }}–{{ min(pagePurchaseInvoices()*limit, totalPurchaseInvoices()) }} de {{ totalPurchaseInvoices() }}</span>
+                <div class="pagination-btns">
+                  <button class="btn-page" [disabled]="pagePurchaseInvoices() === 1" (click)="setPagePurchaseInvoices(pagePurchaseInvoices()-1)">‹</button>
+                  @for (p of pageRangePurchaseInvoices(); track p) {
+                    <button class="btn-page" [class.active]="p === pagePurchaseInvoices()" (click)="setPagePurchaseInvoices(p)">{{ p }}</button>
+                  }
+                  <button class="btn-page" [disabled]="pagePurchaseInvoices() === totalPagesPurchaseInvoices()" (click)="setPagePurchaseInvoices(pagePurchaseInvoices()+1)">›</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'accountsPayable') {
+        <div class="table-card">
+          @if (loadingAccountsPayable()) {
+            <div class="table-loading">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="skeleton-row">
+                  <div class="sk sk-line" style="width:120px"></div>
+                  <div class="sk sk-line" style="width:160px"></div>
+                  <div class="sk sk-line" style="width:180px"></div>
+                  <div class="sk sk-line" style="width:90px"></div>
+                </div>
+              }
+            </div>
+          } @else if (accountsPayable().length === 0) {
+            <div class="empty-state">
+              <p>{{ searchText ? 'Sin resultados para "' + searchText + '"' : 'No hay cuentas por pagar generadas' }}</p>
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N° CxP</th>
+                  <th>Concepto</th>
+                  <th>Cliente</th>
+                  <th>Vence</th>
+                  <th>Estado</th>
+                  <th>Saldo</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (payable of accountsPayable(); track payable.id) {
+                  <tr>
+                    <td><span class="order-number">{{ payable.number }}</span></td>
+                    <td>{{ payable.concept }}</td>
+                    <td>{{ payable.customer?.name || '—' }}</td>
+                    <td>{{ payable.dueDate ? formatDate(payable.dueDate) : '—' }}</td>
+                    <td>
+                      <span class="order-status-badge order-status-{{ payable.status.toLowerCase() }}">
+                        {{ accountPayableStatusLabel(payable.status) }}
+                      </span>
+                    </td>
+                    <td class="amount-cell">{{ formatCurrency(payable.balance) }}</td>
+                    <td class="actions-cell">
+                      @if (payable.status === 'OPEN' || payable.status === 'PARTIAL') {
+                        <button class="btn-icon" title="Programar pagos" (click)="openPayableScheduleModal(payable)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M6 2a1 1 0 012 0v1h4V2a1 1 0 112 0v1h1a2 2 0 012 2v3H3V5a2 2 0 012-2h1V2zm11 8H3v5a2 2 0 002 2h10a2 2 0 002-2v-5zM5 12a1 1 0 100 2h3a1 1 0 100-2H5z" clip-rule="evenodd"/></svg>
+                        </button>
+                        <button class="btn-icon" title="Registrar pago" (click)="openPayablePaymentModal(payable)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v2H4V4zm0 4h12v8a2 2 0 01-2 2H6a2 2 0 01-2-2V8zm3 2a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (totalPagesAccountsPayable() > 1) {
+              <div class="pagination">
+                <span class="pagination-info">{{ (pageAccountsPayable()-1)*limit + 1 }}–{{ min(pageAccountsPayable()*limit, totalAccountsPayable()) }} de {{ totalAccountsPayable() }}</span>
+                <div class="pagination-btns">
+                  <button class="btn-page" [disabled]="pageAccountsPayable() === 1" (click)="setPageAccountsPayable(pageAccountsPayable()-1)">‹</button>
+                  @for (p of pageRangeAccountsPayable(); track p) {
+                    <button class="btn-page" [class.active]="p === pageAccountsPayable()" (click)="setPageAccountsPayable(p)">{{ p }}</button>
+                  }
+                  <button class="btn-page" [disabled]="pageAccountsPayable() === totalPagesAccountsPayable()" (click)="setPageAccountsPayable(pageAccountsPayable()+1)">›</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'purchaseAdvances') {
+        <div class="table-card">
+          @if (loadingPurchaseAdvances()) {
+            <div class="table-loading">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="skeleton-row">
+                  <div class="sk sk-line" style="width:120px"></div>
+                  <div class="sk sk-line" style="width:180px"></div>
+                  <div class="sk sk-line" style="width:110px"></div>
+                  <div class="sk sk-line" style="width:90px"></div>
+                </div>
+              }
+            </div>
+          } @else if (purchaseAdvances().length === 0) {
+            <div class="empty-state">
+              <p>{{ searchText ? 'Sin resultados para "' + searchText + '"' : 'No hay anticipos de proveedor registrados' }}</p>
+              @if (!searchText) {
+                <button class="btn btn-primary btn-sm" (click)="openPurchaseAdvanceModal()">Registrar primer anticipo</button>
+              }
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N° Anticipo</th>
+                  <th>Proveedor</th>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                  <th>Valor</th>
+                  <th>Saldo</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (advance of purchaseAdvances(); track advance.id) {
+                  <tr>
+                    <td><span class="order-number">{{ advance.number }}</span></td>
+                    <td>{{ advance.customer?.name || '—' }}</td>
+                    <td>{{ formatDate(advance.issueDate) }}</td>
+                    <td><span class="order-status-badge order-status-{{ advance.status.toLowerCase() }}">{{ advance.status }}</span></td>
+                    <td class="amount-cell">{{ formatCurrency(advance.amount) }}</td>
+                    <td class="amount-cell">{{ formatCurrency(advance.balance) }}</td>
+                    <td class="actions-cell">
+                      @if (advance.balance > 0.009 && (advance.status === 'OPEN' || advance.status === 'PARTIAL')) {
+                        <button class="btn-icon" title="Aplicar a cuenta por pagar" (click)="openApplyAdvanceModal(advance)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v2h2a1 1 0 110 2h-2v2a1 1 0 11-2 0V7H7a1 1 0 110-2h2V3a1 1 0 011-1zm-5 9a2 2 0 012-2h6a2 2 0 012 2v4a3 3 0 01-3 3H7a3 3 0 01-3-3v-4z" clip-rule="evenodd"/></svg>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (totalPagesPurchaseAdvances() > 1) {
+              <div class="pagination">
+                <span class="pagination-info">{{ (pagePurchaseAdvances()-1)*limit + 1 }}–{{ min(pagePurchaseAdvances()*limit, totalPurchaseAdvances()) }} de {{ totalPurchaseAdvances() }}</span>
+                <div class="pagination-btns">
+                  <button class="btn-page" [disabled]="pagePurchaseAdvances() === 1" (click)="setPagePurchaseAdvances(pagePurchaseAdvances()-1)">‹</button>
+                  @for (p of pageRangePurchaseAdvances(); track p) {
+                    <button class="btn-page" [class.active]="p === pagePurchaseAdvances()" (click)="setPagePurchaseAdvances(p)">{{ p }}</button>
+                  }
+                  <button class="btn-page" [disabled]="pagePurchaseAdvances() === totalPagesPurchaseAdvances()" (click)="setPagePurchaseAdvances(pagePurchaseAdvances()+1)">›</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'adjustments') {
+        <div class="table-card">
+          @if (loadingPurchaseAdjustments()) {
+            <div class="table-loading">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="skeleton-row">
+                  <div class="sk sk-line" style="width:140px"></div>
+                  <div class="sk sk-line" style="width:160px"></div>
+                  <div class="sk sk-line" style="width:200px"></div>
+                  <div class="sk sk-line" style="width:90px"></div>
+                </div>
+              }
+            </div>
+          } @else if (purchaseAdjustments().length === 0) {
+            <div class="empty-state">
+              <p>{{ searchText ? 'Sin resultados para "' + searchText + '"' : 'No hay ajustes de compra registrados' }}</p>
+              @if (!searchText) {
+                <button class="btn btn-primary btn-sm" (click)="openPurchaseAdjustmentModal()">Crear primer ajuste</button>
+              }
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Cliente</th>
+                  <th>Referencia</th>
+                  <th>Valor</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (adjustment of purchaseAdjustments(); track adjustment.id) {
+                  <tr>
+                    <td>{{ purchaseAdjustmentTypeLabel(adjustment.type) }}</td>
+                    <td>{{ adjustment.customer?.name || '—' }}</td>
+                    <td>{{ adjustment.receiptNumber || adjustment.invoiceNumber || adjustment.payableNumber || adjustment.paymentNumber || '—' }}</td>
+                    <td class="amount-cell">{{ formatCurrency(adjustment.amount) }}</td>
+                    <td>
+                      <span class="order-status-badge order-status-{{ adjustment.status.toLowerCase() }}">
+                        {{ purchaseAdjustmentStatusLabel(adjustment.status) }}
+                      </span>
+                    </td>
+                    <td class="actions-cell">
+                      @if (adjustment.status === 'PENDING_APPROVAL') {
+                        <button class="btn-icon" title="Aprobar" [disabled]="saving()" (click)="approvePurchaseAdjustment(adjustment)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.25-3.25a1 1 0 111.414-1.414l2.543 2.543 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        </button>
+                        <button class="btn-icon btn-icon-danger" title="Rechazar" [disabled]="saving()" (click)="rejectPurchaseAdjustment(adjustment)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (totalPagesPurchaseAdjustments() > 1) {
+              <div class="pagination">
+                <span class="pagination-info">{{ (pagePurchaseAdjustments()-1)*limit + 1 }}–{{ min(pagePurchaseAdjustments()*limit, totalPurchaseAdjustments()) }} de {{ totalPurchaseAdjustments() }}</span>
+                <div class="pagination-btns">
+                  <button class="btn-page" [disabled]="pagePurchaseAdjustments() === 1" (click)="setPagePurchaseAdjustments(pagePurchaseAdjustments()-1)">‹</button>
+                  @for (p of pageRangePurchaseAdjustments(); track p) {
+                    <button class="btn-page" [class.active]="p === pagePurchaseAdjustments()" (click)="setPagePurchaseAdjustments(p)">{{ p }}</button>
+                  }
+                  <button class="btn-page" [disabled]="pagePurchaseAdjustments() === totalPagesPurchaseAdjustments()" (click)="setPagePurchaseAdjustments(pagePurchaseAdjustments()+1)">›</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'supplierQuotes') {
+        <div class="table-card">
+          @if (loadingSupplierQuotes()) {
+            <div class="table-loading">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="skeleton-row">
+                  <div class="sk sk-line" style="width:120px"></div>
+                  <div class="sk sk-line" style="width:180px"></div>
+                  <div class="sk sk-line" style="width:140px"></div>
+                  <div class="sk sk-line" style="width:90px"></div>
+                </div>
+              }
+            </div>
+          } @else if (supplierQuotes().length === 0) {
+            <div class="empty-state">
+              <p>{{ searchText ? 'Sin resultados para "' + searchText + '"' : 'No hay cotizaciones de proveedor registradas' }}</p>
+              @if (!searchText) {
+                <button class="btn btn-primary btn-sm" (click)="openSupplierQuoteModal()">Crear primera cotización</button>
+              }
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>Proveedor</th>
+                  <th>Solicitud</th>
+                  <th>Vigencia</th>
+                  <th>Lead Time</th>
+                  <th>Total</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (quote of supplierQuotes(); track quote.id) {
+                  <tr>
+                    <td><span class="order-number">{{ quote.number }}</span></td>
+                    <td>{{ quote.customer?.name || '—' }}</td>
+                    <td>{{ quote.requestNumber || 'Sin solicitud' }}</td>
+                    <td>{{ quote.validUntil ? formatDate(quote.validUntil) : '—' }}</td>
+                    <td>{{ quote.leadTimeDays != null ? quote.leadTimeDays + ' días' : '—' }}</td>
+                    <td class="amount-cell">{{ formatCurrency(quote.total) }}</td>
+                    <td>
+                      <span class="order-status-badge order-status-{{ quote.status.toLowerCase() }}">
+                        {{ supplierQuoteStatusLabel(quote.status) }}
+                      </span>
+                    </td>
+                    <td class="actions-cell">
+                      @if (quote.status === 'RECEIVED') {
+                        <button class="btn-icon" title="Adjudicar y crear orden" [disabled]="saving()" (click)="awardSupplierQuote(quote)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.25-3.25a1 1 0 111.414-1.414l2.543 2.543 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (totalPagesSupplierQuotes() > 1) {
+              <div class="pagination">
+                <span class="pagination-info">{{ (pageSupplierQuotes()-1)*limit + 1 }}–{{ min(pageSupplierQuotes()*limit, totalSupplierQuotes()) }} de {{ totalSupplierQuotes() }}</span>
+                <div class="pagination-btns">
+                  <button class="btn-page" [disabled]="pageSupplierQuotes() === 1" (click)="setPageSupplierQuotes(pageSupplierQuotes()-1)">‹</button>
+                  @for (p of pageRangeSupplierQuotes(); track p) {
+                    <button class="btn-page" [class.active]="p === pageSupplierQuotes()" (click)="setPageSupplierQuotes(p)">{{ p }}</button>
+                  }
+                  <button class="btn-page" [disabled]="pageSupplierQuotes() === totalPagesSupplierQuotes()" (click)="setPageSupplierQuotes(pageSupplierQuotes()+1)">›</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'frameworkAgreements') {
+        <div class="table-card">
+          @if (loadingFrameworkAgreements()) {
+            <div class="table-loading">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="skeleton-row">
+                  <div class="sk sk-line" style="width:120px"></div>
+                  <div class="sk sk-line" style="width:180px"></div>
+                  <div class="sk sk-line" style="width:140px"></div>
+                  <div class="sk sk-line" style="width:90px"></div>
+                </div>
+              }
+            </div>
+          } @else if (frameworkAgreements().length === 0) {
+            <div class="empty-state">
+              <p>{{ searchText ? 'Sin resultados para "' + searchText + '"' : 'No hay acuerdos marco registrados' }}</p>
+              @if (!searchText) {
+                <button class="btn btn-primary btn-sm" (click)="openFrameworkAgreementModal()">Crear primer acuerdo</button>
+              }
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>Título</th>
+                  <th>Proveedor</th>
+                  <th>Inicio</th>
+                  <th>Fin</th>
+                  <th>Condiciones</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (agreement of frameworkAgreements(); track agreement.id) {
+                  <tr>
+                    <td><span class="order-number">{{ agreement.number }}</span></td>
+                    <td>{{ agreement.title }}</td>
+                    <td>{{ agreement.customer?.name || '—' }}</td>
+                    <td>{{ formatDate(agreement.startDate) }}</td>
+                    <td>{{ agreement.endDate ? formatDate(agreement.endDate) : 'Abierto' }}</td>
+                    <td>{{ agreement.paymentTermDays ?? 0 }} días / {{ agreement.leadTimeDays ?? 0 }} días</td>
+                    <td>
+                      <span class="order-status-badge order-status-{{ agreement.status.toLowerCase() }}">
+                        {{ frameworkAgreementStatusLabel(agreement.status) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (totalPagesFrameworkAgreements() > 1) {
+              <div class="pagination">
+                <span class="pagination-info">{{ (pageFrameworkAgreements()-1)*limit + 1 }}–{{ min(pageFrameworkAgreements()*limit, totalFrameworkAgreements()) }} de {{ totalFrameworkAgreements() }}</span>
+                <div class="pagination-btns">
+                  <button class="btn-page" [disabled]="pageFrameworkAgreements() === 1" (click)="setPageFrameworkAgreements(pageFrameworkAgreements()-1)">‹</button>
+                  @for (p of pageRangeFrameworkAgreements(); track p) {
+                    <button class="btn-page" [class.active]="p === pageFrameworkAgreements()" (click)="setPageFrameworkAgreements(p)">{{ p }}</button>
+                  }
+                  <button class="btn-page" [disabled]="pageFrameworkAgreements() === totalPagesFrameworkAgreements()" (click)="setPageFrameworkAgreements(pageFrameworkAgreements()+1)">›</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'analytics') {
+        <div class="analytics-stack">
+          @if (loadingAnalytics()) {
+            <div class="table-card">
+              <div class="table-loading">
+                @for (i of [1,2,3,4]; track i) {
+                  <div class="skeleton-row">
+                    <div class="sk sk-line" style="width:140px"></div>
+                    <div class="sk sk-line" style="width:220px"></div>
+                    <div class="sk sk-line" style="width:100px"></div>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <section class="analytics-cards">
+              <article class="analytics-card">
+                <span class="analytics-card__label">Órdenes</span>
+                <strong>{{ analyticsReport()?.summary?.ordersCount ?? 0 }}</strong>
+                <small>{{ formatCurrency(analyticsReport()?.summary?.ordersTotal ?? 0) }}</small>
+              </article>
+              <article class="analytics-card">
+                <span class="analytics-card__label">Orden promedio</span>
+                <strong>{{ formatCurrency(analyticsReport()?.summary?.averageOrder ?? 0) }}</strong>
+                <small>Ticket medio de compra</small>
+              </article>
+              <article class="analytics-card">
+                <span class="analytics-card__label">Recibidas</span>
+                <strong>{{ analyticsReport()?.summary?.receivedCount ?? 0 }}</strong>
+                <small>Parciales: {{ analyticsReport()?.summary?.partialCount ?? 0 }}</small>
+              </article>
+              <article class="analytics-card">
+                <span class="analytics-card__label">Canceladas</span>
+                <strong>{{ analyticsReport()?.summary?.cancelledCount ?? 0 }}</strong>
+                <small>Periodo filtrado</small>
+              </article>
+            </section>
+
+            <div class="analytics-grid">
+              <div class="table-card">
+                <div class="section-head">
+                  <h3>Desempeño de proveedores</h3>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Proveedor</th>
+                      <th>Órdenes</th>
+                      <th>Gasto</th>
+                      <th>Lead Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (item of analyticsReport()?.supplierPerformance ?? []; track item.id) {
+                      <tr>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.ordersCount }}</td>
+                        <td class="amount-cell">{{ formatCurrency(item.totalSpend) }}</td>
+                        <td>{{ item.avgLeadTimeDays | number:'1.0-1' }} días</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="table-card">
+                <div class="section-head">
+                  <h3>Top productos comprados</h3>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Cantidad</th>
+                      <th>Gasto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (item of analyticsReport()?.topProducts ?? []; track item.productId ?? item.productName) {
+                      <tr>
+                        <td>{{ item.productName }}</td>
+                        <td>{{ item.quantity | number:'1.0-2' }}</td>
+                        <td class="amount-cell">{{ formatCurrency(item.totalSpend) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="analytics-grid">
+              <div class="table-card">
+                <div class="section-head">
+                  <h3>Compras por área</h3>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Área</th>
+                      <th>Centro de costo</th>
+                      <th>Órdenes</th>
+                      <th>Gasto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (item of analyticsReport()?.spendByArea ?? []; track item.area + item.costCenter) {
+                      <tr>
+                        <td>{{ item.area }}</td>
+                        <td>{{ item.costCenter }}</td>
+                        <td>{{ item.ordersCount }}</td>
+                        <td class="amount-cell">{{ formatCurrency(item.totalSpend) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="table-card">
+                <div class="section-head">
+                  <h3>Presupuesto vs ejecutado</h3>
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Presupuesto</th>
+                      <th>Monto</th>
+                      <th>Ejecutado</th>
+                      <th>Disponible</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (item of analyticsReport()?.budgetVsActual ?? []; track item.id) {
+                      <tr>
+                        <td>{{ item.number }} · {{ item.title }}</td>
+                        <td class="amount-cell">{{ formatCurrency(item.budgetAmount) }}</td>
+                        <td class="amount-cell">{{ formatCurrency(item.executedAmount) }}</td>
+                        <td class="amount-cell">{{ formatCurrency(item.availableAmount) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="table-card">
+              <div class="section-head">
+                <h3>Trazabilidad del proceso</h3>
+              </div>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Solicitud</th>
+                    <th>Proveedor</th>
+                    <th>Orden</th>
+                    <th>Etapa</th>
+                    <th>Recepciones</th>
+                    <th>Facturas</th>
+                    <th>Saldo CxP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of traceabilityRows(); track row.requestId + (row.orderId || '')) {
+                    <tr>
+                      <td>{{ row.requestNumber }}</td>
+                      <td>{{ row.customerName || '—' }}</td>
+                      <td>{{ row.orderNumber || '—' }}</td>
+                      <td>{{ row.completionStage }}</td>
+                      <td>{{ row.postedReceiptsCount }}/{{ row.receiptsCount }}</td>
+                      <td>{{ row.invoicesCount }}</td>
+                      <td class="amount-cell">{{ formatCurrency(row.pendingBalance) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              @if (totalPagesTraceability() > 1) {
+                <div class="pagination">
+                  <span class="pagination-info">{{ (pageTraceability()-1)*limit + 1 }}–{{ min(pageTraceability()*limit, totalTraceability()) }} de {{ totalTraceability() }}</span>
+                  <div class="pagination-btns">
+                    <button class="btn-page" [disabled]="pageTraceability() === 1" (click)="setPageTraceability(pageTraceability()-1)">‹</button>
+                    @for (p of pageRangeTraceability(); track p) {
+                      <button class="btn-page" [class.active]="p === pageTraceability()" (click)="setPageTraceability(p)">{{ p }}</button>
+                    }
+                    <button class="btn-page" [disabled]="pageTraceability() === totalPagesTraceability()" (click)="setPageTraceability(pageTraceability()+1)">›</button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
     </div>
 
     <!-- ════════════════════════════════════════════════════════ -->
@@ -726,6 +2305,173 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
       </div>
     }
 
+    @if (showPurchaseBudgetModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>{{ editingBudgetId() ? 'Editar Presupuesto de Compra' : 'Nuevo Presupuesto de Compra' }}</h3>
+            <button class="drawer-close" (click)="closePurchaseBudgetModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Título *</label>
+                <input type="text" [(ngModel)]="purchaseBudgetForm.title" class="form-control" placeholder="Presupuesto operativo 2026"/>
+              </div>
+              <div class="form-group">
+                <label>Estado *</label>
+                <select [(ngModel)]="purchaseBudgetForm.status" class="form-control">
+                  <option value="DRAFT">Borrador</option>
+                  <option value="ACTIVE">Activo</option>
+                  <option value="CLOSED">Cerrado</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Monto *</label>
+                <input type="number" [(ngModel)]="purchaseBudgetForm.amount" class="form-control" min="0" step="0.01"/>
+              </div>
+              <div class="form-group">
+                <label>Área</label>
+                <input type="text" [(ngModel)]="purchaseBudgetForm.area" class="form-control" placeholder="Operaciones"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Fecha inicio *</label>
+                <input type="date" [(ngModel)]="purchaseBudgetForm.startDate" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>Fecha fin</label>
+                <input type="date" [(ngModel)]="purchaseBudgetForm.endDate" class="form-control"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Centro de costo</label>
+                <input type="text" [(ngModel)]="purchaseBudgetForm.costCenter" class="form-control" placeholder="CC-OPER-01"/>
+              </div>
+              <div class="form-group">
+                <label>Proyecto</label>
+                <input type="text" [(ngModel)]="purchaseBudgetForm.projectCode" class="form-control" placeholder="PRJ-EXP-2026"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notas</label>
+              <textarea [(ngModel)]="purchaseBudgetForm.notes" class="form-control form-textarea" placeholder="Alcance, reglas de uso y restricciones del presupuesto"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closePurchaseBudgetModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="saving()" (click)="savePurchaseBudget()">
+              {{ saving() ? 'Guardando...' : (editingBudgetId() ? 'Actualizar presupuesto' : 'Crear presupuesto') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showRequestModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>{{ editingRequestId() ? 'Editar Solicitud de Compra' : 'Nueva Solicitud de Compra' }}</h3>
+            <button class="drawer-close" (click)="closeRequestModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Cliente sugerido</label>
+                <select [(ngModel)]="requestForm.customerId" class="form-control">
+                  <option value="">— Sin cliente —</option>
+                  @for (c of allCustomers(); track c.id) {
+                    @if (c.isActive) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Fecha solicitud *</label>
+                <input type="date" [(ngModel)]="requestForm.requestDate" class="form-control"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Presupuesto</label>
+                <select [(ngModel)]="requestForm.budgetId" class="form-control">
+                  <option value="">— Sin presupuesto —</option>
+                  @for (budget of purchaseBudgets(); track budget.id) {
+                    <option [value]="budget.id">{{ budget.number }} · {{ budget.title }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Área solicitante</label>
+                <input type="text" [(ngModel)]="requestForm.requestingArea" class="form-control" placeholder="Operaciones"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Fecha requerida</label>
+                <input type="date" [(ngModel)]="requestForm.neededByDate" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>Notas</label>
+                <input type="text" [(ngModel)]="requestForm.notes" class="form-control" placeholder="Observaciones de la solicitud"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Centro de costo</label>
+                <input type="text" [(ngModel)]="requestForm.costCenter" class="form-control" placeholder="CC-OPER-01"/>
+              </div>
+              <div class="form-group">
+                <label>Proyecto</label>
+                <input type="text" [(ngModel)]="requestForm.projectCode" class="form-control" placeholder="PRJ-EXP-2026"/>
+              </div>
+            </div>
+            <div class="lines-section">
+              <div class="lines-header">
+                <span class="form-section-title">Ítems solicitados</span>
+                <button class="btn btn-sm btn-secondary" type="button" (click)="addRequestLine()">Agregar ítem</button>
+              </div>
+              @for (line of requestForm.items; track $index; let i = $index) {
+                <div class="line-row">
+                  <div class="line-desc">
+                    <label>Descripción</label>
+                    <input type="text" [(ngModel)]="line.description" class="form-control" placeholder="Producto o servicio solicitado"/>
+                  </div>
+                  <div class="line-qty">
+                    <label>Cantidad</label>
+                    <input type="number" [(ngModel)]="line.quantity" class="form-control" min="0" step="0.01"/>
+                  </div>
+                  <div class="line-price">
+                    <label>Precio estimado</label>
+                    <input type="number" [(ngModel)]="line.estimatedUnitPrice" class="form-control" min="0" step="0.01"/>
+                  </div>
+                  <button class="btn-icon btn-icon-danger line-remove" title="Quitar ítem" (click)="removeRequestLine(i)">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"/></svg>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeRequestModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="saving()" (click)="saveRequest()">
+              {{ saving() ? 'Guardando...' : (editingRequestId() ? 'Actualizar solicitud' : 'Crear solicitud') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- ════════════════════════════════════════════════════════ -->
     <!-- MODAL: Nueva Orden de Compra                            -->
     <!-- ════════════════════════════════════════════════════════ -->
@@ -764,12 +2510,37 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
             </div>
             <div class="form-row">
               <div class="form-group">
+                <label>Presupuesto</label>
+                <select [(ngModel)]="orderForm.budgetId" class="form-control">
+                  <option value="">— Sin presupuesto —</option>
+                  @for (budget of purchaseBudgets(); track budget.id) {
+                    <option [value]="budget.id">{{ budget.number }} · {{ budget.title }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Área solicitante</label>
+                <input type="text" [(ngModel)]="orderForm.requestingArea" class="form-control" placeholder="Operaciones"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
                 <label>Fecha Vencimiento</label>
                 <input type="date" [(ngModel)]="orderForm.dueDate" class="form-control"/>
               </div>
               <div class="form-group">
                 <label>Notas</label>
                 <input type="text" [(ngModel)]="orderForm.notes" class="form-control" placeholder="Observaciones de la orden..."/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Centro de costo</label>
+                <input type="text" [(ngModel)]="orderForm.costCenter" class="form-control" placeholder="CC-OPER-01"/>
+              </div>
+              <div class="form-group">
+                <label>Proyecto</label>
+                <input type="text" [(ngModel)]="orderForm.projectCode" class="form-control" placeholder="PRJ-EXP-2026"/>
               </div>
             </div>
 
@@ -846,6 +2617,655 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
             <button class="btn btn-secondary" (click)="closeOrderModal()">Cancelar</button>
             <button class="btn btn-primary" [disabled]="saving()" (click)="saveOrder()">
               {{ saving() ? 'Guardando...' : (editingOrderId() ? 'Guardar cambios' : 'Crear Orden') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showReceiptModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Nueva Recepción de Compra</h3>
+            <button class="drawer-close" (click)="closeReceiptModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Orden de compra *</label>
+                <select [(ngModel)]="receiptForm.orderId" (ngModelChange)="onReceiptOrderChange()" class="form-control">
+                  <option value="">— Seleccionar orden —</option>
+                  @for (o of orders(); track o.id) {
+                    @if (o.status === 'SENT' || o.status === 'PARTIAL' || o.status === 'DRAFT') {
+                      <option [value]="o.id">{{ o.orderNumber }} · {{ o.customer.name }}</option>
+                    }
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Fecha recepción *</label>
+                <input type="date" [(ngModel)]="receiptForm.receiptDate" class="form-control"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notas</label>
+              <input type="text" [(ngModel)]="receiptForm.notes" class="form-control" placeholder="Observaciones de la recepción"/>
+            </div>
+            @if (receiptForm.items.length > 0) {
+              <div class="lines-section">
+                <div class="lines-header">
+                  <span class="form-section-title">Líneas recibidas</span>
+                </div>
+                @for (line of receiptForm.items; track $index; let i = $index) {
+                  <div class="line-row">
+                    <div class="line-desc">
+                      <label>Descripción</label>
+                      <input type="text" [(ngModel)]="line.description" class="form-control" readonly/>
+                    </div>
+                    <div class="line-qty">
+                      <label>Cant. ordenada</label>
+                      <input type="number" [ngModel]="line.orderedQuantity" class="form-control" readonly/>
+                    </div>
+                    <div class="line-price">
+                      <label>Cant. recibida</label>
+                      <input type="number" [(ngModel)]="line.receivedQuantity" class="form-control" min="0" step="0.01"/>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeReceiptModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="saving()" (click)="saveReceipt()">
+              {{ saving() ? 'Guardando...' : 'Registrar recepción' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showPurchaseInvoiceModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Nueva Factura de Proveedor</h3>
+            <button class="drawer-close" (click)="closePurchaseInvoiceModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Orden de compra relacionada</label>
+                <select [(ngModel)]="purchaseInvoiceForm.purchaseOrderId" (ngModelChange)="onPurchaseInvoiceOrderChange()" class="form-control">
+                  <option value="">— Seleccionar orden —</option>
+                  @for (o of orders(); track o.id) {
+                    @if (o.status === 'RECEIVED' || o.status === 'PARTIAL' || o.status === 'SENT') {
+                      <option [value]="o.id">{{ o.orderNumber }} · {{ o.customer.name }}</option>
+                    }
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Cliente *</label>
+                <select [(ngModel)]="purchaseInvoiceForm.customerId" class="form-control">
+                  <option value="">— Seleccionar cliente —</option>
+                  @for (c of allCustomers(); track c.id) {
+                    @if (c.isActive) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>N° factura proveedor *</label>
+                <input type="text" [(ngModel)]="purchaseInvoiceForm.supplierInvoiceNumber" class="form-control" placeholder="FV-12345"/>
+              </div>
+              <div class="form-group">
+                <label>Fecha emisión *</label>
+                <input type="date" [(ngModel)]="purchaseInvoiceForm.issueDate" class="form-control"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Fecha vencimiento</label>
+                <input type="date" [(ngModel)]="purchaseInvoiceForm.dueDate" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>Notas</label>
+                <input type="text" [(ngModel)]="purchaseInvoiceForm.notes" class="form-control" placeholder="Observaciones de la factura"/>
+              </div>
+            </div>
+            @if (purchaseInvoiceForm.items.length > 0) {
+              <div class="lines-section">
+                <div class="lines-header">
+                  <span class="form-section-title">Líneas facturadas</span>
+                </div>
+                @for (line of purchaseInvoiceForm.items; track $index) {
+                  <div class="line-row">
+                    <div class="line-desc">
+                      <label>Descripción</label>
+                      <input type="text" [(ngModel)]="line.description" class="form-control"/>
+                    </div>
+                    <div class="line-qty">
+                      <label>Cantidad</label>
+                      <input type="number" [(ngModel)]="line.quantity" class="form-control" min="0" step="0.01"/>
+                    </div>
+                    <div class="line-price">
+                      <label>Precio unit.</label>
+                      <input type="number" [(ngModel)]="line.unitPrice" class="form-control" min="0" step="0.01"/>
+                    </div>
+                    <div class="line-tax">
+                      <label>% IVA</label>
+                      <input type="number" [(ngModel)]="line.taxRate" class="form-control" min="0" max="100"/>
+                    </div>
+                    <div class="line-disc">
+                      <label>% Dto.</label>
+                      <input type="number" [(ngModel)]="line.discount" class="form-control" min="0" max="100"/>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closePurchaseInvoiceModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="saving()" (click)="savePurchaseInvoice()">
+              {{ saving() ? 'Guardando...' : 'Crear factura' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showPayablePaymentModal() && payablePaymentTarget()) {
+      <div class="modal-overlay">
+        <div class="modal modal-sm" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div>
+              <h3>Registrar pago</h3>
+              <div class="modal-sub">{{ payablePaymentTarget()!.number }} · Saldo {{ formatCurrency(payablePaymentTarget()!.balance) }}</div>
+            </div>
+            <button class="drawer-close" (click)="closePayablePaymentModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Fecha pago *</label>
+              <input type="date" [(ngModel)]="payablePaymentForm.paymentDate" class="form-control"/>
+            </div>
+            <div class="form-group">
+              <label>Valor *</label>
+              <input type="number" [(ngModel)]="payablePaymentForm.amount" class="form-control" min="0" step="0.01"/>
+            </div>
+            <div class="form-group">
+              <label>Método de pago *</label>
+              <select [(ngModel)]="payablePaymentForm.paymentMethod" class="form-control">
+                <option value="TRANSFER">Transferencia</option>
+                <option value="CASH">Efectivo</option>
+                <option value="CARD">Tarjeta</option>
+                <option value="MIXED">Mixto</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Referencia</label>
+              <input type="text" [(ngModel)]="payablePaymentForm.reference" class="form-control" placeholder="Comprobante o referencia bancaria"/>
+            </div>
+            <div class="form-group">
+              <label>Notas</label>
+              <textarea [(ngModel)]="payablePaymentForm.notes" class="form-control form-textarea" placeholder="Observaciones del pago"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closePayablePaymentModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="saving()" (click)="savePayablePayment()">
+              {{ saving() ? 'Guardando...' : 'Registrar pago' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showPayableScheduleModal() && payableScheduleTarget()) {
+      <div class="modal-overlay">
+        <div class="modal modal-md" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div>
+              <h3>Programación de Pago</h3>
+              <div class="modal-sub">{{ payableScheduleTarget()!.number }} · Saldo {{ formatCurrency(payableScheduleTarget()!.balance) }}</div>
+            </div>
+            <button class="drawer-close" (click)="closePayableScheduleModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="lines-section">
+              <div class="lines-header">
+                <span class="form-section-title">Cuotas</span>
+                <button class="btn btn-secondary btn-sm" (click)="addPayableScheduleLine()">Agregar cuota</button>
+              </div>
+              @for (line of payableScheduleForm.schedules; track $index; let i = $index) {
+                <div class="line-row">
+                  <div class="line-price">
+                    <label>Vence</label>
+                    <input type="date" [(ngModel)]="line.dueDate" class="form-control"/>
+                  </div>
+                  <div class="line-price">
+                    <label>Valor</label>
+                    <input type="number" [(ngModel)]="line.amount" class="form-control" min="0" step="0.01"/>
+                  </div>
+                  <div class="line-desc">
+                    <label>Notas</label>
+                    <input type="text" [(ngModel)]="line.notes" class="form-control" placeholder="Opcional"/>
+                  </div>
+                  <div class="line-actions">
+                    <button class="btn-icon btn-icon-danger" title="Eliminar" (click)="removePayableScheduleLine(i)" [disabled]="payableScheduleForm.schedules.length === 1">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M6 4a1 1 0 011-1h6a1 1 0 011 1v1h3a1 1 0 110 2h-1v9a2 2 0 01-2 2H6a2 2 0 01-2-2V7H3a1 1 0 010-2h3V4z" clip-rule="evenodd"/></svg>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closePayableScheduleModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="saving()" (click)="savePayableSchedule()">{{ saving() ? 'Guardando...' : 'Guardar cronograma' }}</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showPurchaseAdvanceModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal-md" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Nuevo Anticipo</h3>
+            <button class="drawer-close" (click)="closePurchaseAdvanceModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Proveedor *</label>
+                <select [(ngModel)]="purchaseAdvanceForm.customerId" class="form-control">
+                  <option value="">— Seleccionar proveedor —</option>
+                  @for (c of allCustomers(); track c.id) {
+                    @if (c.isActive) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Fecha *</label>
+                <input type="date" [(ngModel)]="purchaseAdvanceForm.issueDate" class="form-control"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Valor *</label>
+                <input type="number" [(ngModel)]="purchaseAdvanceForm.amount" class="form-control" min="0" step="0.01"/>
+              </div>
+              <div class="form-group">
+                <label>Medio de pago *</label>
+                <select [(ngModel)]="purchaseAdvanceForm.paymentMethod" class="form-control">
+                  <option value="TRANSFER">Transferencia</option>
+                  <option value="CASH">Efectivo</option>
+                  <option value="CARD">Tarjeta</option>
+                  <option value="MIXED">Mixto</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Referencia</label>
+                <input type="text" [(ngModel)]="purchaseAdvanceForm.reference" class="form-control" placeholder="Referencia bancaria o soporte"/>
+              </div>
+              <div class="form-group">
+                <label>Notas</label>
+                <input type="text" [(ngModel)]="purchaseAdvanceForm.notes" class="form-control" placeholder="Observaciones"/>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closePurchaseAdvanceModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="saving()" (click)="savePurchaseAdvance()">{{ saving() ? 'Guardando...' : 'Registrar anticipo' }}</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showApplyAdvanceModal() && advanceApplyTarget()) {
+      <div class="modal-overlay">
+        <div class="modal modal-md" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div>
+              <h3>Aplicar Anticipo</h3>
+              <div class="modal-sub">{{ advanceApplyTarget()!.number }} · Saldo {{ formatCurrency(advanceApplyTarget()!.balance) }}</div>
+            </div>
+            <button class="drawer-close" (click)="closeApplyAdvanceModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Cuenta por pagar *</label>
+              <select [(ngModel)]="purchaseAdvanceApplyForm.accountPayableId" class="form-control">
+                <option value="">— Seleccionar cuenta por pagar —</option>
+                @for (payable of accountsPayable(); track payable.id) {
+                  @if ((payable.status === 'OPEN' || payable.status === 'PARTIAL') && payable.customerId === advanceApplyTarget()!.customerId) {
+                    <option [value]="payable.id">{{ payable.number }} · {{ formatCurrency(payable.balance) }}</option>
+                  }
+                }
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Valor *</label>
+                <input type="number" [(ngModel)]="purchaseAdvanceApplyForm.amount" class="form-control" min="0" step="0.01"/>
+              </div>
+              <div class="form-group">
+                <label>Notas</label>
+                <input type="text" [(ngModel)]="purchaseAdvanceApplyForm.notes" class="form-control" placeholder="Observación opcional"/>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeApplyAdvanceModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="saving()" (click)="saveAdvanceApplication()">{{ saving() ? 'Aplicando...' : 'Aplicar anticipo' }}</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showPurchaseAdjustmentModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Nuevo Ajuste de Compra</h3>
+            <button class="drawer-close" (click)="closePurchaseAdjustmentModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Cliente *</label>
+                <select [(ngModel)]="purchaseAdjustmentForm.customerId" class="form-control">
+                  <option value="">— Seleccionar cliente —</option>
+                  @for (c of allCustomers(); track c.id) {
+                    @if (c.isActive) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Tipo *</label>
+                <select [(ngModel)]="purchaseAdjustmentForm.type" class="form-control">
+                  <option value="RETURN">Devolución</option>
+                  <option value="CREDIT_NOTE">Nota crédito</option>
+                  <option value="DEBIT_NOTE">Nota débito</option>
+                  <option value="RECEIPT_REVERSAL">Reversión recepción</option>
+                  <option value="INVOICE_REVERSAL">Reversión factura</option>
+                  <option value="PAYMENT_REVERSAL">Reversión pago</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Recepción</label>
+                <select [(ngModel)]="purchaseAdjustmentForm.receiptId" class="form-control">
+                  <option value="">— Sin recepción —</option>
+                  @for (r of receipts(); track r.id) {
+                    <option [value]="r.id">{{ r.number }} · {{ r.orderNumber }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Factura proveedor</label>
+                <select [(ngModel)]="purchaseAdjustmentForm.purchaseInvoiceId" class="form-control">
+                  <option value="">— Sin factura —</option>
+                  @for (invoice of purchaseInvoices(); track invoice.id) {
+                    <option [value]="invoice.id">{{ invoice.number }} · {{ invoice.customer?.name }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Cuenta por pagar</label>
+                <select [(ngModel)]="purchaseAdjustmentForm.accountPayableId" (ngModelChange)="onAdjustmentPayableChange()" class="form-control">
+                  <option value="">— Sin cuenta por pagar —</option>
+                  @for (payable of accountsPayable(); track payable.id) {
+                    <option [value]="payable.id">{{ payable.number }} · {{ payable.customer?.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Pago asociado</label>
+                <select [(ngModel)]="purchaseAdjustmentForm.paymentId" class="form-control">
+                  <option value="">— Sin pago —</option>
+                  @for (payment of adjustmentPaymentOptions(); track payment.id) {
+                    <option [value]="payment.id">{{ payment.number }} · {{ formatCurrency(payment.amount) }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Valor *</label>
+                <input type="number" [(ngModel)]="purchaseAdjustmentForm.amount" class="form-control" min="0" step="0.01"/>
+              </div>
+              <div class="form-group">
+                <label>Motivo *</label>
+                <input type="text" [(ngModel)]="purchaseAdjustmentForm.reason" class="form-control" placeholder="Describe el ajuste"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notas</label>
+              <textarea [(ngModel)]="purchaseAdjustmentForm.notes" class="form-control form-textarea" placeholder="Observaciones del ajuste"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closePurchaseAdjustmentModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="saving()" (click)="savePurchaseAdjustment()">
+              {{ saving() ? 'Guardando...' : 'Enviar a aprobación' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showSupplierQuoteModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Nueva Cotización de Proveedor</h3>
+            <button class="drawer-close" (click)="closeSupplierQuoteModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Proveedor *</label>
+                <select [(ngModel)]="supplierQuoteForm.customerId" class="form-control">
+                  <option value="">— Seleccionar proveedor —</option>
+                  @for (c of allCustomers(); track c.id) {
+                    @if (c.isActive) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Solicitud de compra</label>
+                <select [(ngModel)]="supplierQuoteForm.purchaseRequestId" (ngModelChange)="onSupplierQuoteRequestChange()" class="form-control">
+                  <option value="">— Sin solicitud —</option>
+                  @for (request of requests(); track request.id) {
+                    <option [value]="request.id">{{ request.number }} · {{ request.customer?.name || 'Interna' }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Vigencia</label>
+                <input type="date" [(ngModel)]="supplierQuoteForm.validUntil" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>Lead time (días)</label>
+                <input type="number" [(ngModel)]="supplierQuoteForm.leadTimeDays" class="form-control" min="0"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Plazo de pago (días)</label>
+                <input type="number" [(ngModel)]="supplierQuoteForm.paymentTermDays" class="form-control" min="0"/>
+              </div>
+              <div class="form-group">
+                <label>Notas</label>
+                <input type="text" [(ngModel)]="supplierQuoteForm.notes" class="form-control" placeholder="Condiciones comerciales o comentarios"/>
+              </div>
+            </div>
+            <div class="lines-section">
+              <div class="lines-header">
+                <span class="form-section-title">Líneas ofertadas</span>
+                <button class="btn btn-sm btn-secondary" type="button" (click)="addSupplierQuoteLine()">Agregar línea</button>
+              </div>
+              @for (line of supplierQuoteForm.items; track $index; let i = $index) {
+                <div class="line-row">
+                  <div class="line-desc">
+                    <label>Descripción</label>
+                    <input type="text" [(ngModel)]="line.description" class="form-control" placeholder="Producto o servicio ofertado"/>
+                  </div>
+                  <div class="line-qty">
+                    <label>Cantidad</label>
+                    <input type="number" [(ngModel)]="line.quantity" class="form-control" min="0" step="0.01"/>
+                  </div>
+                  <div class="line-price">
+                    <label>Precio unitario</label>
+                    <input type="number" [(ngModel)]="line.unitPrice" class="form-control" min="0" step="0.01"/>
+                  </div>
+                  <div class="line-price">
+                    <label>IVA %</label>
+                    <input type="number" [(ngModel)]="line.taxRate" class="form-control" min="0" max="100" step="0.01"/>
+                  </div>
+                  <button class="btn-icon btn-icon-danger line-remove" title="Quitar línea" (click)="removeSupplierQuoteLine(i)">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"/></svg>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeSupplierQuoteModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="saving()" (click)="saveSupplierQuote()">
+              {{ saving() ? 'Guardando...' : 'Registrar cotización' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showFrameworkAgreementModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Nuevo Acuerdo Marco</h3>
+            <button class="drawer-close" (click)="closeFrameworkAgreementModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Proveedor *</label>
+                <select [(ngModel)]="frameworkAgreementForm.customerId" class="form-control">
+                  <option value="">— Seleccionar proveedor —</option>
+                  @for (c of allCustomers(); track c.id) {
+                    @if (c.isActive) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Título *</label>
+                <input type="text" [(ngModel)]="frameworkAgreementForm.title" class="form-control" placeholder="Acuerdo de suministro anual"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Fecha inicio *</label>
+                <input type="date" [(ngModel)]="frameworkAgreementForm.startDate" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>Fecha fin</label>
+                <input type="date" [(ngModel)]="frameworkAgreementForm.endDate" class="form-control"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Plazo de pago (días)</label>
+                <input type="number" [(ngModel)]="frameworkAgreementForm.paymentTermDays" class="form-control" min="0"/>
+              </div>
+              <div class="form-group">
+                <label>Lead time (días)</label>
+                <input type="number" [(ngModel)]="frameworkAgreementForm.leadTimeDays" class="form-control" min="0"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notas</label>
+              <textarea [(ngModel)]="frameworkAgreementForm.notes" class="form-control form-textarea" placeholder="Condiciones generales del acuerdo"></textarea>
+            </div>
+            <div class="lines-section">
+              <div class="lines-header">
+                <span class="form-section-title">Ítems negociados</span>
+                <button class="btn btn-sm btn-secondary" type="button" (click)="addFrameworkAgreementLine()">Agregar línea</button>
+              </div>
+              @for (line of frameworkAgreementForm.items; track $index; let i = $index) {
+                <div class="line-row">
+                  <div class="line-desc">
+                    <label>Descripción</label>
+                    <input type="text" [(ngModel)]="line.description" class="form-control" placeholder="Producto, servicio o familia negociada"/>
+                  </div>
+                  <div class="line-price">
+                    <label>Precio</label>
+                    <input type="number" [(ngModel)]="line.unitPrice" class="form-control" min="0" step="0.01"/>
+                  </div>
+                  <div class="line-price">
+                    <label>IVA %</label>
+                    <input type="number" [(ngModel)]="line.taxRate" class="form-control" min="0" max="100" step="0.01"/>
+                  </div>
+                  <div class="line-price">
+                    <label>Cantidad mínima</label>
+                    <input type="number" [(ngModel)]="line.minQuantity" class="form-control" min="0" step="0.01"/>
+                  </div>
+                  <button class="btn-icon btn-icon-danger line-remove" title="Quitar línea" (click)="removeFrameworkAgreementLine(i)">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"/></svg>
+                  </button>
+                </div>
+                <div class="form-group">
+                  <label>Notas de línea</label>
+                  <input type="text" [(ngModel)]="line.notes" class="form-control" placeholder="Cobertura, empaque, observaciones o vigencias particulares"/>
+                </div>
+              }
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeFrameworkAgreementModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="saving()" (click)="saveFrameworkAgreement()">
+              {{ saving() ? 'Guardando...' : 'Registrar acuerdo' }}
             </button>
           </div>
         </div>
@@ -1129,12 +3549,72 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     .kpi-card__icon { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #e0efff, #eefbf7); color:#1a407e; flex-shrink:0; }
     .kpi-card__label { display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#7b8fa8; margin-bottom:6px; }
     .kpi-card__value { font-family:'Sora',sans-serif; font-size:22px; line-height:1.1; letter-spacing:-.05em; color:#0c1c35; }
+    .analytics-stack { display:grid; gap:16px; }
+    .analytics-cards { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:14px; }
+    .analytics-card { border:1px solid #dce6f0; border-radius:18px; background:linear-gradient(180deg, #fff, #f7fbff); padding:16px; box-shadow:0 12px 24px rgba(12,28,53,.05); }
+    .analytics-card__label { display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#7b8fa8; margin-bottom:8px; }
+    .analytics-card strong { display:block; font-family:'Sora',sans-serif; font-size:24px; color:#0c1c35; }
+    .analytics-card small { color:#6d7f94; }
+    .analytics-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
+    .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .section-head h3 { margin:0; font-size:16px; color:#0c1c35; }
 
     /* ── Pestañas ──────────────────────────────────────────────── */
-    .tabs-bar { display:flex; gap:4px; margin-bottom:18px; background:#f0f4f9; padding:4px; border-radius:14px; width:fit-content; border:1px solid #dce6f0; }
-    .tab-btn { display:inline-flex; align-items:center; gap:7px; padding:9px 18px; border:none; border-radius:10px; background:transparent; cursor:pointer; font-size:13.5px; font-weight:600; color:#64748b; transition:all .15s; }
-    .tab-btn:hover { color:#1a407e; background:rgba(26,64,126,.06); }
-    .tab-btn--active { background:#fff; color:#1a407e; box-shadow:0 4px 12px rgba(26,64,126,.1); }
+    .tabs-bar {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(168px, 1fr));
+      gap:10px;
+      margin-bottom:18px;
+      padding:14px;
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(244,248,252,.98) 100%);
+      border:1px solid #dce6f0;
+      box-shadow:0 18px 34px rgba(12,28,53,.06);
+    }
+    .tab-btn {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-height:56px;
+      padding:13px 14px;
+      width:100%;
+      text-align:left;
+      border:1px solid transparent;
+      border-radius:16px;
+      background:linear-gradient(180deg, #f8fbff 0%, #f1f6fb 100%);
+      cursor:pointer;
+      font-size:13.5px;
+      font-weight:700;
+      line-height:1.25;
+      color:#4b647f;
+      transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
+      box-shadow:0 8px 16px rgba(12,28,53,.04);
+    }
+    .tab-btn svg {
+      flex-shrink:0;
+      width:16px;
+      height:16px;
+      color:#6b85a3;
+      transition:color .16s ease, transform .16s ease;
+    }
+    .tab-btn:hover {
+      color:#123b6d;
+      border-color:#bfd2e6;
+      background:linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+      transform:translateY(-1px);
+      box-shadow:0 14px 24px rgba(26,64,126,.08);
+    }
+    .tab-btn:hover svg {
+      color:#1a407e;
+      transform:scale(1.05);
+    }
+    .tab-btn--active {
+      color:#fff;
+      border-color:rgba(15,138,127,.28);
+      background:linear-gradient(135deg,#163c72 0%, #0f8a7f 100%);
+      box-shadow:0 16px 28px rgba(15,62,114,.2);
+    }
+    .tab-btn--active svg { color:#dffef5; }
 
     /* ── Filtros ───────────────────────────────────────────────── */
     .filters-shell { margin-bottom:18px; padding:14px 18px; border-radius:16px; background:rgba(255,255,255,.84); border:1px solid #dce6f0; box-shadow:0 8px 20px rgba(12,28,53,.04); backdrop-filter:blur(10px); }
@@ -1186,6 +3666,18 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
     .order-status-received  { background:#d1fae5; color:#065f46; }
     .order-status-partial   { background:#fef3c7; color:#92400e; }
     .order-status-cancelled { background:#fee2e2; color:#991b1b; }
+    .order-status-pending_approval { background:#ede9fe; color:#6d28d9; }
+    .order-status-approved { background:#d1fae5; color:#065f46; }
+    .order-status-rejected { background:#fee2e2; color:#991b1b; }
+    .order-status-ordered { background:#dbeafe; color:#1d4ed8; }
+    .order-status-posted { background:#dcfce7; color:#166534; }
+    .order-status-open { background:#fef3c7; color:#92400e; }
+    .order-status-paid { background:#dcfce7; color:#166534; }
+    .order-status-active { background:#d1fae5; color:#065f46; }
+    .order-status-closed { background:#e5e7eb; color:#374151; }
+    .order-status-expired { background:#fee2e2; color:#991b1b; }
+    .order-status-suspended { background:#fef3c7; color:#92400e; }
+    .order-status-awarded { background:#dcfce7; color:#166534; }
 
     /* ── Acciones ──────────────────────────────────────────────── */
     .actions-cell { text-align:right; white-space:nowrap; }
@@ -1337,14 +3829,18 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
       .page-title { font-size:26px; }
       .page-header { flex-direction:column; align-items:stretch; gap:10px; }
       .page-header .btn { width:100%; justify-content:center; }
-      .hero-mini-grid, .kpi-strip { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+      .hero-mini-grid, .kpi-strip, .analytics-cards, .analytics-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+      .tabs-bar { grid-template-columns:repeat(2, minmax(0, 1fr)); padding:12px; }
+      .tab-btn { min-height:52px; padding:12px 13px; font-size:13px; }
       .filters-bar { gap:8px; }
       .search-wrap { max-width:100%; flex:1 1 100%; }
       .results-pill { margin-left:0; }
       .view-toggle { margin-left:0; }
     }
     @media (max-width: 640px) {
-      .hero-mini-grid, .kpi-strip { grid-template-columns:1fr; }
+      .tabs-bar { grid-template-columns:1fr; gap:8px; padding:10px; border-radius:18px; }
+      .tab-btn { min-height:50px; padding:11px 12px; border-radius:14px; }
+      .hero-mini-grid, .kpi-strip, .analytics-cards, .analytics-grid { grid-template-columns:1fr; }
       .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
       .data-table { min-width:520px; }
       .modal-overlay { align-items:flex-end; padding:0; }
@@ -1367,10 +3863,21 @@ export class PurchasingComponent implements OnInit {
   // ── URLs de la API ──────────────────────────────────────────────────────────
   // Nota: environment.apiUrl ya incluye /api/v1; el módulo purchasing vive en /purchasing
   private readonly CUSTOMERS_API = `${environment.apiUrl}/purchasing/customers`;
+  private readonly REQUESTS_API  = `${environment.apiUrl}/purchasing/purchase-requests`;
   private readonly ORDERS_API    = `${environment.apiUrl}/purchasing/purchase-orders`;
+  private readonly RECEIPTS_API  = `${environment.apiUrl}/purchasing/purchase-receipts`;
+  private readonly PURCHASE_INVOICES_API = `${environment.apiUrl}/purchasing/purchase-invoices`;
+  private readonly ACCOUNTS_PAYABLE_API = `${environment.apiUrl}/purchasing/accounts-payable`;
+  private readonly PURCHASE_ADJUSTMENTS_API = `${environment.apiUrl}/purchasing/purchase-adjustments`;
+  private readonly PURCHASE_ADVANCES_API = `${environment.apiUrl}/purchasing/purchase-advances`;
+  private readonly SUPPLIER_QUOTES_API = `${environment.apiUrl}/purchasing/supplier-quotes`;
+  private readonly FRAMEWORK_AGREEMENTS_API = `${environment.apiUrl}/purchasing/framework-agreements`;
+  private readonly PURCHASE_BUDGETS_API = `${environment.apiUrl}/purchasing/purchase-budgets`;
+  private readonly PURCHASING_ANALYTICS_API = `${environment.apiUrl}/purchasing/reports/analytics`;
+  private readonly PURCHASING_TRACEABILITY_API = `${environment.apiUrl}/purchasing/reports/traceability`;
 
   // ── Estado de pestañas ──────────────────────────────────────────────────────
-  activeTab = signal<'customers' | 'orders'>('customers');
+  activeTab = signal<'customers' | 'budgets' | 'requests' | 'orders' | 'receipts' | 'purchaseInvoices' | 'accountsPayable' | 'purchaseAdvances' | 'adjustments' | 'supplierQuotes' | 'frameworkAgreements' | 'analytics'>('customers');
   customersViewMode = signal<'table' | 'grid'>('table');
   ordersViewMode = signal<'table' | 'grid'>('table');
 
@@ -1389,10 +3896,76 @@ export class PurchasingComponent implements OnInit {
   pageOrders       = signal(1);
   totalPagesOrders = signal(1);
 
+  // ── Solicitudes de compra ───────────────────────────────────────────────────
+  requests           = signal<PurchaseRequest[]>([]);
+  loadingRequests    = signal(false);
+  totalRequests      = signal(0);
+  pageRequests       = signal(1);
+  totalPagesRequests = signal(1);
+
+  // ── Recepciones de compra ───────────────────────────────────────────────────
+  receipts           = signal<PurchaseReceipt[]>([]);
+  loadingReceipts    = signal(false);
+  totalReceipts      = signal(0);
+  pageReceipts       = signal(1);
+  totalPagesReceipts = signal(1);
+
+  purchaseInvoices           = signal<PurchaseInvoice[]>([]);
+  loadingPurchaseInvoices    = signal(false);
+  totalPurchaseInvoices      = signal(0);
+  pagePurchaseInvoices       = signal(1);
+  totalPagesPurchaseInvoices = signal(1);
+
+  accountsPayable           = signal<AccountPayable[]>([]);
+  loadingAccountsPayable    = signal(false);
+  totalAccountsPayable      = signal(0);
+  pageAccountsPayable       = signal(1);
+  totalPagesAccountsPayable = signal(1);
+
+  purchaseAdvances           = signal<PurchaseAdvance[]>([]);
+  loadingPurchaseAdvances    = signal(false);
+  totalPurchaseAdvances      = signal(0);
+  pagePurchaseAdvances       = signal(1);
+  totalPagesPurchaseAdvances = signal(1);
+
+  purchaseAdjustments           = signal<PurchaseAdjustment[]>([]);
+  loadingPurchaseAdjustments    = signal(false);
+  totalPurchaseAdjustments      = signal(0);
+  pagePurchaseAdjustments       = signal(1);
+  totalPagesPurchaseAdjustments = signal(1);
+
+  supplierQuotes           = signal<SupplierQuote[]>([]);
+  loadingSupplierQuotes    = signal(false);
+  totalSupplierQuotes      = signal(0);
+  pageSupplierQuotes       = signal(1);
+  totalPagesSupplierQuotes = signal(1);
+
+  frameworkAgreements           = signal<FrameworkAgreement[]>([]);
+  loadingFrameworkAgreements    = signal(false);
+  totalFrameworkAgreements      = signal(0);
+  pageFrameworkAgreements       = signal(1);
+  totalPagesFrameworkAgreements = signal(1);
+
+  purchaseBudgets           = signal<PurchaseBudget[]>([]);
+  loadingPurchaseBudgets    = signal(false);
+  totalPurchaseBudgets      = signal(0);
+  pagePurchaseBudgets       = signal(1);
+  totalPagesPurchaseBudgets = signal(1);
+
+  analyticsReport = signal<PurchasingAnalyticsReport | null>(null);
+  loadingAnalytics = signal(false);
+  traceabilityRows = signal<PurchasingTraceabilityRow[]>([]);
+  totalTraceability = signal(0);
+  pageTraceability = signal(1);
+  totalPagesTraceability = signal(1);
+
   // ── KPIs calculados ─────────────────────────────────────────────────────────
   activeCustomers = computed(() => this.allCustomers().filter(c => c.isActive).length);
   receivedOrders  = computed(() => this.orders().filter(o => o.status === 'RECEIVED').length);
   pendingOrders   = computed(() => this.orders().filter(o => o.status === 'DRAFT' || o.status === 'SENT').length);
+  pendingRequests = computed(() => this.requests().filter(r => r.status === 'PENDING_APPROVAL').length);
+  postedReceipts  = computed(() => this.receipts().filter(r => r.status === 'POSTED').length);
+  openPayables    = computed(() => this.accountsPayable().filter(p => p.status === 'OPEN' || p.status === 'PARTIAL').length);
 
   // ── Estado común ────────────────────────────────────────────────────────────
   saving = signal(false);
@@ -1402,7 +3975,18 @@ export class PurchasingComponent implements OnInit {
   searchText      = '';
   filterActive    = '';
   filterStatus    = '';
+  filterRequestStatus = '';
+  filterReceiptStatus = '';
+  filterPurchaseInvoiceStatus = '';
+  filterPayableStatus = '';
+  filterAdvanceStatus = '';
+  filterAdjustmentStatus = '';
+  filterAdjustmentType = '';
+  filterSupplierQuoteStatus = '';
+  filterFrameworkAgreementStatus = '';
+  filterBudgetStatus = '';
   filterCustomerId = '';
+  filterOrderId = '';
   filterDateFrom  = '';
   filterDateTo    = '';
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1416,6 +4000,45 @@ export class PurchasingComponent implements OnInit {
   showOrderModal = signal(false);
   editingOrderId = signal<string | null>(null);
   orderForm: OrderForm = this.emptyOrderForm();
+
+  // ── Modal Solicitud ─────────────────────────────────────────────────────────
+  showRequestModal = signal(false);
+  editingRequestId = signal<string | null>(null);
+  requestForm: RequestForm = this.emptyRequestForm();
+
+  // ── Modal Recepción ─────────────────────────────────────────────────────────
+  showReceiptModal = signal(false);
+  receiptForm: ReceiptForm = this.emptyReceiptForm();
+
+  showPurchaseInvoiceModal = signal(false);
+  purchaseInvoiceForm: PurchaseInvoiceForm = this.emptyPurchaseInvoiceForm();
+
+  showPayablePaymentModal = signal(false);
+  payablePaymentTarget = signal<AccountPayable | null>(null);
+  payablePaymentForm: PayablePaymentForm = this.emptyPayablePaymentForm();
+  showPayableScheduleModal = signal(false);
+  payableScheduleTarget = signal<AccountPayable | null>(null);
+  payableScheduleForm: PayableScheduleForm = this.emptyPayableScheduleForm();
+
+  showPurchaseAdvanceModal = signal(false);
+  purchaseAdvanceForm: PurchaseAdvanceForm = this.emptyPurchaseAdvanceForm();
+  showApplyAdvanceModal = signal(false);
+  advanceApplyTarget = signal<PurchaseAdvance | null>(null);
+  purchaseAdvanceApplyForm: PurchaseAdvanceApplyForm = this.emptyPurchaseAdvanceApplyForm();
+
+  showPurchaseAdjustmentModal = signal(false);
+  purchaseAdjustmentForm: PurchaseAdjustmentForm = this.emptyPurchaseAdjustmentForm();
+  adjustmentPaymentOptions = signal<AccountPayablePayment[]>([]);
+
+  showSupplierQuoteModal = signal(false);
+  supplierQuoteForm: SupplierQuoteForm = this.emptySupplierQuoteForm();
+
+  showFrameworkAgreementModal = signal(false);
+  frameworkAgreementForm: FrameworkAgreementForm = this.emptyFrameworkAgreementForm();
+
+  showPurchaseBudgetModal = signal(false);
+  editingBudgetId = signal<string | null>(null);
+  purchaseBudgetForm: PurchaseBudgetForm = this.emptyPurchaseBudgetForm();
 
   // Totales en tiempo real para la modal de nueva orden
   orderSubtotal = signal(0);
@@ -1448,18 +4071,38 @@ export class PurchasingComponent implements OnInit {
   ngOnInit() {
     this.loadCustomers();
     this.loadAllCustomers();
+    this.loadPurchaseBudgets();
+    this.loadRequests();
     this.loadOrders();
+    this.loadReceipts();
+    this.loadPurchaseInvoices();
+    this.loadAccountsPayable();
+    this.loadPurchaseAdvances();
+    this.loadPurchaseAdjustments();
+    this.loadSupplierQuotes();
+    this.loadFrameworkAgreements();
+    this.loadAnalytics();
   }
 
   // ────────────────────────────────────────────────────────────────────────────
   // Gestión de pestañas
   // ────────────────────────────────────────────────────────────────────────────
 
-  switchTab(tab: 'customers' | 'orders') {
+  switchTab(tab: 'customers' | 'budgets' | 'requests' | 'orders' | 'receipts' | 'purchaseInvoices' | 'accountsPayable' | 'purchaseAdvances' | 'adjustments' | 'supplierQuotes' | 'frameworkAgreements' | 'analytics') {
     this.activeTab.set(tab);
     this.searchText = '';
     if (tab === 'customers') this.loadCustomers();
-    else this.loadOrders();
+    else if (tab === 'budgets') this.loadPurchaseBudgets();
+    else if (tab === 'requests') this.loadRequests();
+    else if (tab === 'orders') this.loadOrders();
+    else if (tab === 'receipts') this.loadReceipts();
+    else if (tab === 'purchaseInvoices') this.loadPurchaseInvoices();
+    else if (tab === 'accountsPayable') this.loadAccountsPayable();
+    else if (tab === 'purchaseAdvances') this.loadPurchaseAdvances();
+    else if (tab === 'adjustments') this.loadPurchaseAdjustments();
+    else if (tab === 'supplierQuotes') this.loadSupplierQuotes();
+    else if (tab === 'frameworkAgreements') this.loadFrameworkAgreements();
+    else this.loadAnalytics();
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -1497,6 +4140,29 @@ export class PurchasingComponent implements OnInit {
     });
   }
 
+  loadPurchaseBudgets() {
+    this.loadingPurchaseBudgets.set(true);
+    const params: Record<string, string | number> = {
+      page: this.pagePurchaseBudgets(),
+      limit: this.limit,
+    };
+    if (this.searchText) params['search'] = this.searchText;
+    if (this.filterBudgetStatus) params['status'] = this.filterBudgetStatus;
+
+    this.http.get<PaginatedResponse<PurchaseBudget>>(this.PURCHASE_BUDGETS_API, { params }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.purchaseBudgets.set((data ?? []).map((budget) => this.mapPurchaseBudget(budget)));
+        this.totalPurchaseBudgets.set(total ?? 0);
+        this.totalPagesPurchaseBudgets.set(totalPages ?? 1);
+        this.loadingPurchaseBudgets.set(false);
+      },
+      error: () => {
+        this.loadingPurchaseBudgets.set(false);
+        this.notify.error('Error al cargar presupuestos de compra');
+      },
+    });
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Carga de órdenes de compra
   // ────────────────────────────────────────────────────────────────────────────
@@ -1527,6 +4193,230 @@ export class PurchasingComponent implements OnInit {
     });
   }
 
+  loadRequests() {
+    this.loadingRequests.set(true);
+    const params: Record<string, string | number> = {
+      page: this.pageRequests(),
+      limit: this.limit,
+    };
+    if (this.searchText) params['search'] = this.searchText;
+    if (this.filterRequestStatus) params['status'] = this.filterRequestStatus;
+
+    this.http.get<PaginatedResponse<PurchaseRequest>>(this.REQUESTS_API, { params }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.requests.set((data ?? []).map((request) => this.mapRequest(request)));
+        this.totalRequests.set(total ?? 0);
+        this.totalPagesRequests.set(totalPages ?? 1);
+        this.loadingRequests.set(false);
+      },
+      error: () => {
+        this.loadingRequests.set(false);
+        this.notify.error('Error al cargar solicitudes de compra');
+      },
+    });
+  }
+
+  loadReceipts() {
+    this.loadingReceipts.set(true);
+    const params: Record<string, string | number> = {
+      page: this.pageReceipts(),
+      limit: this.limit,
+    };
+    if (this.searchText) params['search'] = this.searchText;
+    if (this.filterReceiptStatus) params['status'] = this.filterReceiptStatus;
+    if (this.filterOrderId) params['orderId'] = this.filterOrderId;
+
+    this.http.get<PaginatedResponse<PurchaseReceipt>>(this.RECEIPTS_API, { params }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.receipts.set((data ?? []).map((receipt) => this.mapReceipt(receipt)));
+        this.totalReceipts.set(total ?? 0);
+        this.totalPagesReceipts.set(totalPages ?? 1);
+        this.loadingReceipts.set(false);
+      },
+      error: () => {
+        this.loadingReceipts.set(false);
+        this.notify.error('Error al cargar recepciones');
+      },
+    });
+  }
+
+  loadPurchaseInvoices() {
+    this.loadingPurchaseInvoices.set(true);
+    const params: Record<string, string | number> = {
+      page: this.pagePurchaseInvoices(),
+      limit: this.limit,
+    };
+    if (this.searchText) params['search'] = this.searchText;
+    if (this.filterPurchaseInvoiceStatus) params['status'] = this.filterPurchaseInvoiceStatus;
+    if (this.filterCustomerId && this.activeTab() === 'purchaseInvoices') params['customerId'] = this.filterCustomerId;
+
+    this.http.get<PaginatedResponse<PurchaseInvoice>>(this.PURCHASE_INVOICES_API, { params }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.purchaseInvoices.set((data ?? []).map((invoice) => this.mapPurchaseInvoice(invoice)));
+        this.totalPurchaseInvoices.set(total ?? 0);
+        this.totalPagesPurchaseInvoices.set(totalPages ?? 1);
+        this.loadingPurchaseInvoices.set(false);
+      },
+      error: () => {
+        this.loadingPurchaseInvoices.set(false);
+        this.notify.error('Error al cargar facturas de proveedor');
+      },
+    });
+  }
+
+  loadAccountsPayable() {
+    this.loadingAccountsPayable.set(true);
+    const params: Record<string, string | number> = {
+      page: this.pageAccountsPayable(),
+      limit: this.limit,
+    };
+    if (this.searchText) params['search'] = this.searchText;
+    if (this.filterPayableStatus) params['status'] = this.filterPayableStatus;
+    if (this.filterCustomerId && this.activeTab() === 'accountsPayable') params['customerId'] = this.filterCustomerId;
+
+    this.http.get<PaginatedResponse<AccountPayable>>(this.ACCOUNTS_PAYABLE_API, { params }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.accountsPayable.set((data ?? []).map((payable) => this.mapAccountPayable(payable)));
+        this.totalAccountsPayable.set(total ?? 0);
+        this.totalPagesAccountsPayable.set(totalPages ?? 1);
+        this.loadingAccountsPayable.set(false);
+      },
+      error: () => {
+        this.loadingAccountsPayable.set(false);
+        this.notify.error('Error al cargar cuentas por pagar');
+      },
+    });
+  }
+
+  loadPurchaseAdvances() {
+    this.loadingPurchaseAdvances.set(true);
+    const params: Record<string, string | number> = {
+      page: this.pagePurchaseAdvances(),
+      limit: this.limit,
+    };
+    if (this.searchText) params['search'] = this.searchText;
+    if (this.filterAdvanceStatus) params['status'] = this.filterAdvanceStatus;
+    if (this.filterCustomerId && this.activeTab() === 'purchaseAdvances') params['customerId'] = this.filterCustomerId;
+
+    this.http.get<PaginatedResponse<PurchaseAdvance>>(this.PURCHASE_ADVANCES_API, { params }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.purchaseAdvances.set((data ?? []).map((advance) => this.mapPurchaseAdvance(advance)));
+        this.totalPurchaseAdvances.set(total ?? 0);
+        this.totalPagesPurchaseAdvances.set(totalPages ?? 1);
+        this.loadingPurchaseAdvances.set(false);
+      },
+      error: () => {
+        this.loadingPurchaseAdvances.set(false);
+        this.notify.error('Error al cargar anticipos');
+      },
+    });
+  }
+
+  loadPurchaseAdjustments() {
+    this.loadingPurchaseAdjustments.set(true);
+    const params: Record<string, string | number> = {
+      page: this.pagePurchaseAdjustments(),
+      limit: this.limit,
+    };
+    if (this.searchText) params['search'] = this.searchText;
+    if (this.filterAdjustmentStatus) params['status'] = this.filterAdjustmentStatus;
+    if (this.filterAdjustmentType) params['type'] = this.filterAdjustmentType;
+    if (this.filterCustomerId && this.activeTab() === 'adjustments') params['customerId'] = this.filterCustomerId;
+
+    this.http.get<PaginatedResponse<PurchaseAdjustment>>(this.PURCHASE_ADJUSTMENTS_API, { params }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.purchaseAdjustments.set((data ?? []).map((item) => this.mapPurchaseAdjustment(item)));
+        this.totalPurchaseAdjustments.set(total ?? 0);
+        this.totalPagesPurchaseAdjustments.set(totalPages ?? 1);
+        this.loadingPurchaseAdjustments.set(false);
+      },
+      error: () => {
+        this.loadingPurchaseAdjustments.set(false);
+        this.notify.error('Error al cargar ajustes de compra');
+      },
+    });
+  }
+
+  loadSupplierQuotes() {
+    this.loadingSupplierQuotes.set(true);
+    const params: Record<string, string | number> = { page: this.pageSupplierQuotes(), limit: this.limit };
+    if (this.searchText) params['search'] = this.searchText;
+    if (this.filterSupplierQuoteStatus) params['status'] = this.filterSupplierQuoteStatus;
+    if (this.filterCustomerId && this.activeTab() === 'supplierQuotes') params['customerId'] = this.filterCustomerId;
+    this.http.get<PaginatedResponse<SupplierQuote>>(this.SUPPLIER_QUOTES_API, { params }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.supplierQuotes.set((data ?? []).map((quote) => this.mapSupplierQuote(quote)));
+        this.totalSupplierQuotes.set(total ?? 0);
+        this.totalPagesSupplierQuotes.set(totalPages ?? 1);
+        this.loadingSupplierQuotes.set(false);
+      },
+      error: () => {
+        this.loadingSupplierQuotes.set(false);
+        this.notify.error('Error al cargar cotizaciones de proveedor');
+      },
+    });
+  }
+
+  loadFrameworkAgreements() {
+    this.loadingFrameworkAgreements.set(true);
+    const params: Record<string, string | number> = { page: this.pageFrameworkAgreements(), limit: this.limit };
+    if (this.searchText) params['search'] = this.searchText;
+    if (this.filterFrameworkAgreementStatus) params['status'] = this.filterFrameworkAgreementStatus;
+    if (this.filterCustomerId && this.activeTab() === 'frameworkAgreements') params['customerId'] = this.filterCustomerId;
+    this.http.get<PaginatedResponse<FrameworkAgreement>>(this.FRAMEWORK_AGREEMENTS_API, { params }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.frameworkAgreements.set((data ?? []).map((agreement) => this.mapFrameworkAgreement(agreement)));
+        this.totalFrameworkAgreements.set(total ?? 0);
+        this.totalPagesFrameworkAgreements.set(totalPages ?? 1);
+        this.loadingFrameworkAgreements.set(false);
+      },
+      error: () => {
+        this.loadingFrameworkAgreements.set(false);
+        this.notify.error('Error al cargar acuerdos marco');
+      },
+    });
+  }
+
+  loadAnalytics() {
+    this.loadingAnalytics.set(true);
+    const analyticsParams: Record<string, string> = {};
+    if (this.filterDateFrom) analyticsParams['dateFrom'] = this.filterDateFrom;
+    if (this.filterDateTo) analyticsParams['dateTo'] = this.filterDateTo;
+
+    const traceabilityParams: Record<string, string | number> = {
+      page: this.pageTraceability(),
+      limit: this.limit,
+    };
+    if (this.searchText) traceabilityParams['search'] = this.searchText;
+    if (this.filterDateFrom) traceabilityParams['dateFrom'] = this.filterDateFrom;
+    if (this.filterDateTo) traceabilityParams['dateTo'] = this.filterDateTo;
+
+    this.http.get<PurchasingAnalyticsReport>(this.PURCHASING_ANALYTICS_API, { params: analyticsParams }).subscribe({
+      next: (report) => {
+        this.analyticsReport.set(report);
+        this.loadingAnalytics.set(false);
+      },
+      error: () => {
+        this.analyticsReport.set(null);
+        this.loadingAnalytics.set(false);
+        this.notify.error('No fue posible cargar la analítica de compras');
+      },
+    });
+
+    this.http.get<PaginatedResponse<PurchasingTraceabilityRow>>(this.PURCHASING_TRACEABILITY_API, { params: traceabilityParams }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.traceabilityRows.set((data ?? []).map((row) => this.mapTraceabilityRow(row)));
+        this.totalTraceability.set(total ?? 0);
+        this.totalPagesTraceability.set(totalPages ?? 1);
+      },
+      error: () => {
+        this.traceabilityRows.set([]);
+        this.totalTraceability.set(0);
+        this.totalPagesTraceability.set(1);
+      },
+    });
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Búsqueda con debounce
   // ────────────────────────────────────────────────────────────────────────────
@@ -1537,9 +4427,39 @@ export class PurchasingComponent implements OnInit {
       if (this.activeTab() === 'customers') {
         this.pageCustomers.set(1);
         this.loadCustomers();
-      } else {
+      } else if (this.activeTab() === 'budgets') {
+        this.pagePurchaseBudgets.set(1);
+        this.loadPurchaseBudgets();
+      } else if (this.activeTab() === 'requests') {
+        this.pageRequests.set(1);
+        this.loadRequests();
+      } else if (this.activeTab() === 'orders') {
         this.pageOrders.set(1);
         this.loadOrders();
+      } else if (this.activeTab() === 'purchaseInvoices') {
+        this.pagePurchaseInvoices.set(1);
+        this.loadPurchaseInvoices();
+      } else if (this.activeTab() === 'accountsPayable') {
+        this.pageAccountsPayable.set(1);
+        this.loadAccountsPayable();
+      } else if (this.activeTab() === 'purchaseAdvances') {
+        this.pagePurchaseAdvances.set(1);
+        this.loadPurchaseAdvances();
+      } else if (this.activeTab() === 'analytics') {
+        this.pageTraceability.set(1);
+        this.loadAnalytics();
+      } else if (this.activeTab() === 'adjustments') {
+        this.pagePurchaseAdjustments.set(1);
+        this.loadPurchaseAdjustments();
+      } else if (this.activeTab() === 'supplierQuotes') {
+        this.pageSupplierQuotes.set(1);
+        this.loadSupplierQuotes();
+      } else if (this.activeTab() === 'frameworkAgreements') {
+        this.pageFrameworkAgreements.set(1);
+        this.loadFrameworkAgreements();
+      } else {
+        this.pageReceipts.set(1);
+        this.loadReceipts();
       }
     }, 350);
   }
@@ -1554,6 +4474,9 @@ export class PurchasingComponent implements OnInit {
     return this.buildRange(this.totalPagesCustomers(), this.pageCustomers());
   }
 
+  setPagePurchaseBudgets(p: number) { this.pagePurchaseBudgets.set(p); this.loadPurchaseBudgets(); }
+  pageRangePurchaseBudgets(): number[] { return this.buildRange(this.totalPagesPurchaseBudgets(), this.pagePurchaseBudgets()); }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Paginación de órdenes
   // ────────────────────────────────────────────────────────────────────────────
@@ -1563,6 +4486,33 @@ export class PurchasingComponent implements OnInit {
   pageRangeOrders(): number[] {
     return this.buildRange(this.totalPagesOrders(), this.pageOrders());
   }
+
+  setPageRequests(p: number) { this.pageRequests.set(p); this.loadRequests(); }
+  pageRangeRequests(): number[] { return this.buildRange(this.totalPagesRequests(), this.pageRequests()); }
+
+  setPageReceipts(p: number) { this.pageReceipts.set(p); this.loadReceipts(); }
+  pageRangeReceipts(): number[] { return this.buildRange(this.totalPagesReceipts(), this.pageReceipts()); }
+
+  setPagePurchaseInvoices(p: number) { this.pagePurchaseInvoices.set(p); this.loadPurchaseInvoices(); }
+  pageRangePurchaseInvoices(): number[] { return this.buildRange(this.totalPagesPurchaseInvoices(), this.pagePurchaseInvoices()); }
+
+  setPageAccountsPayable(p: number) { this.pageAccountsPayable.set(p); this.loadAccountsPayable(); }
+  pageRangeAccountsPayable(): number[] { return this.buildRange(this.totalPagesAccountsPayable(), this.pageAccountsPayable()); }
+
+  setPagePurchaseAdvances(p: number) { this.pagePurchaseAdvances.set(p); this.loadPurchaseAdvances(); }
+  pageRangePurchaseAdvances(): number[] { return this.buildRange(this.totalPagesPurchaseAdvances(), this.pagePurchaseAdvances()); }
+
+  setPageTraceability(p: number) { this.pageTraceability.set(p); this.loadAnalytics(); }
+  pageRangeTraceability(): number[] { return this.buildRange(this.totalPagesTraceability(), this.pageTraceability()); }
+
+  setPagePurchaseAdjustments(p: number) { this.pagePurchaseAdjustments.set(p); this.loadPurchaseAdjustments(); }
+  pageRangePurchaseAdjustments(): number[] { return this.buildRange(this.totalPagesPurchaseAdjustments(), this.pagePurchaseAdjustments()); }
+
+  setPageSupplierQuotes(p: number) { this.pageSupplierQuotes.set(p); this.loadSupplierQuotes(); }
+  pageRangeSupplierQuotes(): number[] { return this.buildRange(this.totalPagesSupplierQuotes(), this.pageSupplierQuotes()); }
+
+  setPageFrameworkAgreements(p: number) { this.pageFrameworkAgreements.set(p); this.loadFrameworkAgreements(); }
+  pageRangeFrameworkAgreements(): number[] { return this.buildRange(this.totalPagesFrameworkAgreements(), this.pageFrameworkAgreements()); }
 
   private buildRange(total: number, current: number): number[] {
     const range: number[] = [];
@@ -1647,6 +4597,945 @@ export class PurchasingComponent implements OnInit {
     this.loadOrders();
   }
 
+  openPurchaseBudgetModal(budget?: PurchaseBudget) {
+    if (budget) {
+      this.editingBudgetId.set(budget.id);
+      this.purchaseBudgetForm = {
+        title: budget.title,
+        status: budget.status,
+        amount: budget.amount,
+        startDate: this.asInputDate(budget.startDate),
+        endDate: this.asInputDate(budget.endDate),
+        area: budget.area ?? '',
+        costCenter: budget.costCenter ?? '',
+        projectCode: budget.projectCode ?? '',
+        notes: budget.notes ?? '',
+      };
+    } else {
+      this.editingBudgetId.set(null);
+      this.purchaseBudgetForm = this.emptyPurchaseBudgetForm();
+    }
+    this.showPurchaseBudgetModal.set(true);
+  }
+
+  closePurchaseBudgetModal() {
+    this.showPurchaseBudgetModal.set(false);
+    this.editingBudgetId.set(null);
+    this.purchaseBudgetForm = this.emptyPurchaseBudgetForm();
+  }
+
+  savePurchaseBudget() {
+    if (!this.purchaseBudgetForm.title.trim()) {
+      this.notify.warning('Ingresa el nombre del presupuesto');
+      return;
+    }
+    if (this.sanitizeAmount(this.purchaseBudgetForm.amount) <= 0) {
+      this.notify.warning('El monto del presupuesto debe ser mayor que cero');
+      return;
+    }
+    if (!this.purchaseBudgetForm.startDate) {
+      this.notify.warning('Indica la fecha inicial del presupuesto');
+      return;
+    }
+
+    const payload = {
+      title: this.purchaseBudgetForm.title.trim(),
+      status: this.purchaseBudgetForm.status,
+      amount: this.sanitizeAmount(this.purchaseBudgetForm.amount),
+      startDate: this.purchaseBudgetForm.startDate,
+      endDate: this.purchaseBudgetForm.endDate || undefined,
+      area: this.purchaseBudgetForm.area || undefined,
+      costCenter: this.purchaseBudgetForm.costCenter || undefined,
+      projectCode: this.purchaseBudgetForm.projectCode || undefined,
+      notes: this.purchaseBudgetForm.notes || undefined,
+    };
+    const id = this.editingBudgetId();
+    this.saving.set(true);
+    const request$ = id
+      ? this.http.put(`${this.PURCHASE_BUDGETS_API}/${id}`, payload)
+      : this.http.post(this.PURCHASE_BUDGETS_API, payload);
+
+    request$.subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closePurchaseBudgetModal();
+        this.notify.success(id ? 'Presupuesto actualizado' : 'Presupuesto creado');
+        this.loadPurchaseBudgets();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible guardar el presupuesto');
+      },
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Solicitudes de compra
+  // ────────────────────────────────────────────────────────────────────────────
+
+  openRequestModal(request?: PurchaseRequest) {
+    if (request) {
+      if (!request.items?.length) {
+        this.http.get<PurchaseRequest>(`${this.REQUESTS_API}/${request.id}`).subscribe({
+          next: (full) => this.openRequestModal(this.mapRequest(full)),
+          error: () => this.notify.error('No fue posible cargar la solicitud para editarla'),
+        });
+        return;
+      }
+      this.editingRequestId.set(request.id);
+      this.requestForm = {
+        customerId: request.customer?.id ?? '',
+        budgetId: request.budget?.id ?? request.budgetId ?? '',
+        requestingArea: request.requestingArea ?? '',
+        costCenter: request.costCenter ?? '',
+        projectCode: request.projectCode ?? '',
+        requestDate: this.asInputDate(request.requestDate),
+        neededByDate: this.asInputDate(request.neededByDate),
+        notes: request.notes ?? '',
+        items: (request.items ?? []).map((item) => ({
+          description: item.description,
+          quantity: Number(item.quantity ?? 0),
+          estimatedUnitPrice: item.estimatedUnitPrice == null ? null : Number(item.estimatedUnitPrice),
+        })),
+      };
+      if (!this.requestForm.items.length) {
+        this.requestForm.items = [{ description: '', quantity: null, estimatedUnitPrice: null }];
+      }
+    } else {
+      this.editingRequestId.set(null);
+      this.requestForm = this.emptyRequestForm();
+    }
+    this.showRequestModal.set(true);
+  }
+
+  closeRequestModal() {
+    this.showRequestModal.set(false);
+    this.editingRequestId.set(null);
+  }
+
+  addRequestLine() {
+    this.requestForm.items.push({ description: '', quantity: null, estimatedUnitPrice: null });
+  }
+
+  removeRequestLine(index: number) {
+    this.requestForm.items.splice(index, 1);
+  }
+
+  saveRequest() {
+    const editingId = this.editingRequestId();
+    if (!this.requestForm.requestDate) {
+      this.notify.warning('Indica la fecha de la solicitud');
+      return;
+    }
+    if (!this.requestForm.items.length) {
+      this.notify.warning('Agrega al menos un ítem a la solicitud');
+      return;
+    }
+    const invalidLine = this.requestForm.items.find((item) => !item.description?.trim() || this.sanitizeAmount(item.quantity) <= 0);
+    if (invalidLine) {
+      this.notify.warning('Cada ítem de la solicitud debe tener descripción y cantidad válida');
+      return;
+    }
+
+    this.saving.set(true);
+    const payload = {
+      requestDate: this.requestForm.requestDate,
+      neededByDate: this.requestForm.neededByDate || undefined,
+      notes: this.requestForm.notes || undefined,
+      customerId: this.requestForm.customerId || undefined,
+      budgetId: this.requestForm.budgetId || undefined,
+      requestingArea: this.requestForm.requestingArea || undefined,
+      costCenter: this.requestForm.costCenter || undefined,
+      projectCode: this.requestForm.projectCode || undefined,
+      items: this.requestForm.items.map((item, index) => ({
+        description: item.description.trim(),
+        quantity: this.sanitizeAmount(item.quantity),
+        estimatedUnitPrice: item.estimatedUnitPrice == null ? undefined : this.sanitizeAmount(item.estimatedUnitPrice),
+        position: index + 1,
+      })),
+    };
+
+    const request$ = editingId
+      ? this.http.put(`${this.REQUESTS_API}/${editingId}`, payload)
+      : this.http.post(this.REQUESTS_API, payload);
+
+    request$.subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.notify.success(editingId ? 'Solicitud actualizada' : 'Solicitud creada');
+        this.closeRequestModal();
+        this.loadRequests();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible guardar la solicitud');
+      },
+    });
+  }
+
+  requestRequestApproval(request: PurchaseRequest) {
+    this.http.post(`${this.REQUESTS_API}/${request.id}/request-approval`, {}).subscribe({
+      next: () => {
+        this.notify.success('Solicitud enviada a aprobación');
+        this.loadRequests();
+      },
+      error: (err) => this.notify.error(err?.error?.message || 'No fue posible solicitar aprobación'),
+    });
+  }
+
+  approveRequest(request: PurchaseRequest) {
+    this.http.patch(`${this.REQUESTS_API}/${request.id}/approve`, {}).subscribe({
+      next: () => {
+        this.notify.success('Solicitud aprobada');
+        this.loadRequests();
+      },
+      error: (err) => this.notify.error(err?.error?.message || 'No fue posible aprobar la solicitud'),
+    });
+  }
+
+  rejectRequest(request: PurchaseRequest) {
+    this.http.patch(`${this.REQUESTS_API}/${request.id}/reject`, {}).subscribe({
+      next: () => {
+        this.notify.success('Solicitud rechazada');
+        this.loadRequests();
+      },
+      error: (err) => this.notify.error(err?.error?.message || 'No fue posible rechazar la solicitud'),
+    });
+  }
+
+  convertRequestToOrder(request: PurchaseRequest) {
+    const customerId = request.customer?.id;
+    if (!customerId) {
+      this.notify.warning('Asocia un cliente a la solicitud antes de convertirla en orden');
+      return;
+    }
+    this.http.post(`${this.REQUESTS_API}/${request.id}/convert-to-order`, {
+      customerId,
+      issueDate: this.asInputDate(new Date().toISOString()),
+      notes: request.notes || undefined,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Solicitud convertida en orden de compra');
+        this.loadRequests();
+        this.loadOrders();
+      },
+      error: (err) => this.notify.error(err?.error?.message || 'No fue posible convertir la solicitud'),
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Recepciones de compra
+  // ────────────────────────────────────────────────────────────────────────────
+
+  openReceiptModal() {
+    this.receiptForm = this.emptyReceiptForm();
+    this.showReceiptModal.set(true);
+  }
+
+  closeReceiptModal() {
+    this.showReceiptModal.set(false);
+    this.receiptForm = this.emptyReceiptForm();
+  }
+
+  onReceiptOrderChange() {
+    const orderId = this.receiptForm.orderId;
+    if (!orderId) {
+      this.receiptForm.items = [];
+      return;
+    }
+    this.http.get<PurchaseOrder>(`${this.ORDERS_API}/${orderId}`).subscribe({
+      next: (order) => {
+        const mapped = this.mapOrder(order);
+        this.receiptForm.items = (mapped.lines ?? []).map((line, index) => ({
+          orderItemId: (order as any)?.items?.[index]?.id,
+          description: line.description,
+          orderedQuantity: Number(line.quantity ?? 0),
+          receivedQuantity: Number(line.quantity ?? 0),
+        }));
+      },
+      error: () => this.notify.error('No fue posible cargar la orden para registrar la recepción'),
+    });
+  }
+
+  saveReceipt() {
+    if (!this.receiptForm.orderId) {
+      this.notify.warning('Selecciona una orden de compra');
+      return;
+    }
+    if (!this.receiptForm.receiptDate) {
+      this.notify.warning('Indica la fecha de recepción');
+      return;
+    }
+    if (!this.receiptForm.items.length) {
+      this.notify.warning('La recepción debe incluir al menos una línea');
+      return;
+    }
+    const validItems = this.receiptForm.items.filter((item) => this.sanitizeAmount(item.receivedQuantity) > 0);
+    if (!validItems.length) {
+      this.notify.warning('Registra al menos una cantidad recibida mayor que cero');
+      return;
+    }
+
+    this.saving.set(true);
+    this.http.post(this.RECEIPTS_API, {
+      orderId: this.receiptForm.orderId,
+      receiptDate: this.receiptForm.receiptDate,
+      notes: this.receiptForm.notes || undefined,
+      items: validItems.map((item, index) => ({
+        orderItemId: item.orderItemId || undefined,
+        description: item.description,
+        orderedQuantity: item.orderedQuantity == null ? undefined : this.sanitizeAmount(item.orderedQuantity),
+        receivedQuantity: this.sanitizeAmount(item.receivedQuantity),
+        position: index + 1,
+      })),
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closeReceiptModal();
+        this.notify.success('Recepción registrada correctamente');
+        this.loadReceipts();
+        this.loadOrders();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible registrar la recepción');
+      },
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Facturas de proveedor
+  // ────────────────────────────────────────────────────────────────────────────
+
+  openPurchaseInvoiceModal() {
+    this.purchaseInvoiceForm = this.emptyPurchaseInvoiceForm();
+    this.showPurchaseInvoiceModal.set(true);
+  }
+
+  closePurchaseInvoiceModal() {
+    this.showPurchaseInvoiceModal.set(false);
+    this.purchaseInvoiceForm = this.emptyPurchaseInvoiceForm();
+  }
+
+  onPurchaseInvoiceOrderChange() {
+    const orderId = this.purchaseInvoiceForm.purchaseOrderId;
+    if (!orderId) {
+      this.purchaseInvoiceForm.items = [];
+      this.purchaseInvoiceForm.customerId = '';
+      return;
+    }
+
+    this.http.get<PurchaseOrder>(`${this.ORDERS_API}/${orderId}`).subscribe({
+      next: (order) => {
+        const mapped = this.mapOrder(order);
+        this.purchaseInvoiceForm.customerId = mapped.customer?.id ?? '';
+        this.purchaseInvoiceForm.items = (mapped.lines ?? []).map((line, index) => ({
+          orderItemId: (order as any)?.items?.[index]?.id,
+          description: line.description,
+          quantity: Number(line.quantity ?? 0),
+          unitPrice: Number(line.unitPrice ?? 0),
+          taxRate: Number(line.taxPercent ?? 19),
+          discount: Number(line.discountPercent ?? 0),
+        }));
+      },
+      error: () => this.notify.error('No fue posible cargar la orden para la factura del proveedor'),
+    });
+  }
+
+  savePurchaseInvoice() {
+    if (!this.purchaseInvoiceForm.customerId) {
+      this.notify.warning('Selecciona un cliente para la factura de proveedor');
+      return;
+    }
+    if (!this.purchaseInvoiceForm.supplierInvoiceNumber.trim()) {
+      this.notify.warning('Ingresa el número de la factura del proveedor');
+      return;
+    }
+    if (!this.purchaseInvoiceForm.issueDate) {
+      this.notify.warning('Indica la fecha de emisión');
+      return;
+    }
+    if (!this.purchaseInvoiceForm.items.length) {
+      this.notify.warning('La factura debe incluir al menos una línea');
+      return;
+    }
+
+    const invalidLine = this.purchaseInvoiceForm.items.find((line) =>
+      !line.description?.trim() ||
+      this.sanitizeAmount(line.quantity) <= 0 ||
+      this.sanitizeAmount(line.unitPrice) < 0,
+    );
+    if (invalidLine) {
+      this.notify.warning('Completa correctamente las líneas de la factura');
+      return;
+    }
+
+    this.saving.set(true);
+    this.http.post(this.PURCHASE_INVOICES_API, {
+      customerId: this.purchaseInvoiceForm.customerId,
+      purchaseOrderId: this.purchaseInvoiceForm.purchaseOrderId || undefined,
+      receiptId: this.purchaseInvoiceForm.receiptId || undefined,
+      supplierInvoiceNumber: this.purchaseInvoiceForm.supplierInvoiceNumber.trim(),
+      issueDate: this.purchaseInvoiceForm.issueDate,
+      dueDate: this.purchaseInvoiceForm.dueDate || undefined,
+      notes: this.purchaseInvoiceForm.notes || undefined,
+      items: this.purchaseInvoiceForm.items.map((item, index) => ({
+        orderItemId: item.orderItemId || undefined,
+        description: item.description.trim(),
+        quantity: this.sanitizeAmount(item.quantity),
+        unitPrice: this.sanitizeAmount(item.unitPrice),
+        taxRate: this.sanitizePercent(item.taxRate),
+        discount: this.sanitizePercent(item.discount),
+        position: index + 1,
+      })),
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closePurchaseInvoiceModal();
+        this.notify.success('Factura de proveedor creada');
+        this.loadPurchaseInvoices();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible crear la factura de proveedor');
+      },
+    });
+  }
+
+  postPurchaseInvoice(invoice: PurchaseInvoice) {
+    this.saving.set(true);
+    this.http.patch(`${this.PURCHASE_INVOICES_API}/${invoice.id}/post`, {}).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.notify.success('Factura contabilizada y cuenta por pagar generada');
+        this.loadPurchaseInvoices();
+        this.loadAccountsPayable();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible contabilizar la factura');
+      },
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Cuentas por pagar
+  // ────────────────────────────────────────────────────────────────────────────
+
+  openPayablePaymentModal(payable: AccountPayable) {
+    this.payablePaymentTarget.set(payable);
+    this.payablePaymentForm = {
+      ...this.emptyPayablePaymentForm(),
+      amount: payable.balance,
+    };
+    this.showPayablePaymentModal.set(true);
+  }
+
+  closePayablePaymentModal() {
+    this.showPayablePaymentModal.set(false);
+    this.payablePaymentTarget.set(null);
+    this.payablePaymentForm = this.emptyPayablePaymentForm();
+  }
+
+  savePayablePayment() {
+    const payable = this.payablePaymentTarget();
+    if (!payable) return;
+    if (!this.payablePaymentForm.paymentDate) {
+      this.notify.warning('Indica la fecha del pago');
+      return;
+    }
+    if (this.sanitizeAmount(this.payablePaymentForm.amount) <= 0) {
+      this.notify.warning('El valor del pago debe ser mayor que cero');
+      return;
+    }
+
+    this.saving.set(true);
+    this.http.post(`${this.ACCOUNTS_PAYABLE_API}/${payable.id}/payments`, {
+      paymentDate: this.payablePaymentForm.paymentDate,
+      amount: this.sanitizeAmount(this.payablePaymentForm.amount),
+      paymentMethod: this.payablePaymentForm.paymentMethod,
+      reference: this.payablePaymentForm.reference || undefined,
+      notes: this.payablePaymentForm.notes || undefined,
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closePayablePaymentModal();
+        this.notify.success('Pago registrado correctamente');
+        this.loadAccountsPayable();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible registrar el pago');
+      },
+    });
+  }
+
+  openPayableScheduleModal(payable: AccountPayable) {
+    this.http.get<AccountPayable>(`${this.ACCOUNTS_PAYABLE_API}/${payable.id}`).subscribe({
+      next: (detail) => {
+        const mapped = this.mapAccountPayable(detail);
+        this.payableScheduleTarget.set(mapped);
+        const defaultDueDate = mapped.dueDate ? this.asInputDate(mapped.dueDate) : this.asInputDate(new Date().toISOString());
+        const scheduleSource: Array<{ dueDate: string; amount: number; notes?: string }> = mapped.schedules?.length
+          ? mapped.schedules.map((schedule) => ({
+              dueDate: schedule.dueDate,
+              amount: Number(schedule.balance ?? 0),
+              notes: schedule.notes ?? '',
+            }))
+          : [{ dueDate: defaultDueDate, amount: mapped.balance, notes: '' }];
+        this.payableScheduleForm = {
+          schedules: scheduleSource.map((schedule) => ({
+            dueDate: this.asInputDate(schedule.dueDate),
+            amount: Number(schedule.amount ?? 0),
+            notes: schedule.notes ?? '',
+          })),
+        };
+        this.showPayableScheduleModal.set(true);
+      },
+      error: () => this.notify.error('No fue posible cargar la programación de pagos'),
+    });
+  }
+
+  closePayableScheduleModal() {
+    this.showPayableScheduleModal.set(false);
+    this.payableScheduleTarget.set(null);
+    this.payableScheduleForm = this.emptyPayableScheduleForm();
+  }
+
+  addPayableScheduleLine() {
+    this.payableScheduleForm.schedules.push({
+      dueDate: this.asInputDate(new Date().toISOString()),
+      amount: null,
+      notes: '',
+    });
+  }
+
+  removePayableScheduleLine(index: number) {
+    this.payableScheduleForm.schedules.splice(index, 1);
+  }
+
+  savePayableSchedule() {
+    const payable = this.payableScheduleTarget();
+    if (!payable) return;
+    if (!this.payableScheduleForm.schedules.length) {
+      this.notify.warning('Agrega al menos una cuota al cronograma');
+      return;
+    }
+    const invalidLine = this.payableScheduleForm.schedules.find((line) => !line.dueDate || this.sanitizeAmount(line.amount) <= 0);
+    if (invalidLine) {
+      this.notify.warning('Cada cuota debe tener fecha de vencimiento y valor válido');
+      return;
+    }
+    const totalScheduled = this.payableScheduleForm.schedules.reduce((sum, line) => sum + this.sanitizeAmount(line.amount), 0);
+    if (Math.abs(totalScheduled - payable.balance) > 0.01) {
+      this.notify.warning(`La suma del cronograma debe ser igual al saldo pendiente: ${this.formatCurrency(payable.balance)}`);
+      return;
+    }
+
+    this.saving.set(true);
+    this.http.post(`${this.ACCOUNTS_PAYABLE_API}/${payable.id}/schedules`, {
+      schedules: this.payableScheduleForm.schedules.map((line) => ({
+        dueDate: line.dueDate,
+        amount: this.sanitizeAmount(line.amount),
+        notes: line.notes || undefined,
+      })),
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closePayableScheduleModal();
+        this.notify.success('Cronograma de pago actualizado');
+        this.loadAccountsPayable();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible guardar el cronograma');
+      },
+    });
+  }
+
+  openPurchaseAdvanceModal() {
+    this.purchaseAdvanceForm = this.emptyPurchaseAdvanceForm();
+    this.showPurchaseAdvanceModal.set(true);
+  }
+
+  closePurchaseAdvanceModal() {
+    this.showPurchaseAdvanceModal.set(false);
+    this.purchaseAdvanceForm = this.emptyPurchaseAdvanceForm();
+  }
+
+  savePurchaseAdvance() {
+    if (!this.purchaseAdvanceForm.customerId) {
+      this.notify.warning('Selecciona el proveedor del anticipo');
+      return;
+    }
+    if (!this.purchaseAdvanceForm.issueDate) {
+      this.notify.warning('Indica la fecha del anticipo');
+      return;
+    }
+    if (this.sanitizeAmount(this.purchaseAdvanceForm.amount) <= 0) {
+      this.notify.warning('El valor del anticipo debe ser mayor que cero');
+      return;
+    }
+
+    this.saving.set(true);
+    this.http.post(this.PURCHASE_ADVANCES_API, {
+      customerId: this.purchaseAdvanceForm.customerId,
+      issueDate: this.purchaseAdvanceForm.issueDate,
+      amount: this.sanitizeAmount(this.purchaseAdvanceForm.amount),
+      paymentMethod: this.purchaseAdvanceForm.paymentMethod,
+      reference: this.purchaseAdvanceForm.reference || undefined,
+      notes: this.purchaseAdvanceForm.notes || undefined,
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closePurchaseAdvanceModal();
+        this.notify.success('Anticipo registrado');
+        this.loadPurchaseAdvances();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible registrar el anticipo');
+      },
+    });
+  }
+
+  openApplyAdvanceModal(advance: PurchaseAdvance) {
+    this.advanceApplyTarget.set(advance);
+    this.purchaseAdvanceApplyForm = {
+      ...this.emptyPurchaseAdvanceApplyForm(),
+      amount: advance.balance,
+    };
+    this.showApplyAdvanceModal.set(true);
+  }
+
+  closeApplyAdvanceModal() {
+    this.showApplyAdvanceModal.set(false);
+    this.advanceApplyTarget.set(null);
+    this.purchaseAdvanceApplyForm = this.emptyPurchaseAdvanceApplyForm();
+  }
+
+  saveAdvanceApplication() {
+    const advance = this.advanceApplyTarget();
+    if (!advance) return;
+    if (!this.purchaseAdvanceApplyForm.accountPayableId) {
+      this.notify.warning('Selecciona la cuenta por pagar a la que aplicarás el anticipo');
+      return;
+    }
+    if (this.sanitizeAmount(this.purchaseAdvanceApplyForm.amount) <= 0) {
+      this.notify.warning('El valor aplicado debe ser mayor que cero');
+      return;
+    }
+    this.saving.set(true);
+    this.http.post(`${this.PURCHASE_ADVANCES_API}/${advance.id}/apply`, {
+      accountPayableId: this.purchaseAdvanceApplyForm.accountPayableId,
+      amount: this.sanitizeAmount(this.purchaseAdvanceApplyForm.amount),
+      notes: this.purchaseAdvanceApplyForm.notes || undefined,
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closeApplyAdvanceModal();
+        this.notify.success('Anticipo aplicado a la cuenta por pagar');
+        this.loadPurchaseAdvances();
+        this.loadAccountsPayable();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible aplicar el anticipo');
+      },
+    });
+  }
+
+  openPurchaseAdjustmentModal() {
+    this.purchaseAdjustmentForm = this.emptyPurchaseAdjustmentForm();
+    this.showPurchaseAdjustmentModal.set(true);
+  }
+
+  closePurchaseAdjustmentModal() {
+    this.showPurchaseAdjustmentModal.set(false);
+    this.purchaseAdjustmentForm = this.emptyPurchaseAdjustmentForm();
+    this.adjustmentPaymentOptions.set([]);
+  }
+
+  onAdjustmentPayableChange() {
+    this.purchaseAdjustmentForm.paymentId = '';
+    const payableId = this.purchaseAdjustmentForm.accountPayableId;
+    if (!payableId) {
+      this.adjustmentPaymentOptions.set([]);
+      return;
+    }
+    this.http.get<AccountPayable>(`${this.ACCOUNTS_PAYABLE_API}/${payableId}`).subscribe({
+      next: (payable) => this.adjustmentPaymentOptions.set((this.mapAccountPayable(payable).payments ?? [])),
+      error: () => {
+        this.adjustmentPaymentOptions.set([]);
+        this.notify.error('No fue posible cargar los pagos de la cuenta por pagar');
+      },
+    });
+  }
+
+  savePurchaseAdjustment() {
+    if (!this.purchaseAdjustmentForm.customerId) {
+      this.notify.warning('Selecciona un cliente para el ajuste');
+      return;
+    }
+    if (this.sanitizeAmount(this.purchaseAdjustmentForm.amount) <= 0) {
+      this.notify.warning('El valor del ajuste debe ser mayor que cero');
+      return;
+    }
+    if (!this.purchaseAdjustmentForm.reason.trim()) {
+      this.notify.warning('Indica el motivo del ajuste');
+      return;
+    }
+
+    this.saving.set(true);
+    this.http.post(this.PURCHASE_ADJUSTMENTS_API, {
+      customerId: this.purchaseAdjustmentForm.customerId,
+      type: this.purchaseAdjustmentForm.type,
+      receiptId: this.purchaseAdjustmentForm.receiptId || undefined,
+      purchaseInvoiceId: this.purchaseAdjustmentForm.purchaseInvoiceId || undefined,
+      accountPayableId: this.purchaseAdjustmentForm.accountPayableId || undefined,
+      paymentId: this.purchaseAdjustmentForm.paymentId || undefined,
+      amount: this.sanitizeAmount(this.purchaseAdjustmentForm.amount),
+      reason: this.purchaseAdjustmentForm.reason.trim(),
+      notes: this.purchaseAdjustmentForm.notes || undefined,
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closePurchaseAdjustmentModal();
+        this.notify.success('Ajuste enviado a aprobación');
+        this.loadPurchaseAdjustments();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible crear el ajuste');
+      },
+    });
+  }
+
+  approvePurchaseAdjustment(adjustment: PurchaseAdjustment) {
+    this.saving.set(true);
+    this.http.patch(`${this.PURCHASE_ADJUSTMENTS_API}/${adjustment.id}/approve`, {}).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.notify.success('Ajuste aprobado y aplicado');
+        this.loadPurchaseAdjustments();
+        this.loadReceipts();
+        this.loadPurchaseInvoices();
+        this.loadAccountsPayable();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible aprobar el ajuste');
+      },
+    });
+  }
+
+  rejectPurchaseAdjustment(adjustment: PurchaseAdjustment) {
+    this.saving.set(true);
+    this.http.patch(`${this.PURCHASE_ADJUSTMENTS_API}/${adjustment.id}/reject`, {}).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.notify.success('Ajuste rechazado');
+        this.loadPurchaseAdjustments();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible rechazar el ajuste');
+      },
+    });
+  }
+
+  openSupplierQuoteModal() {
+    this.supplierQuoteForm = this.emptySupplierQuoteForm();
+    this.showSupplierQuoteModal.set(true);
+  }
+
+  closeSupplierQuoteModal() {
+    this.showSupplierQuoteModal.set(false);
+    this.supplierQuoteForm = this.emptySupplierQuoteForm();
+  }
+
+  addSupplierQuoteLine() {
+    this.supplierQuoteForm.items.push({
+      description: '',
+      quantity: null,
+      unitPrice: null,
+      taxRate: 19,
+    });
+  }
+
+  removeSupplierQuoteLine(index: number) {
+    this.supplierQuoteForm.items.splice(index, 1);
+  }
+
+  onSupplierQuoteRequestChange() {
+    const requestId = this.supplierQuoteForm.purchaseRequestId;
+    if (!requestId) {
+      this.supplierQuoteForm.items = [];
+      return;
+    }
+    this.http.get<PurchaseRequest>(`${this.REQUESTS_API}/${requestId}`).subscribe({
+      next: (request) => {
+        const mapped = this.mapRequest(request);
+        this.supplierQuoteForm.items = (mapped.items ?? []).map((item) => ({
+          requestItemId: item.id,
+          description: item.description,
+          quantity: Number(item.quantity ?? 0),
+          unitPrice: item.estimatedUnitPrice ?? null,
+          taxRate: 19,
+        }));
+      },
+      error: () => this.notify.error('No fue posible cargar la solicitud de compra'),
+    });
+  }
+
+  saveSupplierQuote() {
+    if (!this.supplierQuoteForm.customerId) {
+      this.notify.warning('Selecciona el cliente/proveedor de la cotización');
+      return;
+    }
+    if (!this.supplierQuoteForm.items.length) {
+      this.notify.warning('Agrega al menos una línea a la cotización');
+      return;
+    }
+    const invalidLine = this.supplierQuoteForm.items.find((item) =>
+      !item.description?.trim() ||
+      this.sanitizeAmount(item.quantity) <= 0 ||
+      this.sanitizeAmount(item.unitPrice) <= 0,
+    );
+    if (invalidLine) {
+      this.notify.warning('Completa todas las líneas con descripción, cantidad y precio válidos');
+      return;
+    }
+    this.saving.set(true);
+    this.http.post(this.SUPPLIER_QUOTES_API, {
+      customerId: this.supplierQuoteForm.customerId,
+      purchaseRequestId: this.supplierQuoteForm.purchaseRequestId || undefined,
+      validUntil: this.supplierQuoteForm.validUntil || undefined,
+      leadTimeDays: this.supplierQuoteForm.leadTimeDays ?? undefined,
+      paymentTermDays: this.supplierQuoteForm.paymentTermDays ?? undefined,
+      notes: this.supplierQuoteForm.notes || undefined,
+      items: this.supplierQuoteForm.items.map((item, index) => ({
+        requestItemId: item.requestItemId || undefined,
+        description: item.description,
+        quantity: this.sanitizeAmount(item.quantity),
+        unitPrice: this.sanitizeAmount(item.unitPrice),
+        taxRate: this.sanitizePercent(item.taxRate),
+        position: index + 1,
+      })),
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closeSupplierQuoteModal();
+        this.notify.success('Cotización de proveedor registrada');
+        this.loadSupplierQuotes();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible registrar la cotización');
+      },
+    });
+  }
+
+  awardSupplierQuote(quote: SupplierQuote) {
+    this.saving.set(true);
+    this.http.post(`${this.SUPPLIER_QUOTES_API}/${quote.id}/award`, {
+      issueDate: new Date().toISOString().slice(0, 10),
+      dueDate: quote.validUntil || undefined,
+      notes: quote.notes || undefined,
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.notify.success('Cotización adjudicada y orden creada');
+        this.loadSupplierQuotes();
+        this.loadOrders();
+        this.loadRequests();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible adjudicar la cotización');
+      },
+    });
+  }
+
+  openFrameworkAgreementModal() {
+    this.frameworkAgreementForm = this.emptyFrameworkAgreementForm();
+    this.showFrameworkAgreementModal.set(true);
+  }
+
+  closeFrameworkAgreementModal() {
+    this.showFrameworkAgreementModal.set(false);
+    this.frameworkAgreementForm = this.emptyFrameworkAgreementForm();
+  }
+
+  addFrameworkAgreementLine() {
+    this.frameworkAgreementForm.items.push({
+      description: '',
+      unitPrice: null,
+      taxRate: 19,
+      minQuantity: null,
+      notes: '',
+    });
+  }
+
+  removeFrameworkAgreementLine(index: number) {
+    this.frameworkAgreementForm.items.splice(index, 1);
+  }
+
+  saveFrameworkAgreement() {
+    if (!this.frameworkAgreementForm.customerId) {
+      this.notify.warning('Selecciona el cliente/proveedor del acuerdo');
+      return;
+    }
+    if (!this.frameworkAgreementForm.title.trim()) {
+      this.notify.warning('Ingresa el título del acuerdo');
+      return;
+    }
+    if (!this.frameworkAgreementForm.startDate) {
+      this.notify.warning('Indica la fecha inicial del acuerdo');
+      return;
+    }
+    if (!this.frameworkAgreementForm.items.length) {
+      this.notify.warning('Agrega al menos una línea al acuerdo marco');
+      return;
+    }
+    const invalidLine = this.frameworkAgreementForm.items.find((item) =>
+      !item.description?.trim() || this.sanitizeAmount(item.unitPrice) <= 0,
+    );
+    if (invalidLine) {
+      this.notify.warning('Completa cada línea del acuerdo con descripción y precio válidos');
+      return;
+    }
+    this.saving.set(true);
+    this.http.post(this.FRAMEWORK_AGREEMENTS_API, {
+      customerId: this.frameworkAgreementForm.customerId,
+      title: this.frameworkAgreementForm.title.trim(),
+      startDate: this.frameworkAgreementForm.startDate,
+      endDate: this.frameworkAgreementForm.endDate || undefined,
+      paymentTermDays: this.frameworkAgreementForm.paymentTermDays ?? undefined,
+      leadTimeDays: this.frameworkAgreementForm.leadTimeDays ?? undefined,
+      notes: this.frameworkAgreementForm.notes || undefined,
+      items: this.frameworkAgreementForm.items.map((item, index) => ({
+        description: item.description,
+        unitPrice: this.sanitizeAmount(item.unitPrice),
+        taxRate: this.sanitizePercent(item.taxRate),
+        minQuantity: item.minQuantity == null ? undefined : this.sanitizeAmount(item.minQuantity),
+        notes: item.notes || undefined,
+        position: index + 1,
+      })),
+    }).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closeFrameworkAgreementModal();
+        this.notify.success('Acuerdo marco registrado');
+        this.loadFrameworkAgreements();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(err?.error?.message || 'No fue posible registrar el acuerdo marco');
+      },
+    });
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // CRUD de órdenes de compra
   // ────────────────────────────────────────────────────────────────────────────
@@ -1686,6 +5575,10 @@ export class PurchasingComponent implements OnInit {
     this.editingOrderId.set(order.id);
     this.orderForm = {
       customerId: order.customer?.id ?? '',
+      budgetId: order.budget?.id ?? order.budgetId ?? '',
+      requestingArea: order.requestingArea ?? '',
+      costCenter: order.costCenter ?? '',
+      projectCode: order.projectCode ?? '',
       issueDate: this.asInputDate(order.issueDate),
       dueDate: this.asInputDate(order.dueDate),
       notes: order.notes ?? '',
@@ -1796,9 +5689,13 @@ export class PurchasingComponent implements OnInit {
     }
     this.saving.set(true);
     const payload: any = {
+      budgetId: this.orderForm.budgetId || undefined,
       issueDate: this.orderForm.issueDate,
       dueDate: this.orderForm.dueDate || undefined,
       notes: this.orderForm.notes || undefined,
+      requestingArea: this.orderForm.requestingArea || undefined,
+      costCenter: this.orderForm.costCenter || undefined,
+      projectCode: this.orderForm.projectCode || undefined,
       items: this.orderForm.lines.map((line, index) => ({
         description: line.description.trim(),
         quantity: this.sanitizeAmount(line.quantity),
@@ -2011,6 +5908,42 @@ export class PurchasingComponent implements OnInit {
     return ORDER_STATUS_LABELS[status as OrderStatus] ?? status;
   }
 
+  requestStatusLabel(status: RequestStatus | string): string {
+    return REQUEST_STATUS_LABELS[status as RequestStatus] ?? status;
+  }
+
+  receiptStatusLabel(status: ReceiptStatus | string): string {
+    return RECEIPT_STATUS_LABELS[status as ReceiptStatus] ?? status;
+  }
+
+  purchaseInvoiceStatusLabel(status: PurchaseInvoiceStatus | string): string {
+    return PURCHASE_INVOICE_STATUS_LABELS[status as PurchaseInvoiceStatus] ?? status;
+  }
+
+  accountPayableStatusLabel(status: AccountPayableStatus | string): string {
+    return ACCOUNT_PAYABLE_STATUS_LABELS[status as AccountPayableStatus] ?? status;
+  }
+
+  purchaseAdjustmentStatusLabel(status: PurchaseAdjustmentStatus | string): string {
+    return PURCHASE_ADJUSTMENT_STATUS_LABELS[status as PurchaseAdjustmentStatus] ?? status;
+  }
+
+  purchaseAdjustmentTypeLabel(type: PurchaseAdjustmentType | string): string {
+    return PURCHASE_ADJUSTMENT_TYPE_LABELS[type as PurchaseAdjustmentType] ?? type;
+  }
+
+  supplierQuoteStatusLabel(status: SupplierQuoteStatus | string): string {
+    return SUPPLIER_QUOTE_STATUS_LABELS[status as SupplierQuoteStatus] ?? status;
+  }
+
+  frameworkAgreementStatusLabel(status: FrameworkAgreementStatus | string): string {
+    return FRAMEWORK_AGREEMENT_STATUS_LABELS[status as FrameworkAgreementStatus] ?? status;
+  }
+
+  purchaseBudgetStatusLabel(status: PurchaseBudgetStatus | string): string {
+    return PURCHASE_BUDGET_STATUS_LABELS[status as PurchaseBudgetStatus] ?? status;
+  }
+
   /** Subtotal de una línea individual (usado en el detalle de la orden) */
   calcLineSubtotal(line: OrderLine): number {
     return this.lineBase(line);
@@ -2060,6 +5993,151 @@ export class PurchasingComponent implements OnInit {
     };
   }
 
+  private mapRequest(request: any): PurchaseRequest {
+    return {
+      ...request,
+      customer: request?.customer ?? null,
+      items: request?.items?.map((item: any) => ({
+        ...item,
+        quantity: Number(item.quantity ?? 0),
+        estimatedUnitPrice: item.estimatedUnitPrice == null ? null : Number(item.estimatedUnitPrice),
+      })),
+      linkedOrders: request?.linkedOrders?.map((order: any) => ({
+        ...order,
+        orderNumber: order.orderNumber ?? order.number,
+        total: Number(order.total ?? 0),
+      })),
+    };
+  }
+
+  private mapReceipt(receipt: any): PurchaseReceipt {
+    return {
+      ...receipt,
+      items: receipt?.items?.map((item: any) => ({
+        ...item,
+        orderedQuantity: item.orderedQuantity == null ? null : Number(item.orderedQuantity),
+        receivedQuantity: Number(item.receivedQuantity ?? 0),
+      })),
+    };
+  }
+
+  private mapPurchaseInvoice(invoice: any): PurchaseInvoice {
+    return {
+      ...invoice,
+      subtotal: Number(invoice?.subtotal ?? 0),
+      taxAmount: Number(invoice?.taxAmount ?? 0),
+      total: Number(invoice?.total ?? 0),
+      accountPayable: invoice?.accountPayable
+        ? {
+            ...invoice.accountPayable,
+            balance: Number(invoice.accountPayable.balance ?? 0),
+          }
+        : null,
+      items: invoice?.items?.map((item: any) => ({
+        ...item,
+        quantity: Number(item.quantity ?? 0),
+        unitPrice: Number(item.unitPrice ?? 0),
+        taxRate: Number(item.taxRate ?? 0),
+        discount: Number(item.discount ?? 0),
+        total: Number(item.total ?? 0),
+      })),
+    };
+  }
+
+  private mapAccountPayable(payable: any): AccountPayable {
+    return {
+      ...payable,
+      originalAmount: Number(payable?.originalAmount ?? 0),
+      paidAmount: Number(payable?.paidAmount ?? 0),
+      balance: Number(payable?.balance ?? 0),
+      schedules: payable?.schedules?.map((schedule: any) => ({
+        ...schedule,
+        amount: Number(schedule.amount ?? 0),
+        paidAmount: Number(schedule.paidAmount ?? 0),
+        balance: Number(schedule.balance ?? 0),
+      })),
+      advances: payable?.advances?.map((application: any) => ({
+        ...application,
+        amount: Number(application.amount ?? 0),
+      })),
+      payments: payable?.payments?.map((payment: any) => ({
+        ...payment,
+        amount: Number(payment.amount ?? 0),
+      })),
+    };
+  }
+
+  private mapPurchaseAdvance(advance: any): PurchaseAdvance {
+    return {
+      ...advance,
+      amount: Number(advance?.amount ?? 0),
+      appliedAmount: Number(advance?.appliedAmount ?? 0),
+      balance: Number(advance?.balance ?? 0),
+      applications: advance?.applications?.map((application: any) => ({
+        ...application,
+        amount: Number(application.amount ?? 0),
+      })),
+    };
+  }
+
+  private mapTraceabilityRow(row: any): PurchasingTraceabilityRow {
+    return {
+      ...row,
+      orderTotal: Number(row?.orderTotal ?? 0),
+      receiptsCount: Number(row?.receiptsCount ?? 0),
+      postedReceiptsCount: Number(row?.postedReceiptsCount ?? 0),
+      invoicesCount: Number(row?.invoicesCount ?? 0),
+      payablesCount: Number(row?.payablesCount ?? 0),
+      pendingBalance: Number(row?.pendingBalance ?? 0),
+    };
+  }
+
+  private mapPurchaseAdjustment(adjustment: any): PurchaseAdjustment {
+    return {
+      ...adjustment,
+      amount: Number(adjustment?.amount ?? 0),
+    };
+  }
+
+  private mapPurchaseBudget(budget: any): PurchaseBudget {
+    return {
+      ...budget,
+      amount: Number(budget?.amount ?? 0),
+      committedAmount: Number(budget?.committedAmount ?? 0),
+      executedAmount: Number(budget?.executedAmount ?? 0),
+      availableAmount: Number(budget?.availableAmount ?? 0),
+    };
+  }
+
+  private mapSupplierQuote(quote: any): SupplierQuote {
+    return {
+      ...quote,
+      subtotal: Number(quote?.subtotal ?? 0),
+      taxAmount: Number(quote?.taxAmount ?? 0),
+      total: Number(quote?.total ?? 0),
+      score: quote?.score == null ? null : Number(quote.score),
+      items: quote?.items?.map((item: any) => ({
+        ...item,
+        quantity: Number(item.quantity ?? 0),
+        unitPrice: Number(item.unitPrice ?? 0),
+        taxRate: Number(item.taxRate ?? 0),
+        total: Number(item.total ?? 0),
+      })),
+    };
+  }
+
+  private mapFrameworkAgreement(agreement: any): FrameworkAgreement {
+    return {
+      ...agreement,
+      items: agreement?.items?.map((item: any) => ({
+        ...item,
+        unitPrice: Number(item.unitPrice ?? 0),
+        taxRate: Number(item.taxRate ?? 0),
+        minQuantity: item.minQuantity == null ? null : Number(item.minQuantity),
+      })),
+    };
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Factories de formulario vacío
   // ────────────────────────────────────────────────────────────────────────────
@@ -2082,10 +6160,144 @@ export class PurchasingComponent implements OnInit {
     const today = new Date().toISOString().split('T')[0];
     return {
       customerId: '',
+      budgetId: '',
+      requestingArea: '',
+      costCenter: '',
+      projectCode: '',
       issueDate:  today,
       dueDate:    '',
       notes:      '',
       lines:      [],
+    };
+  }
+
+  private emptyRequestForm(): RequestForm {
+    const today = new Date().toISOString().split('T')[0];
+    return {
+      customerId: '',
+      budgetId: '',
+      requestingArea: '',
+      costCenter: '',
+      projectCode: '',
+      requestDate: today,
+      neededByDate: '',
+      notes: '',
+      items: [{ description: '', quantity: null, estimatedUnitPrice: null }],
+    };
+  }
+
+  private emptyReceiptForm(): ReceiptForm {
+    const today = new Date().toISOString().split('T')[0];
+    return {
+      orderId: '',
+      receiptDate: today,
+      notes: '',
+      items: [],
+    };
+  }
+
+  private emptyPurchaseInvoiceForm(): PurchaseInvoiceForm {
+    const today = new Date().toISOString().split('T')[0];
+    return {
+      customerId: '',
+      purchaseOrderId: '',
+      receiptId: '',
+      supplierInvoiceNumber: '',
+      issueDate: today,
+      dueDate: '',
+      notes: '',
+      items: [],
+    };
+  }
+
+  private emptyPayablePaymentForm(): PayablePaymentForm {
+    const today = new Date().toISOString().split('T')[0];
+    return {
+      paymentDate: today,
+      amount: null,
+      paymentMethod: 'TRANSFER',
+      reference: '',
+      notes: '',
+    };
+  }
+
+  private emptyPayableScheduleForm(): PayableScheduleForm {
+    return {
+      schedules: [{ dueDate: this.asInputDate(new Date().toISOString()), amount: null, notes: '' }],
+    };
+  }
+
+  private emptyPurchaseAdvanceForm(): PurchaseAdvanceForm {
+    return {
+      customerId: '',
+      issueDate: this.asInputDate(new Date().toISOString()),
+      amount: null,
+      paymentMethod: 'TRANSFER',
+      reference: '',
+      notes: '',
+    };
+  }
+
+  private emptyPurchaseAdvanceApplyForm(): PurchaseAdvanceApplyForm {
+    return {
+      accountPayableId: '',
+      amount: null,
+      notes: '',
+    };
+  }
+
+  private emptyPurchaseAdjustmentForm(): PurchaseAdjustmentForm {
+    return {
+      customerId: '',
+      type: 'RETURN',
+      receiptId: '',
+      purchaseInvoiceId: '',
+      accountPayableId: '',
+      paymentId: '',
+      amount: null,
+      reason: '',
+      notes: '',
+    };
+  }
+
+  private emptyPurchaseBudgetForm(): PurchaseBudgetForm {
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      title: '',
+      status: 'DRAFT',
+      amount: null,
+      startDate: today,
+      endDate: '',
+      area: '',
+      costCenter: '',
+      projectCode: '',
+      notes: '',
+    };
+  }
+
+  private emptySupplierQuoteForm(): SupplierQuoteForm {
+    return {
+      customerId: '',
+      purchaseRequestId: '',
+      validUntil: '',
+      leadTimeDays: null,
+      paymentTermDays: null,
+      notes: '',
+      items: [{ description: '', quantity: null, unitPrice: null, taxRate: 19 }],
+    };
+  }
+
+  private emptyFrameworkAgreementForm(): FrameworkAgreementForm {
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      customerId: '',
+      title: '',
+      startDate: today,
+      endDate: '',
+      paymentTermDays: null,
+      leadTimeDays: null,
+      notes: '',
+      items: [{ description: '', unitPrice: null, taxRate: 19, minQuantity: null, notes: '' }],
     };
   }
 }

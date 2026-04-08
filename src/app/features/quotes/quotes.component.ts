@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { ConfirmDialogComponent, ConfirmDialogService } from '../../core/confirm-dialog/confirm-dialog.component';
 import { NotificationService } from '../../core/services/notification.service';
 import { environment } from '../../../environments/environment';
 import { PaginatedResponse } from '../../model/paginate-response.model';
@@ -22,12 +23,113 @@ interface Quote {
   total: number;
   notes?: string;
   terms?: string;
+  salesOwnerName?: string;
+  opportunityName?: string;
+  sourceChannel?: string;
+  lostReason?: string;
   currency: string;
+  paymentTermLabel?: string;
+  paymentTermDays?: number;
+  deliveryLeadTimeDays?: number;
+  deliveryTerms?: string;
+  incotermCode?: string;
+  incotermLocation?: string;
+  exchangeRate?: number;
+  commercialConditions?: string;
   invoiceId?: string;
   invoiceNumber?: string;
+  approvalRequired?: boolean;
+  currentVersion?: number;
+  approval?: {
+    id: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUPERSEDED';
+    reason: string;
+    sequence?: number;
+    policyName?: string | null;
+    requiredRole?: string | null;
+    rejectedReason?: string | null;
+  } | null;
+  approvalFlow?: QuoteApprovalStep[];
   customer: { id: string; name: string; documentNumber: string };
   items?: QuoteItem[];
   createdAt: string;
+}
+
+interface QuoteAttachment {
+  id: string;
+  quoteId: string;
+  fileName: string;
+  fileUrl: string;
+  mimeType?: string | null;
+  category?: string | null;
+  notes?: string | null;
+  sizeBytes?: number | null;
+  uploadedById?: string | null;
+  uploadedByName?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface QuoteComment {
+  id: string;
+  quoteId: string;
+  commentType: string;
+  message: string;
+  createdById?: string | null;
+  createdByName?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface QuoteAuditEntry {
+  id: string;
+  action: string;
+  resource: string;
+  resourceId?: string | null;
+  before?: any;
+  after?: any;
+  userId?: string | null;
+  userName?: string | null;
+  createdAt: string;
+}
+
+interface QuoteInventoryIntegrationLine {
+  lineIndex: number;
+  productId: string;
+  description: string;
+  sku: string;
+  unit: string;
+  status: string;
+  requestedQuantity: number;
+  currentStock: number;
+  minStock: number;
+  enoughStock: boolean;
+  shortage: number;
+  lowStock: boolean;
+}
+
+interface QuoteIntegrationSummary {
+  quoteId: string;
+  quoteNumber: string;
+  sales: {
+    status: string;
+    canConvertToInvoice: boolean;
+    hasInvoice: boolean;
+    invoiceId?: string | null;
+    invoiceNumber?: string | null;
+  };
+  fiscal: {
+    canSendToDian: boolean;
+    requiresInvoiceCreation: boolean;
+    dianFlowLabel: string;
+  };
+  inventory: {
+    checkedLines: number;
+    availableLines: number;
+    unavailableLines: number;
+    lowStockLines: number;
+    lines: QuoteInventoryIntegrationLine[];
+  };
 }
 
 interface QuoteItem {
@@ -66,10 +168,124 @@ interface ProductOption {
   taxRate?: number;
 }
 
+interface CommercialMasterOption {
+  id: string;
+  name: string;
+  description?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  code?: string | null;
+  color?: string | null;
+  position?: number;
+  isDefault?: boolean;
+  isClosed?: boolean;
+  isActive?: boolean;
+}
+
+interface QuotePriceListItem {
+  id?: string;
+  productId?: string | null;
+  description: string;
+  unitPrice: number;
+  taxRate: number;
+  position?: number;
+}
+
+interface QuotePriceList {
+  id: string;
+  name: string;
+  description?: string | null;
+  currency: string;
+  isDefault?: boolean;
+  items: QuotePriceListItem[];
+}
+
+interface QuoteTemplateItem {
+  id?: string;
+  productId?: string | null;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  taxRate: number;
+  discount: number;
+  position?: number;
+}
+
+interface QuoteTemplate {
+  id: string;
+  name: string;
+  description?: string | null;
+  notes?: string | null;
+  terms?: string | null;
+  currency: string;
+  isDefault?: boolean;
+  items: QuoteTemplateItem[];
+}
+
+interface QuoteCommercialMasters {
+  salesOwners: CommercialMasterOption[];
+  sourceChannels: CommercialMasterOption[];
+  lostReasons: CommercialMasterOption[];
+  stages: CommercialMasterOption[];
+  priceLists: QuotePriceList[];
+  templates: QuoteTemplate[];
+}
+
+type MasterTab = 'salesOwners' | 'sourceChannels' | 'lostReasons' | 'stages' | 'priceLists' | 'templates';
+
+interface QuoteFollowUp {
+  id: string;
+  activityType: string;
+  notes: string;
+  scheduledAt?: string | null;
+  createdAt: string;
+}
+
+interface QuoteAnalyticsSummary {
+  totalQuotes: number;
+  totalAmount: number;
+  convertedAmount: number;
+  acceptedAmount: number;
+  wonQuotes: number;
+  lostQuotes: number;
+  conversionRate: number;
+  winRate: number;
+  lossRate: number;
+  pendingApprovals: number;
+  followUpCount: number;
+  totalsByStatus: Record<string, number>;
+  bySalesOwner: Array<{ name: string; totalQuotes: number; totalAmount: number; wonQuotes: number; winRate: number }>;
+  byChannel: Array<{ channel: string; totalQuotes: number; totalAmount: number }>;
+}
+
+interface QuoteApprovalStep {
+  id: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUPERSEDED';
+  reason: string;
+  sequence: number;
+  policyName?: string | null;
+  requiredRole?: string | null;
+  thresholdType?: string | null;
+  thresholdValue?: number | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectedReason?: string | null;
+}
+
+interface QuoteApprovalPolicy {
+  id: string;
+  name: string;
+  approvalType: 'TOTAL' | 'DISCOUNT';
+  thresholdValue: number;
+  requiredRole: string;
+  sequence: number;
+  description?: string | null;
+}
+
 @Component({
   selector: 'app-quotes',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ConfirmDialogComponent],
   template: `
     <div class="page animate-in">
 
@@ -81,12 +297,26 @@ interface ProductOption {
             <h2 class="page-title">Cotizaciones</h2>
             <p class="page-subtitle">Crea, envía y convierte cotizaciones a facturas. Controla el ciclo de ventas desde la propuesta hasta el cierre.</p>
           </div>
-          <button class="btn btn-primary" (click)="openFormModal()">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
-            </svg>
-            Nueva cotización
-          </button>
+          <div class="header-actions">
+            <button class="btn btn-secondary" (click)="openApprovalPoliciesModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                <path fill-rule="evenodd" d="M10 1.75a.75.75 0 01.75.75v.756a6.502 6.502 0 012.52 1.045l.535-.536a.75.75 0 111.06 1.061l-.535.535a6.502 6.502 0 011.045 2.52h.756a.75.75 0 010 1.5h-.756a6.502 6.502 0 01-1.045 2.52l.535.535a.75.75 0 11-1.06 1.061l-.536-.535a6.502 6.502 0 01-2.52 1.045v.756a.75.75 0 01-1.5 0v-.756a6.502 6.502 0 01-2.52-1.045l-.536.535a.75.75 0 11-1.06-1.06l.535-.536A6.502 6.502 0 014.23 9.776h-.756a.75.75 0 010-1.5h.756A6.502 6.502 0 015.275 5.76l-.535-.536a.75.75 0 111.06-1.06l.536.535A6.502 6.502 0 018.856 3.65V2.5a.75.75 0 01.75-.75zm0 4a3.25 3.25 0 100 6.5 3.25 3.25 0 000-6.5z"/>
+              </svg>
+              Aprobaciones
+            </button>
+            <button class="btn btn-secondary" (click)="openCommercialMastersModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                <path d="M10 2a2 2 0 012 2v.341a6.002 6.002 0 012.5 1.443l.241-.14a2 2 0 012.732.732l1 1.732a2 2 0 01-.732 2.732l-.243.14a6.064 6.064 0 010 2.89l.243.14a2 2 0 01.732 2.732l-1 1.732a2 2 0 01-2.732.732l-.241-.14A6.002 6.002 0 0112 15.659V16a2 2 0 11-4 0v-.341a6.002 6.002 0 01-2.5-1.443l-.241.14a2 2 0 01-2.732-.732l-1-1.732a2 2 0 01.732-2.732l.243-.14a6.064 6.064 0 010-2.89l-.243-.14A2 2 0 011.527 3.99l1-1.732A2 2 0 015.26 1.526l.241.14A6.002 6.002 0 018 4.341V4a2 2 0 012-2zm0 5a3 3 0 100 6 3 3 0 000-6z"/>
+              </svg>
+              Maestros comerciales
+            </button>
+            <button class="btn btn-primary" (click)="openFormModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
+              </svg>
+              Nueva cotización
+            </button>
+          </div>
         </div>
         <div class="hero-aside">
           <div class="hero-highlight">
@@ -109,6 +339,29 @@ interface ProductOption {
             </div>
           </div>
         </div>
+      </section>
+
+      <section class="analytics-strip">
+        <article class="analytics-card">
+          <span class="analytics-card__label">Conversión</span>
+          <strong>{{ analyticsSummary()?.conversionRate ?? 0 }}%</strong>
+          <small>{{ analyticsStatusCount('CONVERTED') }} cotizaciones convertidas</small>
+        </article>
+        <article class="analytics-card">
+          <span class="analytics-card__label">Ganadas</span>
+          <strong>{{ analyticsSummary()?.winRate ?? 0 }}%</strong>
+          <small>{{ analyticsSummary()?.wonQuotes ?? 0 }} aceptadas o convertidas</small>
+        </article>
+        <article class="analytics-card">
+          <span class="analytics-card__label">En seguimiento</span>
+          <strong>{{ analyticsSummary()?.followUpCount ?? 0 }}</strong>
+          <small>{{ analyticsSummary()?.pendingApprovals ?? 0 }} aprobaciones pendientes</small>
+        </article>
+        <article class="analytics-card">
+          <span class="analytics-card__label">Valor convertido</span>
+          <strong>{{ formatCurrency(analyticsSummary()?.convertedAmount ?? 0) }}</strong>
+          <small>{{ topSalesOwnerLabel() }}</small>
+        </article>
       </section>
 
       <!-- ── KPI strip ──────────────────────────────────────────────────────── -->
@@ -253,6 +506,11 @@ interface ProductOption {
                     <span class="status-badge status-{{ q.status.toLowerCase() }}">
                       {{ statusLabel(q.status) }}
                     </span>
+                    @if (q.approvalRequired) {
+                      <div style="margin-top:6px">
+                        <span class="status-badge status-draft">{{ approvalLabel(q.approval?.status || 'PENDING') }}</span>
+                      </div>
+                    }
                   </td>
                   <td class="text-right">
                     <strong class="quote-total">{{ formatCurrency(q.total) }}</strong>
@@ -297,7 +555,7 @@ interface ProductOption {
                     </button>
                     <!-- Enviar a DIAN — solo ACCEPTED o CONVERTED -->
                     @if (q.status === 'ACCEPTED' || q.status === 'CONVERTED') {
-                      <button class="btn-icon btn-icon-primary" title="Enviar a DIAN" (click)="sendToDian(q)" [disabled]="sendingDian()[q.id]">
+                      <button class="btn-icon btn-icon-primary" [title]="q.invoiceId ? 'Enviar factura a DIAN' : 'Convertir y enviar a DIAN'" (click)="sendToDian(q)" [disabled]="sendingDian()[q.id]">
                         @if (sendingDian()[q.id]) {
                           <span class="btn-spinner-sm"></span>
                         } @else {
@@ -408,6 +666,95 @@ interface ProductOption {
               </div>
             </div>
 
+            <div class="form-row form-row--triple">
+              <div class="form-group">
+                <label>Responsable comercial</label>
+                <select [(ngModel)]="quoteForm.salesOwnerId" (ngModelChange)="onSalesOwnerChange($event)" class="form-control">
+                  <option value="">Sin asignar</option>
+                  @for (owner of commercialMasters().salesOwners; track owner.id) {
+                    <option [value]="owner.id">{{ owner.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Oportunidad</label>
+                <input type="text" [(ngModel)]="quoteForm.opportunityName" class="form-control"
+                       placeholder="Ej. Renovación anual"/>
+              </div>
+              <div class="form-group">
+                <label>Canal</label>
+                <select [(ngModel)]="quoteForm.sourceChannelId" (ngModelChange)="onSourceChannelChange($event)" class="form-control">
+                  <option value="">Sin canal</option>
+                  @for (channel of commercialMasters().sourceChannels; track channel.id) {
+                    <option [value]="channel.id">{{ channel.name }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row form-row--triple">
+              <div class="form-group">
+                <label>Lista de precios</label>
+                <select [(ngModel)]="quoteForm.priceListId" (ngModelChange)="onPriceListChange($event)" class="form-control">
+                  <option value="">Sin lista aplicada</option>
+                  @for (priceList of commercialMasters().priceLists; track priceList.id) {
+                    <option [value]="priceList.id">{{ priceList.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Plantilla</label>
+                <select [(ngModel)]="quoteForm.templateId" (ngModelChange)="onTemplateChange($event)" class="form-control">
+                  <option value="">Sin plantilla</option>
+                  @for (template of commercialMasters().templates; track template.id) {
+                    <option [value]="template.id">{{ template.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Moneda de referencia</label>
+                <input type="text" [value]="selectedCommercialCurrency()" class="form-control" readonly/>
+              </div>
+            </div>
+
+            <div class="form-section-title">Condiciones comerciales</div>
+
+            <div class="form-row form-row--triple">
+              <div class="form-group">
+                <label>Término de pago</label>
+                <input type="text" [(ngModel)]="quoteForm.paymentTermLabel" class="form-control" placeholder="Ej. Crédito 30 días"/>
+              </div>
+              <div class="form-group">
+                <label>Días de pago</label>
+                <input type="number" [(ngModel)]="quoteForm.paymentTermDays" class="form-control" min="0" step="1" placeholder="30"/>
+              </div>
+              <div class="form-group">
+                <label>Tasa de cambio</label>
+                <input type="number" [(ngModel)]="quoteForm.exchangeRate" class="form-control" min="0.0001" step="0.0001"/>
+              </div>
+            </div>
+
+            <div class="form-row form-row--triple">
+              <div class="form-group">
+                <label>Incoterm</label>
+                <input type="text" [(ngModel)]="quoteForm.incotermCode" class="form-control" placeholder="Ej. EXW, FOB, CIF"/>
+              </div>
+              <div class="form-group">
+                <label>Ubicación incoterm</label>
+                <input type="text" [(ngModel)]="quoteForm.incotermLocation" class="form-control" placeholder="Ej. Bogotá, Colombia"/>
+              </div>
+              <div class="form-group">
+                <label>Entrega en días</label>
+                <input type="number" [(ngModel)]="quoteForm.deliveryLeadTimeDays" class="form-control" min="0" step="1" placeholder="5"/>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Condiciones de entrega</label>
+              <textarea [(ngModel)]="quoteForm.deliveryTerms" class="form-control form-textarea"
+                        rows="2" placeholder="Ej. Entrega parcial permitida, sujeto a disponibilidad..."></textarea>
+            </div>
+
             <div class="form-group">
               <label>Notas</label>
               <textarea [(ngModel)]="quoteForm.notes" class="form-control form-textarea"
@@ -418,6 +765,12 @@ interface ProductOption {
               <label>Términos y condiciones</label>
               <textarea [(ngModel)]="quoteForm.terms" class="form-control form-textarea"
                         rows="3" placeholder="Condiciones de pago, vigencia, etc..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Cláusulas comerciales avanzadas</label>
+              <textarea [(ngModel)]="quoteForm.commercialConditions" class="form-control form-textarea"
+                        rows="3" placeholder="Restricciones, condiciones de servicio, exclusiones, revisiones de precio..."></textarea>
             </div>
 
             <!-- Líneas de la cotización -->
@@ -548,17 +901,22 @@ interface ProductOption {
       <div class="drawer-overlay" (click)="closeDetail()">
         <div class="drawer" (click)="$event.stopPropagation()">
           <div class="drawer-header">
-            <div class="drawer-avatar">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="18">
-                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
-              </svg>
-            </div>
-            <div>
-              <div class="drawer-title">{{ detailQuote()!.number }}</div>
-              <div class="drawer-sub">
-                <span class="status-badge status-{{ detailQuote()!.status.toLowerCase() }}">
-                  {{ statusLabel(detailQuote()!.status) }}
-                </span>
+            <div class="drawer-header__content">
+              <div class="drawer-avatar">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="18">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
+                </svg>
+              </div>
+              <div class="drawer-headline">
+                <span class="drawer-kicker">Detalle comercial</span>
+                <div class="drawer-title">{{ detailQuote()!.number }}</div>
+                <div class="drawer-meta">
+                  <span class="status-badge status-{{ detailQuote()!.status.toLowerCase() }}">
+                    {{ statusLabel(detailQuote()!.status) }}
+                  </span>
+                  <span class="drawer-meta__text">Versión v{{ detailQuote()!.currentVersion || 0 }}</span>
+                  <span class="drawer-meta__text">Emitida {{ formatDate(detailQuote()!.issueDate) }}</span>
+                </div>
               </div>
             </div>
             <button class="drawer-close" (click)="closeDetail()">
@@ -568,9 +926,26 @@ interface ProductOption {
             </button>
           </div>
           <div class="drawer-body">
+            <div class="quote-spotlight">
+              <div class="quote-spotlight__main">
+                <span class="quote-spotlight__label">Cliente</span>
+                <strong>{{ detailQuote()!.customer.name }}</strong>
+                <small>{{ detailQuote()!.customer.documentNumber }}</small>
+              </div>
+              <div class="quote-spotlight__metric">
+                <span class="quote-spotlight__label">Total</span>
+                <strong>{{ formatCurrency(detailQuote()!.total) }}</strong>
+                <small>IVA {{ formatCurrency(detailQuote()!.taxAmount) }}</small>
+              </div>
+              <div class="quote-spotlight__metric">
+                <span class="quote-spotlight__label">Vigencia</span>
+                <strong>{{ detailQuote()!.expiresAt ? formatDate(detailQuote()!.expiresAt!) : 'Sin fecha' }}</strong>
+                <small>{{ detailQuote()!.sourceChannel || 'Sin canal comercial' }}</small>
+              </div>
+            </div>
 
             <!-- Datos del cliente -->
-            <div class="detail-section">
+            <div class="detail-section detail-card">
               <div class="detail-section-title">Cliente</div>
               <div class="detail-grid">
                 <div class="detail-item"><span>Nombre</span><strong>{{ detailQuote()!.customer.name }}</strong></div>
@@ -580,9 +955,78 @@ interface ProductOption {
               </div>
             </div>
 
+            <div class="detail-section detail-card">
+              <div class="detail-section-title">Gestión comercial</div>
+              <div class="detail-grid">
+                <div class="detail-item"><span>Responsable</span><strong>{{ detailQuote()!.salesOwnerName || 'Sin asignar' }}</strong></div>
+                <div class="detail-item"><span>Canal</span><strong>{{ detailQuote()!.sourceChannel || 'Sin canal' }}</strong></div>
+                <div class="detail-item"><span>Oportunidad</span><strong>{{ detailQuote()!.opportunityName || 'Sin oportunidad' }}</strong></div>
+                <div class="detail-item"><span>Motivo de pérdida</span><strong>{{ detailQuote()!.lostReason || 'No aplica' }}</strong></div>
+              </div>
+            </div>
+
+            <div class="detail-section detail-card">
+              <div class="detail-section-title">Condiciones comerciales</div>
+              <div class="detail-grid">
+                <div class="detail-item"><span>Término de pago</span><strong>{{ detailQuote()!.paymentTermLabel || 'Sin definir' }}</strong></div>
+                <div class="detail-item"><span>Días de pago</span><strong>{{ detailQuote()!.paymentTermDays ?? '—' }}</strong></div>
+                <div class="detail-item"><span>Incoterm</span><strong>{{ detailQuote()!.incotermCode || 'No aplica' }}</strong></div>
+                <div class="detail-item"><span>Ubicación</span><strong>{{ detailQuote()!.incotermLocation || '—' }}</strong></div>
+                <div class="detail-item"><span>Entrega en días</span><strong>{{ detailQuote()!.deliveryLeadTimeDays ?? '—' }}</strong></div>
+                <div class="detail-item"><span>Tasa de cambio</span><strong>{{ detailQuote()!.exchangeRate ?? 1 }}</strong></div>
+              </div>
+              @if (detailQuote()!.deliveryTerms) {
+                <div class="detail-note">
+                  <span>Condiciones de entrega</span>
+                  <p>{{ detailQuote()!.deliveryTerms }}</p>
+                </div>
+              }
+              @if (detailQuote()!.commercialConditions) {
+                <div class="detail-note">
+                  <span>Cláusulas avanzadas</span>
+                  <p>{{ detailQuote()!.commercialConditions }}</p>
+                </div>
+              }
+            </div>
+
+            @if (quoteIntegrationSummary()) {
+              <div class="detail-section detail-card">
+                <div class="detail-section-title">Integraciones empresariales</div>
+                <div class="detail-grid">
+                  <div class="detail-item"><span>Conversión comercial</span><strong>{{ quoteIntegrationSummary()!.sales.hasInvoice ? 'Factura generada' : 'Pendiente de factura' }}</strong></div>
+                  <div class="detail-item"><span>Flujo fiscal</span><strong>{{ quoteIntegrationSummary()!.fiscal.dianFlowLabel }}</strong></div>
+                  <div class="detail-item"><span>Líneas con stock</span><strong>{{ quoteIntegrationSummary()!.inventory.availableLines }}/{{ quoteIntegrationSummary()!.inventory.checkedLines }}</strong></div>
+                  <div class="detail-item"><span>Líneas sin stock</span><strong>{{ quoteIntegrationSummary()!.inventory.unavailableLines }}</strong></div>
+                </div>
+                @if (quoteIntegrationSummary()!.sales.invoiceNumber) {
+                  <div class="detail-note">
+                    <span>Factura relacionada</span>
+                    <p>{{ quoteIntegrationSummary()!.sales.invoiceNumber }}</p>
+                  </div>
+                }
+                @if (quoteIntegrationSummary()!.inventory.lines.length) {
+                  <div class="integration-stock-list">
+                    @for (line of quoteIntegrationSummary()!.inventory.lines; track line.lineIndex) {
+                      <div class="integration-stock-row">
+                        <div>
+                          <strong>{{ line.description }}</strong>
+                          <small>{{ line.sku || 'Sin SKU' }} · Solicitado {{ line.requestedQuantity }} {{ line.unit }}</small>
+                        </div>
+                        <span class="status-badge status-{{ line.enoughStock ? 'accepted' : 'rejected' }}">
+                          {{ line.enoughStock ? ('Stock ' + line.currentStock) : ('Faltan ' + line.shortage) }}
+                        </span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="followups-empty">No hay líneas con productos inventariables vinculados a esta cotización.</div>
+                }
+              </div>
+            }
+
             <!-- Ítems -->
             @if (detailQuote()!.items && detailQuote()!.items!.length > 0) {
-              <div class="detail-section">
+              <div class="detail-section detail-card">
                 <div class="detail-section-title">Líneas</div>
                 <div class="items-list">
                   @for (item of detailQuote()!.items; track item.id) {
@@ -601,12 +1045,139 @@ interface ProductOption {
             }
 
             <!-- Totales -->
-            <div class="detail-section">
+            <div class="detail-section detail-card">
               <div class="detail-grid">
                 <div class="detail-item"><span>Subtotal</span><strong>{{ formatCurrency(detailQuote()!.subtotal) }}</strong></div>
                 <div class="detail-item"><span>IVA</span><strong>{{ formatCurrency(detailQuote()!.taxAmount) }}</strong></div>
                 <div class="detail-item detail-item--total"><span>Total</span><strong class="total-value">{{ formatCurrency(detailQuote()!.total) }}</strong></div>
+                <div class="detail-item"><span>Versión</span><strong>v{{ detailQuote()!.currentVersion || 0 }}</strong></div>
               </div>
+            </div>
+
+            @if (detailQuote()!.approvalRequired) {
+              <div class="detail-section detail-card">
+                <div class="detail-section-title">Aprobación comercial</div>
+                <div class="detail-grid">
+                  <div class="detail-item"><span>Estado</span><strong>{{ approvalLabel(detailQuote()!.approval?.status || 'PENDING') }}</strong></div>
+                  <div class="detail-item"><span>Política actual</span><strong>{{ detailQuote()!.approval?.policyName || 'Política comercial general' }}</strong></div>
+                  <div class="detail-item"><span>Rol requerido</span><strong>{{ detailQuote()!.approval?.requiredRole || 'MANAGER' }}</strong></div>
+                  <div class="detail-item"><span>Motivo</span><strong>{{ detailQuote()!.approval?.reason || 'Supera política comercial' }}</strong></div>
+                  @if (detailQuote()!.approval?.rejectedReason) {
+                    <div class="detail-item"><span>Rechazo</span><strong>{{ detailQuote()!.approval?.rejectedReason }}</strong></div>
+                  }
+                </div>
+                @if (detailQuote()!.approvalFlow?.length) {
+                  <div class="approval-flow-list">
+                    @for (step of detailQuote()!.approvalFlow!; track step.id) {
+                      <div class="approval-flow-row">
+                        <div>
+                          <strong>Nivel {{ step.sequence }} · {{ step.policyName || 'Política general' }}</strong>
+                          <small>{{ step.requiredRole || 'MANAGER' }} · {{ thresholdLabel(step) }}</small>
+                        </div>
+                        <span class="status-badge status-{{ approvalStatusClass(step.status) }}">{{ approvalLabel(step.status) }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <div class="detail-section detail-card">
+              <div class="detail-section-title">Seguimiento comercial</div>
+              @if (quoteFollowUps().length === 0) {
+                <div class="followups-empty">Todavía no hay seguimientos registrados para esta cotización.</div>
+              } @else {
+                <div class="followups-list">
+                  @for (followUp of quoteFollowUps(); track followUp.id) {
+                    <div class="followup-row">
+                      <div class="followup-badge">{{ followUpTypeLabel(followUp.activityType) }}</div>
+                      <div class="followup-content">
+                        <strong>{{ followUp.notes }}</strong>
+                        <small>
+                          {{ formatDateTime(followUp.createdAt) }}
+                          @if (followUp.scheduledAt) {
+                            · Programado para {{ formatDateTime(followUp.scheduledAt!) }}
+                          }
+                        </small>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="detail-section detail-card">
+              <div class="detail-section-header">
+                <div class="detail-section-title">Documentación</div>
+                <button class="btn btn-secondary btn-xs" (click)="registerQuoteAttachment(detailQuote()!)">Registrar adjunto</button>
+              </div>
+              @if (quoteAttachments().length === 0) {
+                <div class="followups-empty">Todavía no hay adjuntos documentales registrados para esta cotización.</div>
+              } @else {
+                <div class="document-list">
+                  @for (attachment of quoteAttachments(); track attachment.id) {
+                    <a class="document-row" [href]="attachment.fileUrl" target="_blank" rel="noopener noreferrer">
+                      <div>
+                        <strong>{{ attachment.fileName }}</strong>
+                        <small>
+                          {{ attachment.category || 'General' }}
+                          · {{ formatDateTime(attachment.createdAt) }}
+                          @if (attachment.uploadedByName) {
+                            · {{ attachment.uploadedByName }}
+                          }
+                        </small>
+                        @if (attachment.notes) {
+                          <small>{{ attachment.notes }}</small>
+                        }
+                      </div>
+                      <span class="document-link">Abrir</span>
+                    </a>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="detail-section detail-card">
+              <div class="detail-section-header">
+                <div class="detail-section-title">Comentarios internos</div>
+                <button class="btn btn-secondary btn-xs" (click)="addQuoteComment(detailQuote()!)">Agregar comentario</button>
+              </div>
+              @if (quoteComments().length === 0) {
+                <div class="followups-empty">Todavía no hay comentarios internos registrados.</div>
+              } @else {
+                <div class="comment-list">
+                  @for (comment of quoteComments(); track comment.id) {
+                    <div class="comment-row">
+                      <strong>{{ comment.createdByName || 'Equipo comercial' }}</strong>
+                      <small>{{ formatDateTime(comment.createdAt) }} · {{ commentTypeLabel(comment.commentType) }}</small>
+                      <p>{{ comment.message }}</p>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="detail-section detail-card">
+              <div class="detail-section-title">Bitácora de auditoría</div>
+              @if (quoteAuditTrail().length === 0) {
+                <div class="followups-empty">Todavía no hay eventos de auditoría visibles para esta cotización.</div>
+              } @else {
+                <div class="audit-list">
+                  @for (entry of quoteAuditTrail(); track entry.id) {
+                    <div class="audit-row">
+                      <div>
+                        <strong>{{ auditActionLabel(entry.action) }}</strong>
+                        <small>
+                          {{ formatDateTime(entry.createdAt) }}
+                          @if (entry.userName) {
+                            · {{ entry.userName }}
+                          }
+                        </small>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
             </div>
 
             <!-- Link a factura si fue convertida -->
@@ -624,13 +1195,13 @@ interface ProductOption {
 
             <!-- Notas y términos -->
             @if (detailQuote()!.notes) {
-              <div class="detail-section">
+              <div class="detail-section detail-card">
                 <div class="detail-section-title">Notas</div>
                 <p class="detail-text">{{ detailQuote()!.notes }}</p>
               </div>
             }
             @if (detailQuote()!.terms) {
-              <div class="detail-section">
+              <div class="detail-section detail-card">
                 <div class="detail-section-title">Términos y condiciones</div>
                 <p class="detail-text">{{ detailQuote()!.terms }}</p>
               </div>
@@ -638,40 +1209,54 @@ interface ProductOption {
 
           </div>
           <div class="drawer-footer">
-            @if (detailQuote()!.status === 'DRAFT' || detailQuote()!.status === 'SENT') {
-              <button class="btn btn-secondary" (click)="openFormModal(detailQuote()!)">Editar</button>
-            }
-            @if (detailQuote()!.status !== 'CONVERTED') {
-              <button class="btn btn-secondary" (click)="openStatusModal(detailQuote()!)">Cambiar estado</button>
-            }
-            @if (detailQuote()!.status === 'ACCEPTED') {
-              <button class="btn btn-primary" (click)="openConvertConfirm(detailQuote()!)">Convertir a factura</button>
-            }
-            <button class="btn btn-secondary" (click)="openPdfPreview(detailQuote()!)">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="15">
-                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"/>
-              </svg>
-              Vista previa PDF
-            </button>
-            <button class="btn btn-secondary" [disabled]="downloadingPdf()" (click)="downloadPdf(detailQuote()!)">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="15">
-                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
-              </svg>
-              {{ downloadingPdf() ? 'Descargando...' : 'Descargar PDF' }}
-            </button>
-            @if (detailQuote()!.status === 'ACCEPTED' || detailQuote()!.status === 'CONVERTED') {
-              <button class="btn btn-primary" [disabled]="sendingDian()[detailQuote()!.id]" (click)="sendToDian(detailQuote()!)">
-                @if (sendingDian()[detailQuote()!.id]) {
-                  <span class="btn-spinner-sm"></span>
-                  Enviando...
-                } @else {
-                  <svg viewBox="0 0 20 20" fill="currentColor" width="15">
-                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
-                  </svg>
-                  Enviar a DIAN
-                }
+            <div class="drawer-footer__group drawer-footer__group--secondary">
+              @if (detailQuote()!.status === 'DRAFT' || detailQuote()!.status === 'SENT') {
+                <button class="btn btn-secondary" (click)="openFormModal(detailQuote()!)">Editar</button>
+              }
+              <button class="btn btn-secondary" (click)="duplicateQuote(detailQuote()!)">Duplicar</button>
+              <button class="btn btn-secondary" (click)="renewQuote(detailQuote()!)">Renovar</button>
+              <button class="btn btn-secondary" (click)="createQuoteFollowUp(detailQuote()!)">Registrar seguimiento</button>
+              @if (detailQuote()!.approvalRequired && (!detailQuote()!.approval || detailQuote()!.approval?.status !== 'APPROVED')) {
+                <button class="btn btn-secondary" (click)="requestApproval(detailQuote()!)">Solicitar aprobación</button>
+              }
+              @if (detailQuote()!.approval?.status === 'PENDING') {
+                <button class="btn btn-secondary" (click)="approveQuote(detailQuote()!)">Aprobar</button>
+                <button class="btn btn-secondary" (click)="rejectQuoteApproval(detailQuote()!)">Rechazar</button>
+              }
+              @if (detailQuote()!.status !== 'CONVERTED') {
+                <button class="btn btn-secondary" (click)="openStatusModal(detailQuote()!)">Cambiar estado</button>
+              }
+              <button class="btn btn-secondary" (click)="openPdfPreview(detailQuote()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"/>
+                </svg>
+                Vista previa PDF
               </button>
-            }
+              <button class="btn btn-secondary" [disabled]="downloadingPdf()" (click)="downloadPdf(detailQuote()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                  <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
+                </svg>
+                {{ downloadingPdf() ? 'Descargando...' : 'Descargar PDF' }}
+              </button>
+            </div>
+            <div class="drawer-footer__group drawer-footer__group--primary">
+              @if (detailQuote()!.status === 'ACCEPTED') {
+                <button class="btn btn-primary" (click)="openConvertConfirm(detailQuote()!)">Convertir a factura</button>
+              }
+              @if (detailQuote()!.status === 'ACCEPTED' || detailQuote()!.status === 'CONVERTED') {
+                <button class="btn btn-primary" [disabled]="sendingDian()[detailQuote()!.id]" (click)="sendToDian(detailQuote()!)">
+                  @if (sendingDian()[detailQuote()!.id]) {
+                    <span class="btn-spinner-sm"></span>
+                    Enviando...
+                  } @else {
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                      <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
+                    </svg>
+                    {{ detailQuote()!.invoiceId ? 'Enviar factura a DIAN' : 'Convertir y enviar a DIAN' }}
+                  }
+                </button>
+              }
+            </div>
           </div>
         </div>
       </div>
@@ -703,6 +1288,25 @@ interface ProductOption {
                 <option value="EXPIRED">Vencida</option>
               </select>
             </div>
+            @if (newStatus === 'REJECTED') {
+              <div class="form-group">
+                <label>Motivo de pérdida *</label>
+                <select [(ngModel)]="statusLostReason" class="form-control">
+                  <option value="">Selecciona un motivo</option>
+                  @for (reason of commercialMasters().lostReasons; track reason.id) {
+                    <option [value]="reason.name">{{ reason.name }}</option>
+                  }
+                  <option value="__custom__">Escribir otro motivo</option>
+                </select>
+              </div>
+              @if (statusLostReason === '__custom__') {
+                <div class="form-group">
+                  <label>Motivo personalizado *</label>
+                  <textarea [(ngModel)]="customStatusLostReason" class="form-control form-textarea"
+                            rows="3" placeholder="Indica por qué se perdió o rechazó la oportunidad"></textarea>
+                </div>
+              }
+            }
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="statusTarget.set(null)">Cancelar</button>
@@ -769,6 +1373,366 @@ interface ProductOption {
         </div>
       </div>
     }
+
+    @if (showCommercialMastersModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal-xl" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Maestros comerciales</h3>
+            <button class="drawer-close" (click)="closeCommercialMastersModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body commercial-masters">
+            <aside class="masters-sidebar">
+              @for (tab of masterTabs; track tab.id) {
+                <button
+                  class="master-tab-btn"
+                  [class.active]="activeMasterTab() === tab.id"
+                  (click)="setMasterTab(tab.id)">
+                  <span>{{ tab.label }}</span>
+                  <small>{{ masterTabCount(tab.id) }}</small>
+                </button>
+              }
+            </aside>
+
+            <div class="masters-content">
+              <div class="masters-toolbar">
+                <div>
+                  <p class="filters-kicker">Configuración comercial</p>
+                  <h3>{{ activeMasterLabel() }}</h3>
+                </div>
+                <button class="btn btn-primary" (click)="openMasterEditor()">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="14">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
+                  </svg>
+                  Nuevo {{ activeMasterSingular() }}
+                </button>
+              </div>
+
+              @if (showMasterEditor()) {
+                <div class="master-editor-card">
+                  <div class="master-editor-head">
+                    <strong>{{ editingMasterId() ? 'Editar' : 'Nuevo' }} {{ activeMasterSingular() }}</strong>
+                    <button class="btn btn-secondary btn-sm" (click)="cancelMasterEditor()">Cancelar</button>
+                  </div>
+
+                  @if (activeMasterTab() === 'salesOwners' || activeMasterTab() === 'sourceChannels' || activeMasterTab() === 'lostReasons' || activeMasterTab() === 'stages') {
+                    <div class="form-row form-row--triple">
+                      <div class="form-group">
+                        <label>Nombre *</label>
+                        <input type="text" [(ngModel)]="masterForm.name" class="form-control"/>
+                      </div>
+                      @if (activeMasterTab() === 'salesOwners') {
+                        <div class="form-group">
+                          <label>Correo</label>
+                          <input type="text" [(ngModel)]="masterForm.email" class="form-control"/>
+                        </div>
+                        <div class="form-group">
+                          <label>Teléfono</label>
+                          <input type="text" [(ngModel)]="masterForm.phone" class="form-control"/>
+                        </div>
+                      } @else if (activeMasterTab() === 'stages') {
+                        <div class="form-group">
+                          <label>Código</label>
+                          <input type="text" [(ngModel)]="masterForm.code" class="form-control"/>
+                        </div>
+                        <div class="form-group">
+                          <label>Color</label>
+                          <input type="text" [(ngModel)]="masterForm.color" class="form-control" placeholder="#2563eb"/>
+                        </div>
+                      }
+                    </div>
+
+                    @if (activeMasterTab() === 'stages') {
+                      <div class="form-row form-row--triple">
+                        <div class="form-group">
+                          <label>Posición</label>
+                          <input type="number" [(ngModel)]="masterForm.position" class="form-control" min="0"/>
+                        </div>
+                        <label class="master-check">
+                          <input type="checkbox" [(ngModel)]="masterForm.isDefault"/>
+                          Etapa predeterminada
+                        </label>
+                        <label class="master-check">
+                          <input type="checkbox" [(ngModel)]="masterForm.isClosed"/>
+                          Marca cierre comercial
+                        </label>
+                      </div>
+                    }
+
+                    <div class="form-group">
+                      <label>Descripción</label>
+                      <textarea [(ngModel)]="masterForm.description" rows="2" class="form-control form-textarea"></textarea>
+                    </div>
+                  }
+
+                  @if (activeMasterTab() === 'priceLists') {
+                    <div class="form-row form-row--triple">
+                      <div class="form-group">
+                        <label>Nombre *</label>
+                        <input type="text" [(ngModel)]="masterForm.name" class="form-control"/>
+                      </div>
+                      <div class="form-group">
+                        <label>Moneda</label>
+                        <input type="text" [(ngModel)]="masterForm.currency" class="form-control"/>
+                      </div>
+                      <label class="master-check">
+                        <input type="checkbox" [(ngModel)]="masterForm.isDefault"/>
+                        Lista predeterminada
+                      </label>
+                    </div>
+                    <div class="form-group">
+                      <label>Descripción</label>
+                      <textarea [(ngModel)]="masterForm.description" rows="2" class="form-control form-textarea"></textarea>
+                    </div>
+                    <div class="form-section-title">
+                      Ítems de la lista
+                      <button type="button" class="btn btn-sm btn-secondary add-line-btn" (click)="addPriceListItem()">
+                        Agregar ítem
+                      </button>
+                    </div>
+                    @for (item of masterForm.priceListItems; let idx = $index; track idx) {
+                      <div class="line-card compact-line-card">
+                        <div class="line-fields">
+                          <div class="form-group">
+                            <label>Descripción *</label>
+                            <input type="text" [(ngModel)]="item.description" class="form-control"/>
+                          </div>
+                          <div class="form-group">
+                            <label>Precio</label>
+                            <input type="number" [(ngModel)]="item.unitPrice" class="form-control" min="0" step="0.01"/>
+                          </div>
+                          <div class="form-group">
+                            <label>IVA %</label>
+                            <input type="number" [(ngModel)]="item.taxRate" class="form-control" min="0" max="100" step="0.01"/>
+                          </div>
+                          <div class="form-group">
+                            <label>Producto</label>
+                            <select [(ngModel)]="item.productId" class="form-control">
+                              <option value="">Sin producto</option>
+                              @for (product of allProducts(); track product.id) {
+                                <option [value]="product.id">{{ product.name }}</option>
+                              }
+                            </select>
+                          </div>
+                          <button type="button" class="btn-icon btn-icon-danger" (click)="removePriceListItem(idx)">
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="13">
+                              <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9z"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  }
+
+                  @if (activeMasterTab() === 'templates') {
+                    <div class="form-row form-row--triple">
+                      <div class="form-group">
+                        <label>Nombre *</label>
+                        <input type="text" [(ngModel)]="masterForm.name" class="form-control"/>
+                      </div>
+                      <div class="form-group">
+                        <label>Moneda</label>
+                        <input type="text" [(ngModel)]="masterForm.currency" class="form-control"/>
+                      </div>
+                      <label class="master-check">
+                        <input type="checkbox" [(ngModel)]="masterForm.isDefault"/>
+                        Plantilla predeterminada
+                      </label>
+                    </div>
+                    <div class="form-group">
+                      <label>Descripción</label>
+                      <textarea [(ngModel)]="masterForm.description" rows="2" class="form-control form-textarea"></textarea>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Notas</label>
+                        <textarea [(ngModel)]="masterForm.notes" rows="2" class="form-control form-textarea"></textarea>
+                      </div>
+                      <div class="form-group">
+                        <label>Términos</label>
+                        <textarea [(ngModel)]="masterForm.terms" rows="2" class="form-control form-textarea"></textarea>
+                      </div>
+                    </div>
+                    <div class="form-section-title">
+                      Líneas de plantilla
+                      <button type="button" class="btn btn-sm btn-secondary add-line-btn" (click)="addTemplateItem()">
+                        Agregar línea
+                      </button>
+                    </div>
+                    @for (item of masterForm.templateItems; let idx = $index; track idx) {
+                      <div class="line-card compact-line-card">
+                        <div class="line-fields line-fields--template">
+                          <div class="form-group">
+                            <label>Descripción *</label>
+                            <input type="text" [(ngModel)]="item.description" class="form-control"/>
+                          </div>
+                          <div class="form-group">
+                            <label>Cant.</label>
+                            <input type="number" [(ngModel)]="item.quantity" class="form-control" min="0.0001" step="0.01"/>
+                          </div>
+                          <div class="form-group">
+                            <label>Precio</label>
+                            <input type="number" [(ngModel)]="item.unitPrice" class="form-control" min="0" step="0.01"/>
+                          </div>
+                          <div class="form-group">
+                            <label>IVA %</label>
+                            <input type="number" [(ngModel)]="item.taxRate" class="form-control" min="0" max="100" step="0.01"/>
+                          </div>
+                          <div class="form-group">
+                            <label>Desc. %</label>
+                            <input type="number" [(ngModel)]="item.discount" class="form-control" min="0" max="100" step="0.01"/>
+                          </div>
+                          <button type="button" class="btn-icon btn-icon-danger" (click)="removeTemplateItem(idx)">
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="13">
+                              <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9z"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  }
+
+                  <div class="modal-footer master-editor-footer">
+                    <button class="btn btn-secondary" (click)="cancelMasterEditor()">Cancelar</button>
+                    <button class="btn btn-primary" [disabled]="savingMaster()" (click)="saveMaster()">
+                      {{ savingMaster() ? 'Guardando...' : (editingMasterId() ? 'Actualizar' : 'Crear') }}
+                    </button>
+                  </div>
+                </div>
+              }
+
+              <div class="master-list-card">
+                @if (currentMasterRows().length === 0) {
+                  <div class="empty-state">
+                    <p>No hay registros configurados para {{ activeMasterLabel().toLowerCase() }}.</p>
+                  </div>
+                } @else {
+                  <div class="master-list">
+                    @for (row of currentMasterRows(); track row.id) {
+                      <div class="master-row">
+                        <div class="master-row__main">
+                          <strong>{{ row.name }}</strong>
+                          <small>{{ masterRowSummary(row) }}</small>
+                        </div>
+                        <div class="master-row__actions">
+                          <button class="btn btn-secondary btn-sm" (click)="openMasterEditor(row)">Editar</button>
+                          <button class="btn btn-secondary btn-sm" (click)="removeMaster(row)">Desactivar</button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showApprovalPoliciesModal()) {
+      <div class="modal-overlay">
+        <div class="modal modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Políticas de aprobación</h3>
+            <button class="drawer-close" (click)="closeApprovalPoliciesModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="masters-toolbar">
+              <div>
+                <p class="filters-kicker">Workflow empresarial</p>
+                <h3>Secuencias y umbrales</h3>
+              </div>
+              <button class="btn btn-primary" (click)="openApprovalPolicyEditor()">
+                Nueva política
+              </button>
+            </div>
+
+            @if (showApprovalPolicyEditor()) {
+              <div class="master-editor-card" style="margin-top:14px;">
+                <div class="master-editor-head">
+                  <strong>{{ editingApprovalPolicyId() ? 'Editar' : 'Nueva' }} política</strong>
+                  <button class="btn btn-secondary btn-sm" (click)="cancelApprovalPolicyEditor()">Cancelar</button>
+                </div>
+                <div class="form-row form-row--triple">
+                  <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" [(ngModel)]="approvalPolicyForm.name" class="form-control"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Tipo</label>
+                    <select [(ngModel)]="approvalPolicyForm.approvalType" class="form-control">
+                      <option value="TOTAL">Monto total</option>
+                      <option value="DISCOUNT">Descuento por línea</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Umbral</label>
+                    <input type="number" [(ngModel)]="approvalPolicyForm.thresholdValue" class="form-control" min="0" step="0.01"/>
+                  </div>
+                </div>
+                <div class="form-row form-row--triple">
+                  <div class="form-group">
+                    <label>Rol aprobador</label>
+                    <select [(ngModel)]="approvalPolicyForm.requiredRole" class="form-control">
+                      <option value="MANAGER">MANAGER</option>
+                      <option value="ADMIN">ADMIN</option>
+                      <option value="CONTADOR">CONTADOR</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Secuencia</label>
+                    <input type="number" [(ngModel)]="approvalPolicyForm.sequence" class="form-control" min="1"/>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Descripción</label>
+                  <textarea [(ngModel)]="approvalPolicyForm.description" rows="2" class="form-control form-textarea"></textarea>
+                </div>
+                <div class="modal-footer master-editor-footer">
+                  <button class="btn btn-secondary" (click)="cancelApprovalPolicyEditor()">Cancelar</button>
+                  <button class="btn btn-primary" [disabled]="savingApprovalPolicy()" (click)="saveApprovalPolicy()">
+                    {{ savingApprovalPolicy() ? 'Guardando...' : (editingApprovalPolicyId() ? 'Actualizar' : 'Crear') }}
+                  </button>
+                </div>
+              </div>
+            }
+
+            <div class="master-list-card" style="margin-top:14px;">
+              @if (approvalPolicies().length === 0) {
+                <div class="empty-state">
+                  <p>No hay políticas empresariales configuradas.</p>
+                </div>
+              } @else {
+                <div class="master-list">
+                  @for (policy of approvalPolicies(); track policy.id) {
+                    <div class="master-row">
+                      <div class="master-row__main">
+                        <strong>{{ policy.name }}</strong>
+                        <small>{{ approvalPolicySummary(policy) }}</small>
+                      </div>
+                      <div class="master-row__actions">
+                        <button class="btn btn-secondary btn-sm" (click)="openApprovalPolicyEditor(policy)">Editar</button>
+                        <button class="btn btn-secondary btn-sm" (click)="removeApprovalPolicy(policy)">Desactivar</button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <app-confirm-dialog />
   `,
   styles: [`
     /* ── Layout base ─────────────────────────────────────────────────────── */
@@ -790,6 +1754,7 @@ interface ProductOption {
       color:#fff;
     }
     .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+    .header-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
     .hero-copy { max-width:620px; }
     .hero-kicker {
       margin:0 0 10px;
@@ -894,6 +1859,43 @@ interface ProductOption {
       margin-bottom:6px;
     }
     .kpi-card__value { font-family:'Sora',sans-serif; font-size:22px; line-height:1.1; letter-spacing:-.05em; color:#0c1c35; }
+    .analytics-strip {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;
+      margin-bottom:18px;
+    }
+    .analytics-card {
+      padding:16px 18px;
+      border-radius:20px;
+      background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+      border:1px solid #dce6f0;
+      box-shadow:0 16px 28px rgba(12,28,53,.05);
+    }
+    .analytics-card__label {
+      display:block;
+      margin-bottom:8px;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:#1a407e;
+    }
+    .analytics-card strong {
+      display:block;
+      font-family:'Sora',sans-serif;
+      font-size:24px;
+      line-height:1.08;
+      letter-spacing:-.05em;
+      color:#0c1c35;
+    }
+    .analytics-card small {
+      display:block;
+      margin-top:8px;
+      font-size:12px;
+      line-height:1.5;
+      color:#6b7f95;
+    }
 
     /* ── Filters ─────────────────────────────────────────────────────────── */
     .filters-shell {
@@ -971,27 +1973,315 @@ interface ProductOption {
 
     /* ── Drawer (detalle) ─────────────────────────────────────────────────── */
     .drawer-overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:100; display:flex; justify-content:flex-end; }
-    .drawer { width:480px; max-width:100%; background:#fff; height:100%; display:flex; flex-direction:column; box-shadow:-4px 0 24px rgba(0,0,0,.15); }
-    .drawer-header { display:flex; align-items:center; gap:12px; padding:20px; border-bottom:1px solid #f0f4f8; }
-    .drawer-avatar { width:44px; height:44px; border-radius:10px; background:linear-gradient(135deg,#1a407e,#00c6a0); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-    .drawer-title { font-weight:700; font-size:16px; color:#0c1c35; font-family:monospace; }
-    .drawer-sub { margin-top:4px; }
+    .drawer {
+      width:540px;
+      max-width:100%;
+      background:#fff;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      box-shadow:-10px 0 36px rgba(0,0,0,.18);
+    }
+    .drawer-header {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      padding:24px 24px 20px;
+      border-bottom:1px solid rgba(226,234,243,.8);
+      background:
+        radial-gradient(circle at top left, rgba(127,183,255,.18), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(45,212,191,.12), transparent 28%),
+        linear-gradient(135deg,#0d2344 0%, #16386a 56%, #0f7a72 100%);
+      color:#fff;
+    }
+    .drawer-header__content { display:flex; align-items:flex-start; gap:14px; min-width:0; }
+    .drawer-headline { min-width:0; }
+    .drawer-avatar {
+      width:50px;
+      height:50px;
+      border-radius:16px;
+      background:rgba(255,255,255,.14);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-shrink:0;
+      border:1px solid rgba(255,255,255,.16);
+      backdrop-filter:blur(10px);
+    }
+    .drawer-kicker {
+      display:block;
+      margin-bottom:6px;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.16em;
+      color:#bfdbfe;
+    }
+    .drawer-title {
+      font-family:'Sora',sans-serif;
+      font-weight:800;
+      font-size:24px;
+      line-height:1.05;
+      color:#fff;
+      letter-spacing:-.05em;
+      word-break:break-word;
+    }
+    .drawer-meta {
+      display:flex;
+      align-items:center;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:10px;
+    }
+    .drawer-meta__text {
+      display:inline-flex;
+      align-items:center;
+      min-height:28px;
+      padding:0 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.14);
+      font-size:11px;
+      font-weight:700;
+      color:rgba(236,244,255,.92);
+      white-space:nowrap;
+    }
     .drawer-close { margin-left:auto; background:none; border:none; cursor:pointer; color:#9ca3af; padding:4px; border-radius:6px; flex-shrink:0; }
-    .drawer-close:hover { background:#f0f4f8; color:#374151; }
-    .drawer-body { flex:1; overflow-y:auto; padding:20px; }
-    .drawer-footer { padding:16px 20px; border-top:1px solid #f0f4f8; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+    .drawer-close:hover { background:rgba(255,255,255,.12); color:#fff; }
+    .drawer-body {
+      flex:1;
+      overflow-y:auto;
+      padding:20px;
+      background:
+        linear-gradient(180deg,#f7fbff 0%, #fdfefe 100%);
+    }
+    .quote-spotlight {
+      display:grid;
+      grid-template-columns:1.2fr .9fr .9fr;
+      gap:12px;
+      margin-bottom:18px;
+    }
+    .quote-spotlight__main,
+    .quote-spotlight__metric {
+      padding:16px;
+      border-radius:18px;
+      border:1px solid #dfeaf4;
+      background:#ffffff;
+      box-shadow:0 14px 24px rgba(12,28,53,.05);
+    }
+    .quote-spotlight__main {
+      background:linear-gradient(135deg,#eff6ff 0%, #f8fbff 100%);
+    }
+    .quote-spotlight__label {
+      display:block;
+      margin-bottom:8px;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:#1a407e;
+    }
+    .quote-spotlight__main strong,
+    .quote-spotlight__metric strong {
+      display:block;
+      font-family:'Sora',sans-serif;
+      font-size:18px;
+      line-height:1.15;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+    }
+    .quote-spotlight__main small,
+    .quote-spotlight__metric small {
+      display:block;
+      margin-top:6px;
+      font-size:12px;
+      line-height:1.5;
+      color:#6b7f95;
+    }
+    .drawer-footer {
+      padding:18px 20px 20px;
+      border-top:1px solid #e6edf5;
+      display:grid;
+      gap:14px;
+      align-items:start;
+      background:
+        linear-gradient(180deg, rgba(248,251,255,.92) 0%, #ffffff 100%);
+      box-shadow:0 -12px 28px rgba(12,28,53,.06);
+    }
+    .drawer-footer__group {
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      padding:12px;
+      border-radius:16px;
+      border:1px solid #e4ecf5;
+      background:#f8fbff;
+    }
+    .drawer-footer__group--secondary { justify-content:flex-start; }
+    .drawer-footer__group--primary {
+      justify-content:flex-end;
+      background:linear-gradient(135deg, #eef5ff 0%, #f0fdf9 100%);
+      border-color:#d8e5f2;
+    }
+    .drawer-footer .btn {
+      min-height:40px;
+      border-radius:12px;
+      padding:10px 14px;
+      font-size:13px;
+      font-weight:700;
+      letter-spacing:-.01em;
+      box-shadow:none;
+    }
+    .drawer-footer .btn svg { flex-shrink:0; }
+    .drawer-footer .btn-secondary {
+      background:#ffffff;
+      color:#35506f;
+      border:1px solid #d6e2ee;
+    }
+    .drawer-footer .btn-secondary:hover {
+      background:#eff6ff;
+      border-color:#9fbfe3;
+      color:#163a63;
+      transform:translateY(-1px);
+    }
+    .drawer-footer .btn-primary {
+      background:linear-gradient(135deg,#163c72 0%, #0f8a7f 100%);
+      color:#fff;
+      border:1px solid transparent;
+      box-shadow:0 10px 18px rgba(22,60,114,.18);
+    }
+    .drawer-footer .btn-primary:hover:not(:disabled) {
+      background:linear-gradient(135deg,#12335f 0%, #0c766d 100%);
+      transform:translateY(-1px);
+      box-shadow:0 14px 24px rgba(22,60,114,.2);
+    }
+    .drawer-footer .btn:disabled {
+      opacity:.65;
+      transform:none;
+      box-shadow:none;
+    }
 
-    .detail-section { margin-bottom:20px; }
-    .detail-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:10px; }
+    .detail-section { margin-bottom:16px; }
+    .detail-card {
+      padding:16px;
+      border-radius:18px;
+      border:1px solid #e1eaf3;
+      background:#fff;
+      box-shadow:0 12px 24px rgba(12,28,53,.04);
+    }
+    .detail-section-title { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#7b8fa8; margin-bottom:12px; }
+    .detail-section-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+    .detail-section-header .detail-section-title { margin-bottom:0; }
     .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .detail-item span { display:block; font-size:11px; color:#9ca3af; font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-bottom:3px; }
-    .detail-item strong { font-size:14px; color:#0c1c35; }
+    .detail-item {
+      padding:12px 14px;
+      border-radius:14px;
+      background:#f8fbff;
+      border:1px solid #e6eef7;
+    }
+    .detail-item span { display:block; font-size:10px; color:#7b8fa8; font-weight:800; text-transform:uppercase; letter-spacing:.08em; margin-bottom:5px; }
+    .detail-item strong { font-size:14px; color:#0c1c35; line-height:1.45; }
     .detail-item--total span { color:#1a407e; }
     .total-value { font-family:'Sora',sans-serif; font-size:18px; color:#0c1c35; }
     .detail-text { font-size:13.5px; color:#374151; line-height:1.6; margin:0; white-space:pre-wrap; }
+    .detail-note {
+      margin-top:12px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:#f8fbff;
+      border:1px solid #e6eef7;
+    }
+    .detail-note span {
+      display:block;
+      margin-bottom:6px;
+      font-size:10px;
+      color:#7b8fa8;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .detail-note p { margin:0; color:#374151; font-size:13px; line-height:1.6; white-space:pre-wrap; }
+    .followups-empty {
+      padding:14px;
+      border-radius:12px;
+      border:1px dashed #c7d7ea;
+      background:#f8fbff;
+      color:#6b7f95;
+      font-size:13px;
+    }
+    .followups-list { display:flex; flex-direction:column; gap:10px; }
+    .followup-row {
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      padding:12px;
+      border-radius:12px;
+      background:#f8fbff;
+      border:1px solid #e3ebf5;
+    }
+    .followup-badge {
+      padding:5px 9px;
+      border-radius:999px;
+      background:#dbeafe;
+      color:#1d4ed8;
+      font-size:11px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .followup-content { display:grid; gap:4px; }
+    .followup-content strong { font-size:13.5px; color:#0c1c35; }
+    .followup-content small { font-size:12px; color:#6b7f95; line-height:1.45; }
+    .document-list, .comment-list, .audit-list { display:flex; flex-direction:column; gap:10px; }
+    .document-row, .comment-row, .audit-row {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:#f8fbff;
+      border:1px solid #e3ebf5;
+    }
+    .document-row { text-decoration:none; }
+    .document-row:hover { border-color:#9fbfe3; background:#eff6ff; }
+    .document-row > div, .comment-row, .audit-row > div { display:grid; gap:4px; min-width:0; }
+    .document-row strong, .comment-row strong, .audit-row strong { font-size:13.5px; color:#0c1c35; }
+    .document-row small, .comment-row small, .audit-row small { font-size:12px; color:#6b7f95; line-height:1.45; }
+    .comment-row p { margin:0; color:#374151; font-size:13px; line-height:1.6; white-space:pre-wrap; }
+    .document-link { flex-shrink:0; align-self:center; font-size:12px; font-weight:800; color:#1d4ed8; }
+    .btn-xs { min-height:34px; padding:8px 12px; border-radius:12px; font-size:12px; }
+    .integration-stock-list { display:flex; flex-direction:column; gap:10px; margin-top:14px; }
+    .integration-stock-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:#f8fbff;
+      border:1px solid #e5edf6;
+    }
+    .integration-stock-row > div { display:grid; gap:4px; min-width:0; }
+    .integration-stock-row strong { display:block; color:#0c1c35; font-size:13px; }
+    .integration-stock-row small { color:#6b7f95; font-size:12px; }
+    .approval-flow-list { display:flex; flex-direction:column; gap:10px; margin-top:14px; }
+    .approval-flow-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:#f8fbff;
+      border:1px solid #e5edf6;
+    }
+    .approval-flow-row strong { display:block; color:#0c1c35; font-size:13px; }
+    .approval-flow-row small { color:#6b7f95; font-size:12px; }
 
-    .items-list { display:flex; flex-direction:column; gap:8px; }
-    .item-row { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:10px; background:#f8fbff; border-radius:8px; border:1px solid #edf2fa; }
+    .items-list { display:flex; flex-direction:column; gap:10px; }
+    .item-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:14px; background:#f8fbff; border-radius:14px; border:1px solid #e5edf6; }
     .item-desc { flex:1; }
     .item-desc strong { display:block; font-size:13.5px; color:#0c1c35; margin-bottom:4px; }
     .item-desc span { display:inline-block; font-size:12px; color:#9ca3af; margin-right:8px; }
@@ -999,7 +2289,7 @@ interface ProductOption {
     .item-tax { color:#2563eb; background:#dbeafe; padding:1px 5px; border-radius:4px; font-weight:600; }
     .item-total { font-weight:700; font-size:14px; color:#0c1c35; white-space:nowrap; }
 
-    .invoice-link-card { display:flex; align-items:center; gap:10px; padding:12px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; margin-bottom:16px; }
+    .invoice-link-card { display:flex; align-items:center; gap:12px; padding:14px 16px; background:linear-gradient(135deg,#eff6ff 0%, #f7fbff 100%); border:1px solid #bfdbfe; border-radius:16px; margin-bottom:16px; box-shadow:0 10px 20px rgba(29,78,216,.08); }
     .invoice-link-card svg { color:#1d4ed8; flex-shrink:0; }
     .invoice-link-label { display:block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#1a407e; margin-bottom:2px; }
     .invoice-link-card strong { font-family:monospace; font-size:14px; color:#1d4ed8; }
@@ -1030,6 +2320,7 @@ interface ProductOption {
       border-bottom:1px solid #dbeafe;
     }
     .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .form-row--triple { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .form-group { margin-bottom:14px; }
     .form-group label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:6px; }
     .form-control { width:100%; padding:9px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; background:#fff; color:#0c1c35; box-sizing:border-box; }
@@ -1063,8 +2354,103 @@ interface ProductOption {
     .line-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
     .line-num { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#1a407e; }
     .line-fields { display:grid; grid-template-columns:1fr 1fr 1fr 1fr auto; gap:10px; align-items:end; }
+    .line-fields--template { grid-template-columns:1.8fr .7fr .8fr .7fr .7fr auto; }
     .line-total-group { display:flex; flex-direction:column; }
     .line-total { padding:9px 12px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; font-size:14px; font-weight:700; color:#1d4ed8; white-space:nowrap; }
+    .compact-line-card { padding:12px; }
+    .master-check {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-height:42px;
+      padding:0 12px;
+      border:1px solid #dce6f0;
+      border-radius:10px;
+      background:#f8fbff;
+      color:#35506f;
+      font-size:13px;
+      font-weight:600;
+    }
+    .commercial-masters {
+      display:grid;
+      grid-template-columns:220px minmax(0,1fr);
+      gap:18px;
+    }
+    .masters-sidebar {
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      padding:10px;
+      border:1px solid #e2e8f0;
+      border-radius:18px;
+      background:#f8fbff;
+      align-self:start;
+    }
+    .master-tab-btn {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      width:100%;
+      padding:11px 12px;
+      border-radius:12px;
+      border:1px solid transparent;
+      background:transparent;
+      cursor:pointer;
+      color:#35506f;
+      text-align:left;
+      font-weight:700;
+    }
+    .master-tab-btn small { color:#6b7f95; font-size:11px; }
+    .master-tab-btn.active {
+      background:#eaf3ff;
+      border-color:#bfd6f5;
+      color:#163a63;
+      box-shadow:0 8px 18px rgba(12,28,53,.05);
+    }
+    .masters-content { display:grid; gap:14px; min-width:0; }
+    .masters-toolbar {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:16px 18px;
+      border-radius:18px;
+      border:1px solid #dce6f0;
+      background:linear-gradient(135deg,#f8fbff 0%,#ffffff 100%);
+    }
+    .masters-toolbar h3 { margin:0; font-family:'Sora',sans-serif; font-size:20px; letter-spacing:-.04em; color:#0c1c35; }
+    .master-editor-card,
+    .master-list-card {
+      padding:18px;
+      border-radius:18px;
+      border:1px solid #dce6f0;
+      background:#fff;
+      box-shadow:0 14px 26px rgba(12,28,53,.05);
+    }
+    .master-editor-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .master-list { display:flex; flex-direction:column; gap:10px; }
+    .master-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 16px;
+      border:1px solid #e6eef7;
+      border-radius:14px;
+      background:#f8fbff;
+    }
+    .master-row__main { display:grid; gap:4px; min-width:0; }
+    .master-row__main strong { color:#0c1c35; font-size:14px; }
+    .master-row__main small { color:#6b7f95; font-size:12px; line-height:1.45; }
+    .master-row__actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .master-editor-footer { padding:0; border:none; margin-top:12px; }
 
     /* ── Totales ─────────────────────────────────────────────────────────── */
     .totals-summary { background:#f8fbff; border:1px solid #dce6f0; border-radius:12px; padding:16px; margin-top:8px; }
@@ -1096,30 +2482,47 @@ interface ProductOption {
       .hero-shell { grid-template-columns:1fr; padding:18px; border-radius:24px; }
       .page-title { font-size:26px; }
       .page-header { flex-direction:column; align-items:stretch; gap:10px; }
+      .header-actions { width:100%; flex-direction:column; }
       .page-header .btn { width:100%; justify-content:center; }
       .hero-mini-grid,
-      .kpi-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .kpi-strip,
+      .analytics-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .filters-head { flex-direction:column; align-items:flex-start; }
       .filters-bar { gap:8px; }
       .search-wrap { max-width:100%; flex:1 1 100%; }
       .drawer { width:100%; max-width:100%; }
+      .quote-spotlight { grid-template-columns:1fr; }
       .line-fields { grid-template-columns:1fr 1fr; }
     }
     @media (max-width:640px) {
       .hero-shell { padding:16px; gap:14px; }
       .hero-mini-grid,
-      .kpi-strip { grid-template-columns:1fr; }
+      .kpi-strip,
+      .analytics-strip { grid-template-columns:1fr; }
       .filters-shell { padding:14px; }
       .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
       .data-table { min-width:620px; }
       .drawer-overlay { align-items:flex-end; justify-content:stretch; }
-      .drawer { width:100%; height:90dvh; border-radius:18px 18px 0 0; }
+      .drawer { width:100%; height:92dvh; border-radius:22px 22px 0 0; }
+      .drawer-header { padding:20px 18px 18px; }
+      .drawer-title { font-size:21px; }
+      .quote-spotlight { grid-template-columns:1fr; }
       .modal-overlay { align-items:flex-end; padding:0; }
       .modal { border-radius:20px 20px 0 0; max-height:95dvh; max-width:100%; }
       .modal-footer { flex-direction:column-reverse; gap:8px; }
       .modal-footer .btn { width:100%; justify-content:center; }
+      .drawer-footer__group { flex-direction:column; }
+      .drawer-footer__group .btn { width:100%; justify-content:center; }
       .form-row { grid-template-columns:1fr; }
+      .form-row--triple { grid-template-columns:1fr; }
       .line-fields { grid-template-columns:1fr 1fr; }
+      .line-fields--template { grid-template-columns:1fr 1fr; }
+      .commercial-masters { grid-template-columns:1fr; }
+      .masters-sidebar { flex-direction:row; overflow:auto; }
+      .master-tab-btn { min-width:180px; }
+      .master-row { flex-direction:column; align-items:flex-start; }
+      .master-row__actions { width:100%; }
+      .master-row__actions .btn { flex:1; justify-content:center; }
       .pagination { flex-direction:column; gap:8px; align-items:center; }
     }
   `]
@@ -1128,6 +2531,14 @@ export class QuotesComponent implements OnInit {
   private readonly API          = `${environment.apiUrl}/quotes`;
   private readonly CUSTOMERS_API = `${environment.apiUrl}/customers`;
   private readonly PRODUCTS_API  = `${environment.apiUrl}/products`;
+  readonly masterTabs: Array<{ id: MasterTab; label: string }> = [
+    { id: 'salesOwners', label: 'Responsables' },
+    { id: 'sourceChannels', label: 'Canales' },
+    { id: 'lostReasons', label: 'Motivos de pérdida' },
+    { id: 'stages', label: 'Etapas' },
+    { id: 'priceLists', label: 'Listas de precios' },
+    { id: 'templates', label: 'Plantillas' },
+  ];
 
   // ── Lista principal ────────────────────────────────────────────────────────
   quotes      = signal<Quote[]>([]);
@@ -1136,6 +2547,7 @@ export class QuotesComponent implements OnInit {
   total       = signal(0);
   page        = signal(1);
   totalPages  = signal(1);
+  analyticsSummary = signal<QuoteAnalyticsSummary | null>(null);
   readonly limit = 20;
 
   // Filtros
@@ -1156,7 +2568,49 @@ export class QuotesComponent implements OnInit {
   showFormModal = signal(false);
   editingId     = signal<string | null>(null);
 
-  quoteForm: { issueDate: string; expiresAt: string; notes: string; terms: string } = this.emptyHeader();
+  quoteForm: {
+    issueDate: string;
+    expiresAt: string;
+    notes: string;
+    terms: string;
+    paymentTermLabel: string;
+    paymentTermDays: number | null;
+    deliveryLeadTimeDays: number | null;
+    deliveryTerms: string;
+    incotermCode: string;
+    incotermLocation: string;
+    exchangeRate: number;
+    commercialConditions: string;
+    salesOwnerId: string;
+    salesOwnerName: string;
+    opportunityName: string;
+    sourceChannelId: string;
+    sourceChannel: string;
+    priceListId: string;
+    templateId: string;
+  } = this.emptyHeader();
+
+  commercialMasters = signal<QuoteCommercialMasters>({
+    salesOwners: [],
+    sourceChannels: [],
+    lostReasons: [],
+    stages: [],
+    priceLists: [],
+    templates: [],
+  });
+  loadingMasters = signal(false);
+  showCommercialMastersModal = signal(false);
+  activeMasterTab = signal<MasterTab>('salesOwners');
+  showMasterEditor = signal(false);
+  editingMasterId = signal<string | null>(null);
+  savingMaster = signal(false);
+  masterForm = this.emptyMasterForm();
+  approvalPolicies = signal<QuoteApprovalPolicy[]>([]);
+  showApprovalPoliciesModal = signal(false);
+  showApprovalPolicyEditor = signal(false);
+  editingApprovalPolicyId = signal<string | null>(null);
+  savingApprovalPolicy = signal(false);
+  approvalPolicyForm = this.emptyApprovalPolicyForm();
 
   // Selección de cliente en el formulario
   selectedCustomer   = signal<CustomerOption | null>(null);
@@ -1198,6 +2652,8 @@ export class QuotesComponent implements OnInit {
   // ── Modal: Cambiar Estado ──────────────────────────────────────────────────
   statusTarget = signal<Quote | null>(null);
   newStatus    = 'DRAFT';
+  statusLostReason = '';
+  customStatusLostReason = '';
 
   // ── Modal: Confirmar conversión ────────────────────────────────────────────
   convertTarget = signal<Quote | null>(null);
@@ -1208,12 +2664,24 @@ export class QuotesComponent implements OnInit {
   pdfUrl          = signal<SafeResourceUrl | null>(null);
   downloadingPdf  = signal(false);
   sendingDian     = signal<{ [id: string]: boolean }>({});
+  quoteFollowUps  = signal<QuoteFollowUp[]>([]);
+  quoteAttachments = signal<QuoteAttachment[]>([]);
+  quoteComments = signal<QuoteComment[]>([]);
+  quoteAuditTrail = signal<QuoteAuditEntry[]>([]);
+  quoteIntegrationSummary = signal<QuoteIntegrationSummary | null>(null);
   private objectUrl: string | null = null;
 
-  constructor(private http: HttpClient, private notify: NotificationService, private sanitizer: DomSanitizer) {}
+  constructor(
+    private http: HttpClient,
+    private notify: NotificationService,
+    private sanitizer: DomSanitizer,
+    private dialog: ConfirmDialogService,
+  ) {}
 
   ngOnInit() {
     this.load();
+    this.loadCommercialMasters();
+    this.loadApprovalPolicies();
 
     // Búsqueda de producto con debounce
     this.productSearchSubject.pipe(
@@ -1257,6 +2725,44 @@ export class QuotesComponent implements OnInit {
         this.notify.error('Error al cargar cotizaciones');
       },
     });
+    this.loadAnalytics();
+  }
+
+  loadAnalytics() {
+    const params: Record<string, string> = {};
+    if (this.filterDateFrom) params['dateFrom'] = this.filterDateFrom;
+    if (this.filterDateTo) params['dateTo'] = this.filterDateTo;
+    this.http.get<QuoteAnalyticsSummary>(`${this.API}/analytics/summary`, { params }).subscribe({
+      next: (summary) => this.analyticsSummary.set(summary),
+      error: () => this.analyticsSummary.set(null),
+    });
+  }
+
+  loadCommercialMasters() {
+    this.loadingMasters.set(true);
+    this.http.get<QuoteCommercialMasters>(`${this.API}/masters`).subscribe({
+      next: (masters) => {
+        this.commercialMasters.set({
+          salesOwners: masters?.salesOwners ?? [],
+          sourceChannels: masters?.sourceChannels ?? [],
+          lostReasons: masters?.lostReasons ?? [],
+          stages: masters?.stages ?? [],
+          priceLists: masters?.priceLists ?? [],
+          templates: masters?.templates ?? [],
+        });
+        this.loadingMasters.set(false);
+      },
+      error: () => {
+        this.loadingMasters.set(false);
+      },
+    });
+  }
+
+  loadApprovalPolicies() {
+    this.http.get<QuoteApprovalPolicy[]>(`${this.API}/approval-policies`).subscribe({
+      next: (rows) => this.approvalPolicies.set(rows ?? []),
+      error: () => this.approvalPolicies.set([]),
+    });
   }
 
   onSearch() {
@@ -1265,6 +2771,411 @@ export class QuotesComponent implements OnInit {
   }
 
   onFilterChange() { this.page.set(1); this.load(); }
+
+  onSalesOwnerChange(id: string) {
+    const owner = this.commercialMasters().salesOwners.find((row) => row.id === id);
+    this.quoteForm.salesOwnerName = owner?.name ?? '';
+  }
+
+  onSourceChannelChange(id: string) {
+    const channel = this.commercialMasters().sourceChannels.find((row) => row.id === id);
+    this.quoteForm.sourceChannel = channel?.name ?? '';
+  }
+
+  onPriceListChange(id: string) {
+    this.quoteForm.priceListId = id;
+    if (!id) return;
+    const priceList = this.commercialMasters().priceLists.find((row) => row.id === id);
+    if (!priceList) return;
+    const nextLines = this.lines().map((line) => {
+      const matched = priceList.items.find((item) =>
+        (item.productId && item.productId === line.productId) ||
+        item.description.trim().toLowerCase() === line.description.trim().toLowerCase(),
+      );
+      if (!matched) return line;
+      return {
+        ...line,
+        unitPrice: matched.unitPrice,
+        taxRate: matched.taxRate ?? line.taxRate,
+      };
+    });
+    this.lines.set(nextLines);
+    this.recalc();
+  }
+
+  onTemplateChange(id: string) {
+    this.quoteForm.templateId = id;
+    if (!id) return;
+    const template = this.commercialMasters().templates.find((row) => row.id === id);
+    if (!template) return;
+    this.quoteForm.notes = template.notes ?? this.quoteForm.notes;
+    this.quoteForm.terms = template.terms ?? this.quoteForm.terms;
+    this.lines.set(template.items.map((item) => ({
+      productId: item.productId ?? '',
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      taxRate: item.taxRate,
+      discount: item.discount,
+    })));
+    this.lineProductSearch = template.items.map(() => '');
+    if (template.currency) {
+      this.quoteForm.priceListId = this.quoteForm.priceListId || '';
+    }
+    this.recalc();
+  }
+
+  selectedCommercialCurrency() {
+    const templateCurrency = this.commercialMasters().templates.find((row) => row.id === this.quoteForm.templateId)?.currency;
+    const priceListCurrency = this.commercialMasters().priceLists.find((row) => row.id === this.quoteForm.priceListId)?.currency;
+    return templateCurrency || priceListCurrency || 'COP';
+  }
+
+  openCommercialMastersModal(tab: MasterTab = 'salesOwners') {
+    this.setMasterTab(tab);
+    this.showCommercialMastersModal.set(true);
+    this.loadCommercialMasters();
+    this.loadProducts('');
+  }
+
+  closeCommercialMastersModal() {
+    this.showCommercialMastersModal.set(false);
+    this.cancelMasterEditor();
+  }
+
+  openApprovalPoliciesModal() {
+    this.showApprovalPoliciesModal.set(true);
+    this.loadApprovalPolicies();
+  }
+
+  closeApprovalPoliciesModal() {
+    this.showApprovalPoliciesModal.set(false);
+    this.cancelApprovalPolicyEditor();
+  }
+
+  openApprovalPolicyEditor(policy?: QuoteApprovalPolicy) {
+    this.editingApprovalPolicyId.set(policy?.id ?? null);
+    this.approvalPolicyForm = policy
+      ? {
+          name: policy.name,
+          approvalType: policy.approvalType,
+          thresholdValue: Number(policy.thresholdValue ?? 0),
+          requiredRole: policy.requiredRole || 'MANAGER',
+          sequence: Number(policy.sequence ?? 1),
+          description: policy.description ?? '',
+        }
+      : this.emptyApprovalPolicyForm();
+    this.showApprovalPolicyEditor.set(true);
+  }
+
+  cancelApprovalPolicyEditor() {
+    this.showApprovalPolicyEditor.set(false);
+    this.editingApprovalPolicyId.set(null);
+    this.approvalPolicyForm = this.emptyApprovalPolicyForm();
+  }
+
+  saveApprovalPolicy() {
+    const id = this.editingApprovalPolicyId();
+    const body = {
+      name: this.approvalPolicyForm.name,
+      approvalType: this.approvalPolicyForm.approvalType,
+      thresholdValue: Number(this.approvalPolicyForm.thresholdValue || 0),
+      requiredRole: this.approvalPolicyForm.requiredRole || 'MANAGER',
+      sequence: Number(this.approvalPolicyForm.sequence || 1),
+      description: this.approvalPolicyForm.description || undefined,
+    };
+    this.savingApprovalPolicy.set(true);
+    const request$ = id
+      ? this.http.put(`${this.API}/approval-policies/${id}`, body)
+      : this.http.post(`${this.API}/approval-policies`, body);
+    request$.subscribe({
+      next: () => {
+        this.notify.success(`Política ${id ? 'actualizada' : 'creada'} correctamente`);
+        this.savingApprovalPolicy.set(false);
+        this.cancelApprovalPolicyEditor();
+        this.loadApprovalPolicies();
+      },
+      error: (e) => {
+        this.savingApprovalPolicy.set(false);
+        this.notify.error(e?.error?.message ?? 'No fue posible guardar la política');
+      },
+    });
+  }
+
+  removeApprovalPolicy(policy: QuoteApprovalPolicy) {
+    this.dialog.confirm({
+      title: 'Desactivar política',
+      message: `Se desactivará la política "${policy.name}".`,
+      confirmLabel: 'Desactivar',
+      danger: true,
+      icon: 'warning',
+    }).then((confirmed) => {
+      if (!confirmed) return;
+      this.http.delete(`${this.API}/approval-policies/${policy.id}`).subscribe({
+        next: () => {
+          this.notify.success('Política desactivada');
+          this.loadApprovalPolicies();
+        },
+        error: (e) => this.notify.error(e?.error?.message ?? 'No fue posible desactivar la política'),
+      });
+    });
+  }
+
+  approvalPolicySummary(policy: QuoteApprovalPolicy) {
+    const metric = policy.approvalType === 'TOTAL'
+      ? `Monto >= ${this.formatCurrency(policy.thresholdValue)}`
+      : `Descuento >= ${policy.thresholdValue}%`;
+    return `${metric} · ${policy.requiredRole} · nivel ${policy.sequence}`;
+  }
+
+  thresholdLabel(step: QuoteApprovalStep) {
+    if (step.thresholdType === 'DISCOUNT') return `Descuento >= ${Number(step.thresholdValue ?? 0)}%`;
+    if (step.thresholdType === 'TOTAL') return `Monto >= ${this.formatCurrency(Number(step.thresholdValue ?? 0))}`;
+    return 'Política general';
+  }
+
+  approvalStatusClass(status: string) {
+    const map: Record<string, string> = {
+      PENDING: 'draft',
+      APPROVED: 'accepted',
+      REJECTED: 'rejected',
+      SUPERSEDED: 'expired',
+    };
+    return map[status] ?? 'draft';
+  }
+
+  setMasterTab(tab: MasterTab) {
+    this.activeMasterTab.set(tab);
+    this.cancelMasterEditor();
+  }
+
+  activeMasterLabel() {
+    return this.masterTabs.find((tab) => tab.id === this.activeMasterTab())?.label ?? 'Maestros';
+  }
+
+  activeMasterSingular() {
+    const labels: Record<MasterTab, string> = {
+      salesOwners: 'responsable',
+      sourceChannels: 'canal',
+      lostReasons: 'motivo',
+      stages: 'etapa',
+      priceLists: 'lista',
+      templates: 'plantilla',
+    };
+    return labels[this.activeMasterTab()];
+  }
+
+  masterTabCount(tab: MasterTab) {
+    return this.currentMasterRows(tab).length;
+  }
+
+  currentMasterRows(tab = this.activeMasterTab()) {
+    const masters = this.commercialMasters();
+    if (tab === 'salesOwners') return masters.salesOwners;
+    if (tab === 'sourceChannels') return masters.sourceChannels;
+    if (tab === 'lostReasons') return masters.lostReasons;
+    if (tab === 'stages') return masters.stages;
+    if (tab === 'priceLists') return masters.priceLists;
+    return masters.templates;
+  }
+
+  masterRowSummary(row: any) {
+    if ('items' in row) {
+      const extra = row.currency ? ` · ${row.currency}` : '';
+      return `${row.items?.length ?? 0} ítems${extra}`;
+    }
+    if (row.email || row.phone) {
+      return [row.email, row.phone].filter(Boolean).join(' · ') || row.description || 'Sin detalle';
+    }
+    if (row.code || row.position !== undefined) {
+      const pieces = [row.code, row.position !== undefined ? `Posición ${row.position}` : '', row.isClosed ? 'Cierre' : ''];
+      return pieces.filter(Boolean).join(' · ') || row.description || 'Etapa comercial';
+    }
+    return row.description || 'Configuración comercial';
+  }
+
+  openMasterEditor(row?: any) {
+    const tab = this.activeMasterTab();
+    this.editingMasterId.set(row?.id ?? null);
+    if (!row) {
+      this.masterForm = this.emptyMasterForm();
+      if (tab === 'priceLists') this.addPriceListItem();
+      if (tab === 'templates') this.addTemplateItem();
+      this.showMasterEditor.set(true);
+      return;
+    }
+    this.masterForm = {
+      name: row.name ?? '',
+      description: row.description ?? '',
+      email: row.email ?? '',
+      phone: row.phone ?? '',
+      code: row.code ?? '',
+      color: row.color ?? '#2563eb',
+      position: row.position ?? 0,
+      isDefault: Boolean(row.isDefault),
+      isClosed: Boolean(row.isClosed),
+      currency: row.currency ?? 'COP',
+      notes: row.notes ?? '',
+      terms: row.terms ?? '',
+      priceListItems: 'items' in row ? (row.items ?? []).map((item: any) => ({
+        productId: item.productId ?? '',
+        description: item.description ?? '',
+        unitPrice: Number(item.unitPrice ?? 0),
+        taxRate: Number(item.taxRate ?? 19),
+      })) : [],
+      templateItems: 'items' in row ? (row.items ?? []).map((item: any) => ({
+        productId: item.productId ?? '',
+        description: item.description ?? '',
+        quantity: Number(item.quantity ?? 1),
+        unitPrice: Number(item.unitPrice ?? 0),
+        taxRate: Number(item.taxRate ?? 19),
+        discount: Number(item.discount ?? 0),
+      })) : [],
+    };
+    this.showMasterEditor.set(true);
+  }
+
+  cancelMasterEditor() {
+    this.showMasterEditor.set(false);
+    this.editingMasterId.set(null);
+    this.masterForm = this.emptyMasterForm();
+  }
+
+  saveMaster() {
+    const tab = this.activeMasterTab();
+    const id = this.editingMasterId();
+    const isEdit = Boolean(id);
+    const routeMap: Record<Exclude<MasterTab, 'priceLists' | 'templates'>, string> = {
+      salesOwners: 'sales-owners',
+      sourceChannels: 'source-channels',
+      lostReasons: 'lost-reasons',
+      stages: 'stages',
+    };
+    let request$;
+    if (tab === 'priceLists') {
+      const body = {
+        name: this.masterForm.name,
+        description: this.masterForm.description || undefined,
+        currency: this.masterForm.currency || 'COP',
+        isDefault: this.masterForm.isDefault,
+        items: this.masterForm.priceListItems
+          .filter((item) => item.description.trim())
+          .map((item, index) => ({
+            productId: item.productId || undefined,
+            description: item.description,
+            unitPrice: Number(item.unitPrice || 0),
+            taxRate: Number(item.taxRate || 0),
+            position: index + 1,
+          })),
+      };
+      request$ = isEdit
+        ? this.http.put(`${this.API}/masters/price-lists/${id}`, body)
+        : this.http.post(`${this.API}/masters/price-lists`, body);
+    } else if (tab === 'templates') {
+      const body = {
+        name: this.masterForm.name,
+        description: this.masterForm.description || undefined,
+        notes: this.masterForm.notes || undefined,
+        terms: this.masterForm.terms || undefined,
+        currency: this.masterForm.currency || 'COP',
+        isDefault: this.masterForm.isDefault,
+        items: this.masterForm.templateItems
+          .filter((item) => item.description.trim())
+          .map((item, index) => ({
+            productId: item.productId || undefined,
+            description: item.description,
+            quantity: Number(item.quantity || 1),
+            unitPrice: Number(item.unitPrice || 0),
+            taxRate: Number(item.taxRate || 0),
+            discount: Number(item.discount || 0),
+            position: index + 1,
+          })),
+      };
+      request$ = isEdit
+        ? this.http.put(`${this.API}/masters/templates/${id}`, body)
+        : this.http.post(`${this.API}/masters/templates`, body);
+    } else {
+      const route = routeMap[tab];
+      const body = {
+        name: this.masterForm.name,
+        description: this.masterForm.description || undefined,
+        email: this.masterForm.email || undefined,
+        phone: this.masterForm.phone || undefined,
+        code: this.masterForm.code || undefined,
+        color: this.masterForm.color || undefined,
+        position: Number(this.masterForm.position || 0),
+        isDefault: this.masterForm.isDefault,
+        isClosed: this.masterForm.isClosed,
+      };
+      request$ = isEdit
+        ? this.http.put(`${this.API}/masters/${route}/${id}`, body)
+        : this.http.post(`${this.API}/masters/${route}`, body);
+    }
+
+    this.savingMaster.set(true);
+    request$.subscribe({
+      next: () => {
+        this.notify.success(`${isEdit ? 'Actualizado' : 'Creado'} ${this.activeMasterSingular()} correctamente`);
+        this.savingMaster.set(false);
+        this.cancelMasterEditor();
+        this.loadCommercialMasters();
+      },
+      error: (e: any) => {
+        this.savingMaster.set(false);
+        this.notify.error(e?.error?.message ?? 'No fue posible guardar el maestro comercial');
+      },
+    });
+  }
+
+  removeMaster(row: any) {
+    const tab = this.activeMasterTab();
+    const routeMap: Record<MasterTab, string> = {
+      salesOwners: 'sales-owners',
+      sourceChannels: 'source-channels',
+      lostReasons: 'lost-reasons',
+      stages: 'stages',
+      priceLists: 'price-lists',
+      templates: 'templates',
+    };
+    this.dialog.confirm({
+      title: 'Desactivar registro',
+      message: `Se desactivará "${row.name}".`,
+      confirmLabel: 'Desactivar',
+      danger: true,
+      icon: 'warning',
+    }).then((confirmed) => {
+      if (!confirmed) return;
+      this.http.delete(`${this.API}/masters/${routeMap[tab]}/${row.id}`).subscribe({
+        next: () => {
+          this.notify.success('Registro desactivado');
+          this.loadCommercialMasters();
+        },
+        error: (e) => this.notify.error(e?.error?.message ?? 'No fue posible desactivar el registro'),
+      });
+    });
+  }
+
+  addPriceListItem() {
+    this.masterForm.priceListItems = [
+      ...this.masterForm.priceListItems,
+      { productId: '', description: '', unitPrice: 0, taxRate: 19 },
+    ];
+  }
+
+  removePriceListItem(index: number) {
+    this.masterForm.priceListItems = this.masterForm.priceListItems.filter((_, idx) => idx !== index);
+  }
+
+  addTemplateItem() {
+    this.masterForm.templateItems = [
+      ...this.masterForm.templateItems,
+      { productId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 19, discount: 0 },
+    ];
+  }
+
+  removeTemplateItem(index: number) {
+    this.masterForm.templateItems = this.masterForm.templateItems.filter((_, idx) => idx !== index);
+  }
 
   setPage(p: number) { this.page.set(p); this.load(); }
 
@@ -1278,6 +3189,7 @@ export class QuotesComponent implements OnInit {
   // ── Modal: Formulario ──────────────────────────────────────────────────────
 
   openFormModal(quote?: Quote) {
+    this.loadCommercialMasters();
     if (quote) {
       // Editar cotización existente — carga el detalle para obtener los ítems
       this.editingId.set(quote.id);
@@ -1286,6 +3198,21 @@ export class QuotesComponent implements OnInit {
         expiresAt:  quote.expiresAt?.substring(0, 10) ?? '',
         notes:      quote.notes ?? '',
         terms:      quote.terms ?? '',
+        paymentTermLabel: quote.paymentTermLabel ?? '',
+        paymentTermDays: quote.paymentTermDays ?? null,
+        deliveryLeadTimeDays: quote.deliveryLeadTimeDays ?? null,
+        deliveryTerms: quote.deliveryTerms ?? '',
+        incotermCode: quote.incotermCode ?? '',
+        incotermLocation: quote.incotermLocation ?? '',
+        exchangeRate: quote.exchangeRate ?? 1,
+        commercialConditions: quote.commercialConditions ?? '',
+        salesOwnerId: this.findMasterIdByName('salesOwners', quote.salesOwnerName),
+        salesOwnerName: quote.salesOwnerName ?? '',
+        opportunityName: quote.opportunityName ?? '',
+        sourceChannelId: this.findMasterIdByName('sourceChannels', quote.sourceChannel),
+        sourceChannel: quote.sourceChannel ?? '',
+        priceListId: '',
+        templateId: '',
       };
       this.selectedCustomer.set({ id: quote.customer.id, name: quote.customer.name, documentNumber: quote.customer.documentNumber });
       this.customerSearch = quote.customer.name;
@@ -1295,7 +3222,30 @@ export class QuotesComponent implements OnInit {
         this.setLinesFromItems(quote.items);
       } else {
         this.http.get<Quote>(`${this.API}/${quote.id}`).subscribe({
-          next: (full) => this.setLinesFromItems(full.items ?? []),
+          next: (full) => {
+            this.quoteForm = {
+              issueDate:  full.issueDate?.substring(0, 10) ?? '',
+              expiresAt:  full.expiresAt?.substring(0, 10) ?? '',
+              notes:      full.notes ?? '',
+              terms:      full.terms ?? '',
+              paymentTermLabel: full.paymentTermLabel ?? '',
+              paymentTermDays: full.paymentTermDays ?? null,
+              deliveryLeadTimeDays: full.deliveryLeadTimeDays ?? null,
+              deliveryTerms: full.deliveryTerms ?? '',
+              incotermCode: full.incotermCode ?? '',
+              incotermLocation: full.incotermLocation ?? '',
+              exchangeRate: full.exchangeRate ?? 1,
+              commercialConditions: full.commercialConditions ?? '',
+              salesOwnerId: this.findMasterIdByName('salesOwners', full.salesOwnerName),
+              salesOwnerName: full.salesOwnerName ?? '',
+              opportunityName: full.opportunityName ?? '',
+              sourceChannelId: this.findMasterIdByName('sourceChannels', full.sourceChannel),
+              sourceChannel: full.sourceChannel ?? '',
+              priceListId: '',
+              templateId: '',
+            };
+            this.setLinesFromItems(full.items ?? []);
+          },
           error: () => this.lines.set([this.emptyLine()]),
         });
       }
@@ -1364,6 +3314,18 @@ export class QuotesComponent implements OnInit {
       expiresAt:  this.quoteForm.expiresAt || undefined,
       notes:      this.quoteForm.notes     || undefined,
       terms:      this.quoteForm.terms     || undefined,
+      paymentTermLabel: this.quoteForm.paymentTermLabel || undefined,
+      paymentTermDays: this.quoteForm.paymentTermDays ?? undefined,
+      deliveryLeadTimeDays: this.quoteForm.deliveryLeadTimeDays ?? undefined,
+      deliveryTerms: this.quoteForm.deliveryTerms || undefined,
+      incotermCode: this.quoteForm.incotermCode || undefined,
+      incotermLocation: this.quoteForm.incotermLocation || undefined,
+      exchangeRate: Number(this.quoteForm.exchangeRate || 1),
+      commercialConditions: this.quoteForm.commercialConditions || undefined,
+      salesOwnerName: this.quoteForm.salesOwnerName || undefined,
+      opportunityName: this.quoteForm.opportunityName || undefined,
+      sourceChannel: this.quoteForm.sourceChannel || undefined,
+      currency: this.selectedCommercialCurrency(),
       items: this.lines().map((l, idx) => ({
         productId:   l.productId   || undefined,
         description: l.description,
@@ -1398,25 +3360,56 @@ export class QuotesComponent implements OnInit {
   openDetail(q: Quote) {
     // Carga el detalle completo para obtener los ítems
     this.http.get<Quote>(`${this.API}/${q.id}`).subscribe({
-      next: (full) => this.detailQuote.set(full),
-      error: () => this.detailQuote.set(q),
+      next: (full) => {
+        this.detailQuote.set(full);
+        this.loadFollowUps(full.id);
+        this.loadAttachments(full.id);
+        this.loadComments(full.id);
+        this.loadAuditTrail(full.id);
+        this.loadIntegrationSummary(full.id);
+      },
+      error: () => {
+        this.detailQuote.set(q);
+        this.loadFollowUps(q.id);
+        this.loadAttachments(q.id);
+        this.loadComments(q.id);
+        this.loadAuditTrail(q.id);
+        this.loadIntegrationSummary(q.id);
+      },
     });
   }
 
-  closeDetail() { this.detailQuote.set(null); }
+  closeDetail() {
+    this.detailQuote.set(null);
+    this.quoteFollowUps.set([]);
+    this.quoteAttachments.set([]);
+    this.quoteComments.set([]);
+    this.quoteAuditTrail.set([]);
+    this.quoteIntegrationSummary.set(null);
+  }
 
   // ── Modal: Cambiar Estado ──────────────────────────────────────────────────
 
   openStatusModal(q: Quote) {
     this.newStatus = q.status === 'CONVERTED' ? 'SENT' : q.status;
+    const matchedLostReason = this.findMasterIdByName('lostReasons', q.lostReason ?? '');
+    this.statusLostReason = matchedLostReason ? (q.lostReason ?? '') : (q.lostReason ? '__custom__' : '');
+    this.customStatusLostReason = matchedLostReason ? '' : (q.lostReason ?? '');
     this.statusTarget.set(q);
   }
 
   changeStatus() {
     const q = this.statusTarget();
     if (!q) return;
+    const finalLostReason = this.statusLostReason === '__custom__'
+      ? this.customStatusLostReason.trim()
+      : this.statusLostReason.trim();
+    if (this.newStatus === 'REJECTED' && !finalLostReason) {
+      this.notify.warning('Debes indicar el motivo de pérdida');
+      return;
+    }
     this.saving.set(true);
-    this.http.patch(`${this.API}/${q.id}/status`, { status: this.newStatus }).subscribe({
+    this.http.patch(`${this.API}/${q.id}/status`, { status: this.newStatus, lostReason: finalLostReason || undefined }).subscribe({
       next: () => {
         this.notify.success(`Estado actualizado a ${this.statusLabel(this.newStatus)}`);
         this.saving.set(false);
@@ -1431,6 +3424,265 @@ export class QuotesComponent implements OnInit {
         this.saving.set(false);
         this.notify.error(e?.error?.message ?? 'Error al cambiar el estado');
       },
+    });
+  }
+
+  async requestApproval(q: Quote) {
+    const reason = await this.dialog.prompt({
+      title: 'Solicitar aprobación comercial',
+      message: `Vas a solicitar aprobación para la cotización ${q.number}.`,
+      detail: 'Este motivo ayudará a justificar la solicitud ante el responsable comercial.',
+      inputLabel: 'Motivo',
+      placeholder: 'Describe por qué debe aprobarse esta cotización',
+      initialValue: q.approval?.reason || 'Supera política comercial',
+      confirmLabel: 'Solicitar aprobación',
+      icon: 'approval',
+      inputType: 'textarea',
+    });
+    if (reason === null) return;
+    this.http.post(`${this.API}/${q.id}/request-approval`, { reason }).subscribe({
+      next: () => {
+        this.notify.success('Solicitud de aprobación enviada');
+        this.openDetail(q);
+        this.load();
+      },
+      error: (e) => this.notify.error(e?.error?.message ?? 'Error al solicitar aprobación'),
+    });
+  }
+
+  approveQuote(q: Quote) {
+    this.http.patch(`${this.API}/${q.id}/approve`, {}).subscribe({
+      next: () => {
+        this.notify.success('Cotización aprobada');
+        this.openDetail(q);
+        this.load();
+      },
+      error: (e) => this.notify.error(e?.error?.message ?? 'Error al aprobar la cotización'),
+    });
+  }
+
+  async rejectQuoteApproval(q: Quote) {
+    const reason = await this.dialog.prompt({
+      title: 'Rechazar aprobación',
+      message: `Indica el motivo del rechazo para la cotización ${q.number}.`,
+      inputLabel: 'Motivo del rechazo',
+      placeholder: 'Describe la razón del rechazo',
+      initialValue: q.approval?.rejectedReason || '',
+      confirmLabel: 'Rechazar',
+      danger: true,
+      icon: 'rule',
+      inputType: 'textarea',
+    });
+    if (reason === null) return;
+    this.http.patch(`${this.API}/${q.id}/reject-approval`, { reason }).subscribe({
+      next: () => {
+        this.notify.success('Aprobación rechazada');
+        this.openDetail(q);
+        this.load();
+      },
+      error: (e) => this.notify.error(e?.error?.message ?? 'Error al rechazar la aprobación'),
+    });
+  }
+
+  loadFollowUps(quoteId: string) {
+    this.http.get<QuoteFollowUp[]>(`${this.API}/${quoteId}/follow-ups`).subscribe({
+      next: (rows) => this.quoteFollowUps.set(rows ?? []),
+      error: () => this.quoteFollowUps.set([]),
+    });
+  }
+
+  loadAttachments(quoteId: string) {
+    this.http.get<QuoteAttachment[]>(`${this.API}/${quoteId}/attachments`).subscribe({
+      next: (rows) => this.quoteAttachments.set(rows ?? []),
+      error: () => this.quoteAttachments.set([]),
+    });
+  }
+
+  loadComments(quoteId: string) {
+    this.http.get<QuoteComment[]>(`${this.API}/${quoteId}/comments`).subscribe({
+      next: (rows) => this.quoteComments.set(rows ?? []),
+      error: () => this.quoteComments.set([]),
+    });
+  }
+
+  loadAuditTrail(quoteId: string) {
+    this.http.get<QuoteAuditEntry[]>(`${this.API}/${quoteId}/audit-trail`).subscribe({
+      next: (rows) => this.quoteAuditTrail.set(rows ?? []),
+      error: () => this.quoteAuditTrail.set([]),
+    });
+  }
+
+  loadIntegrationSummary(quoteId: string) {
+    this.http.get<QuoteIntegrationSummary>(`${this.API}/${quoteId}/integration-summary`).subscribe({
+      next: (row) => this.quoteIntegrationSummary.set(row ?? null),
+      error: () => this.quoteIntegrationSummary.set(null),
+    });
+  }
+
+  duplicateQuote(q: Quote) {
+    this.http.post(`${this.API}/${q.id}/duplicate`, {}).subscribe({
+      next: () => {
+        this.notify.success('Cotización duplicada en un nuevo borrador');
+        this.load();
+      },
+      error: (e) => this.notify.error(e?.error?.message ?? 'No fue posible duplicar la cotización'),
+    });
+  }
+
+  renewQuote(q: Quote) {
+    this.http.post(`${this.API}/${q.id}/renew`, {}).subscribe({
+      next: () => {
+        this.notify.success('Cotización renovada en un nuevo borrador');
+        this.load();
+      },
+      error: (e) => this.notify.error(e?.error?.message ?? 'No fue posible renovar la cotización'),
+    });
+  }
+
+  async createQuoteFollowUp(q: Quote) {
+    const activityType = await this.dialog.prompt({
+      title: 'Nuevo seguimiento comercial',
+      message: `Selecciona el tipo de seguimiento para la cotización ${q.number}.`,
+      inputLabel: 'Tipo de seguimiento',
+      confirmLabel: 'Continuar',
+      icon: 'support_agent',
+      inputType: 'select',
+      initialValue: 'CALL',
+      options: [
+        { label: 'Llamada', value: 'CALL' },
+        { label: 'Correo', value: 'EMAIL' },
+        { label: 'Reunión', value: 'MEETING' },
+        { label: 'WhatsApp', value: 'WHATSAPP' },
+        { label: 'Nota interna', value: 'NOTE' },
+      ],
+    });
+    if (activityType === null) return;
+
+    const notes = await this.dialog.prompt({
+      title: 'Detalle del seguimiento',
+      message: 'Registra el resultado o contexto del seguimiento comercial.',
+      inputLabel: 'Detalle',
+      placeholder: 'Ej. Cliente solicita una nueva reunión el próximo martes',
+      confirmLabel: 'Continuar',
+      icon: 'edit_note',
+      inputType: 'textarea',
+    });
+    if (notes === null) return;
+
+    const scheduledAt = await this.dialog.prompt({
+      title: 'Programar seguimiento',
+      message: 'Si quieres, indica una fecha para el próximo contacto.',
+      detail: 'Este campo es opcional.',
+      inputLabel: 'Fecha programada',
+      confirmLabel: 'Guardar seguimiento',
+      icon: 'event',
+      inputType: 'date',
+      allowEmpty: true,
+    });
+    if (scheduledAt === null) return;
+
+    this.http.post(`${this.API}/${q.id}/follow-ups`, {
+      activityType,
+      notes,
+      scheduledAt: scheduledAt || undefined,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Seguimiento registrado');
+        if (this.detailQuote()?.id === q.id) {
+          this.loadFollowUps(q.id);
+        }
+      },
+      error: (e) => this.notify.error(e?.error?.message ?? 'No fue posible registrar el seguimiento'),
+    });
+  }
+
+  async registerQuoteAttachment(q: Quote) {
+    const fileName = await this.dialog.prompt({
+      title: 'Registrar adjunto',
+      message: `Registra un soporte documental para la cotización ${q.number}.`,
+      inputLabel: 'Nombre del archivo',
+      placeholder: 'Ej. Propuesta técnica.pdf',
+      confirmLabel: 'Continuar',
+      icon: 'attach_file',
+    });
+    if (fileName === null) return;
+
+    const fileUrl = await this.dialog.prompt({
+      title: 'URL del adjunto',
+      message: 'Indica la URL o ubicación pública del archivo.',
+      inputLabel: 'URL',
+      placeholder: 'https://...',
+      confirmLabel: 'Continuar',
+      icon: 'link',
+    });
+    if (fileUrl === null) return;
+
+    const category = await this.dialog.prompt({
+      title: 'Categoría documental',
+      message: 'Si quieres, clasifica el adjunto.',
+      detail: 'Este campo es opcional.',
+      inputLabel: 'Categoría',
+      placeholder: 'Ej. SOPORTE, PROPUESTA, ANEXO',
+      confirmLabel: 'Continuar',
+      icon: 'folder',
+      allowEmpty: true,
+    });
+    if (category === null) return;
+
+    const notes = await this.dialog.prompt({
+      title: 'Notas del adjunto',
+      message: 'Puedes registrar una nota interna breve para este documento.',
+      detail: 'Este campo es opcional.',
+      inputLabel: 'Notas',
+      placeholder: 'Observaciones del documento',
+      confirmLabel: 'Registrar adjunto',
+      icon: 'description',
+      inputType: 'textarea',
+      allowEmpty: true,
+    });
+    if (notes === null) return;
+
+    this.http.post(`${this.API}/${q.id}/attachments`, {
+      fileName,
+      fileUrl,
+      category: category || undefined,
+      notes: notes || undefined,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Adjunto registrado');
+        if (this.detailQuote()?.id === q.id) {
+          this.loadAttachments(q.id);
+          this.loadAuditTrail(q.id);
+        }
+      },
+      error: (e) => this.notify.error(e?.error?.message ?? 'No fue posible registrar el adjunto'),
+    });
+  }
+
+  async addQuoteComment(q: Quote) {
+    const message = await this.dialog.prompt({
+      title: 'Agregar comentario interno',
+      message: `Registra una nota interna para la cotización ${q.number}.`,
+      inputLabel: 'Comentario',
+      placeholder: 'Escribe el comentario interno',
+      confirmLabel: 'Guardar comentario',
+      icon: 'comment',
+      inputType: 'textarea',
+    });
+    if (message === null) return;
+
+    this.http.post(`${this.API}/${q.id}/comments`, {
+      commentType: 'INTERNAL',
+      message,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Comentario registrado');
+        if (this.detailQuote()?.id === q.id) {
+          this.loadComments(q.id);
+          this.loadAuditTrail(q.id);
+        }
+      },
+      error: (e) => this.notify.error(e?.error?.message ?? 'No fue posible registrar el comentario'),
     });
   }
 
@@ -1468,7 +3720,7 @@ export class QuotesComponent implements OnInit {
     this.loadingPdf.set(true);
     this.showPdfModal.set(true);
     const token = localStorage.getItem('access_token') ?? '';
-    this.http.get(`${environment.apiUrl}/v1/quotes/${q.id}/pdf`, {
+    this.http.get(`${this.API}/${q.id}/pdf`, {
       responseType: 'blob',
       headers: { Authorization: `Bearer ${token}` },
     }).subscribe({
@@ -1493,7 +3745,7 @@ export class QuotesComponent implements OnInit {
   downloadPdf(q: Quote) {
     this.downloadingPdf.set(true);
     const token = localStorage.getItem('access_token') ?? '';
-    this.http.get(`${environment.apiUrl}/v1/quotes/${q.id}/pdf/download`, {
+    this.http.get(`${this.API}/${q.id}/pdf/download`, {
       responseType: 'blob',
       headers: { Authorization: `Bearer ${token}` },
     }).subscribe({
@@ -1512,34 +3764,21 @@ export class QuotesComponent implements OnInit {
   }
 
   sendToDian(q: Quote) {
-    if (q.invoiceId) {
-      this.issueToDian(q.invoiceId, q);
-      return;
-    }
     this.sendingDian.update(s => ({ ...s, [q.id]: true }));
-    this.http.patch<any>(`${environment.apiUrl}/v1/quotes/${q.id}/convert`, {}).subscribe({
-      next: invoice => {
-        this.notify.info('Cotización convertida a factura. Enviando a DIAN...');
-        this.issueToDian(invoice.id, q);
-      },
-      error: err => {
-        this.sendingDian.update(s => ({ ...s, [q.id]: false }));
-        this.notify.error(err?.error?.message ?? 'Error al convertir la cotización');
-      },
-    });
-  }
-
-  private issueToDian(invoiceId: string, q: Quote) {
-    this.sendingDian.update(s => ({ ...s, [q.id]: true }));
-    this.http.post<any>(`${environment.apiUrl}/v1/invoices/${invoiceId}/issue`, {}).subscribe({
+    this.http.post<any>(`${this.API}/${q.id}/send-to-dian`, {}).subscribe({
       next: result => {
         this.sendingDian.update(s => ({ ...s, [q.id]: false }));
-        this.notify.success(`Factura enviada a DIAN. ZipKey: ${result.dianZipKey ?? 'OK'}`);
+        const zipKey = result?.dianZipKey ?? 'OK';
+        const invoiceNumber = result?.invoiceNumber ? `Factura ${result.invoiceNumber}. ` : '';
+        this.notify.success(`${invoiceNumber}Enviada a DIAN. ZipKey: ${zipKey}`);
+        if (this.detailQuote()?.id === q.id) {
+          this.openDetail(q);
+        }
         this.load();
       },
       error: err => {
         this.sendingDian.update(s => ({ ...s, [q.id]: false }));
-        this.notify.error(err?.error?.message ?? 'Error al enviar a la DIAN');
+        this.notify.error(err?.error?.message ?? 'Error al enviar la cotización a DIAN');
       },
     });
   }
@@ -1573,6 +3812,55 @@ export class QuotesComponent implements OnInit {
     if (!l) return 0;
     const sub = l.quantity * l.unitPrice * (1 - l.discount / 100);
     return sub + sub * (l.taxRate / 100);
+  }
+
+  approvalLabel(status: string) {
+    const map: Record<string, string> = {
+      PENDING: 'Pendiente',
+      APPROVED: 'Aprobada',
+      REJECTED: 'Rechazada',
+      SUPERSEDED: 'Reemplazada',
+    };
+    return map[status] ?? status;
+  }
+
+  followUpTypeLabel(type: string) {
+    const map: Record<string, string> = {
+      CALL: 'Llamada',
+      EMAIL: 'Correo',
+      MEETING: 'Reunión',
+      WHATSAPP: 'WhatsApp',
+      NOTE: 'Nota',
+    };
+    return map[type] ?? type;
+  }
+
+  commentTypeLabel(type: string) {
+    const map: Record<string, string> = {
+      INTERNAL: 'Comentario interno',
+      DECISION: 'Decisión',
+      REVIEW: 'Revisión',
+    };
+    return map[type] ?? type;
+  }
+
+  auditActionLabel(action: string) {
+    const map: Record<string, string> = {
+      QUOTE_CREATED: 'Cotización creada',
+      QUOTE_UPDATED: 'Cotización actualizada',
+      QUOTE_STATUS_UPDATED: 'Estado actualizado',
+      QUOTE_APPROVAL_REQUESTED: 'Aprobación solicitada',
+      QUOTE_APPROVED: 'Cotización aprobada',
+      QUOTE_APPROVAL_REJECTED: 'Aprobación rechazada',
+      QUOTE_FOLLOWUP_CREATED: 'Seguimiento registrado',
+      QUOTE_ATTACHMENT_CREATED: 'Adjunto registrado',
+      QUOTE_COMMENT_CREATED: 'Comentario registrado',
+      QUOTE_CONVERTED: 'Cotización convertida',
+      QUOTE_SENT_TO_DIAN: 'Factura enviada a DIAN desde cotización',
+      QUOTE_DUPLICATED: 'Cotización duplicada',
+      QUOTE_DELETED: 'Cotización eliminada',
+    };
+    return map[action] ?? action;
   }
 
   // ── Búsqueda de clientes en el formulario ──────────────────────────────────
@@ -1674,6 +3962,17 @@ export class QuotesComponent implements OnInit {
     return utc.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
+  formatDateTime(d?: string | null): string {
+    if (!d) return '—';
+    return new Date(d).toLocaleString('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
   statusLabel(s: string): string {
     const map: Record<string, string> = {
       DRAFT:     'Borrador',
@@ -1688,15 +3987,82 @@ export class QuotesComponent implements OnInit {
 
   min(a: number, b: number) { return Math.min(a, b); }
 
+  topSalesOwnerLabel() {
+    const topOwner = this.analyticsSummary()?.bySalesOwner?.[0];
+    if (!topOwner) return 'Sin responsable líder';
+    return `${topOwner.name} lidera con ${topOwner.winRate}%`;
+  }
+
+  analyticsStatusCount(status: string) {
+    return this.analyticsSummary()?.totalsByStatus?.[status] ?? 0;
+  }
+
   // ── Fábricas de objetos vacíos ─────────────────────────────────────────────
 
   private emptyHeader() {
     const today = new Date().toISOString().substring(0, 10);
     const thirtyDays = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
-    return { issueDate: today, expiresAt: thirtyDays, notes: '', terms: '' };
+    return {
+      issueDate: today,
+      expiresAt: thirtyDays,
+      notes: '',
+      terms: '',
+      paymentTermLabel: '',
+      paymentTermDays: null,
+      deliveryLeadTimeDays: null,
+      deliveryTerms: '',
+      incotermCode: '',
+      incotermLocation: '',
+      exchangeRate: 1,
+      commercialConditions: '',
+      salesOwnerId: '',
+      salesOwnerName: '',
+      opportunityName: '',
+      sourceChannelId: '',
+      sourceChannel: '',
+      priceListId: '',
+      templateId: '',
+    };
   }
 
   private emptyLine(): QuoteLineForm {
     return { productId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 19, discount: 0 };
+  }
+
+  private emptyMasterForm() {
+    return {
+      name: '',
+      description: '',
+      email: '',
+      phone: '',
+      code: '',
+      color: '#2563eb',
+      position: 0,
+      isDefault: false,
+      isClosed: false,
+      currency: 'COP',
+      notes: '',
+      terms: '',
+      priceListItems: [] as Array<{ productId: string; description: string; unitPrice: number; taxRate: number }>,
+      templateItems: [] as Array<{ productId: string; description: string; quantity: number; unitPrice: number; taxRate: number; discount: number }>,
+    };
+  }
+
+  private emptyApprovalPolicyForm() {
+    return {
+      name: '',
+      approvalType: 'TOTAL' as 'TOTAL' | 'DISCOUNT',
+      thresholdValue: 0,
+      requiredRole: 'MANAGER',
+      sequence: 1,
+      description: '',
+    };
+  }
+
+  private findMasterIdByName(kind: 'salesOwners' | 'sourceChannels' | 'lostReasons', name?: string | null) {
+    const value = (name ?? '').trim().toLowerCase();
+    if (!value) return '';
+    const rows = this.commercialMasters()[kind];
+    return rows.find((row) => row.name.trim().toLowerCase() === value)?.id ?? '';
   }
 }

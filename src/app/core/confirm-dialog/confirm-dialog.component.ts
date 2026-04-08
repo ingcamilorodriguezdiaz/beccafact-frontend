@@ -61,6 +61,12 @@ export interface PromptOptions extends ConfirmOptions {
   initialValue?: string;
   /** Etiqueta del campo */
   inputLabel?:   string;
+  /** Tipo de entrada a mostrar en el prompt */
+  inputType?:    'text' | 'textarea' | 'select' | 'date';
+  /** Opciones para prompts tipo select */
+  options?: Array<{ label: string; value: string }>;
+  /** Permite confirmar el diálogo aunque el valor esté vacío */
+  allowEmpty?: boolean;
 }
 
 // ── Servicio del diálogo ────────────────────────────────────────────────────
@@ -98,7 +104,13 @@ export class ConfirmDialogService {
   _confirm() {
     const val = this._mode() === 'prompt' ? this._inputVal() : true;
     this._visible.set(false);
-    this._resolve(val || null);  // prompt vacío = null = cancelado
+    if (this._mode() === 'prompt') {
+      const allowEmpty = !!this._opts().allowEmpty;
+      const normalized = typeof val === 'string' ? val : '';
+      this._resolve(!allowEmpty && !normalized.trim() ? null : normalized);
+      return;
+    }
+    this._resolve(true);
   }
 
   _cancel() {
@@ -148,15 +160,31 @@ export class ConfirmDialogService {
                 @if (svc._opts().inputLabel) {
                   <label class="cd-field__label">{{ svc._opts().inputLabel }}</label>
                 }
-                <input
-                  class="cd-field__input"
-                  type="text"
-                  [placeholder]="svc._opts().placeholder ?? ''"
-                  [(ngModel)]="inputValue"
-                  (keydown.enter)="onEnter()"
-                  #inputRef
-                  autofocus
-                />
+                @if (svc._opts().inputType === 'textarea') {
+                  <textarea
+                    class="cd-field__input cd-field__textarea"
+                    [placeholder]="svc._opts().placeholder ?? ''"
+                    [(ngModel)]="inputValue"
+                    rows="4"
+                    autofocus
+                  ></textarea>
+                } @else if (svc._opts().inputType === 'select') {
+                  <select class="cd-field__input" [(ngModel)]="inputValue" autofocus>
+                    @for (option of svc._opts().options ?? []; track option.value) {
+                      <option [value]="option.value">{{ option.label }}</option>
+                    }
+                  </select>
+                } @else {
+                  <input
+                    class="cd-field__input"
+                    [type]="svc._opts().inputType === 'date' ? 'date' : 'text'"
+                    [placeholder]="svc._opts().placeholder ?? ''"
+                    [(ngModel)]="inputValue"
+                    (keydown.enter)="onEnter()"
+                    #inputRef
+                    autofocus
+                  />
+                }
               </div>
             }
           </div>
@@ -170,7 +198,7 @@ export class ConfirmDialogService {
               class="cd-btn"
               [class.cd-btn--danger]="svc._opts().danger"
               [class.cd-btn--primary]="!svc._opts().danger"
-              [disabled]="svc._mode() === 'prompt' && !inputValue.trim()"
+              [disabled]="svc._mode() === 'prompt' && !svc._opts().allowEmpty && !inputValue.trim()"
               (click)="svc._confirm()"
             >
               {{ svc._opts().confirmLabel ?? 'Confirmar' }}
@@ -267,6 +295,12 @@ export class ConfirmDialogService {
       border-color: #1a407e;
       box-shadow: 0 0 0 3px rgba(26,64,126,.09);
     }
+    .cd-field__textarea {
+      min-height: 96px;
+      resize: vertical;
+      font-family: inherit;
+      line-height: 1.5;
+    }
 
     /* Footer */
     .cd-footer {
@@ -308,7 +342,11 @@ export class ConfirmDialogComponent {
   set inputValue(v: string) { this.svc._inputVal.set(v); }
 
   onEnter() {
-    if (this.svc._mode() === 'prompt' && this.inputValue.trim()) {
+    if (
+      this.svc._mode() === 'prompt' &&
+      this.svc._opts().inputType !== 'textarea' &&
+      (this.svc._opts().allowEmpty || this.inputValue.trim())
+    ) {
       this.svc._confirm();
     }
   }
