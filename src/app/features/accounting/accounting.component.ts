@@ -12,7 +12,7 @@ type AccountNature = 'DEBIT' | 'CREDIT';
 type JournalStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
 type PeriodStatus = 'OPEN' | 'CLOSED';
 type DeleteJournalTarget = { id: string; number: string };
-type AccountingTab = 'accounts' | 'journals' | 'periods';
+type AccountingTab = 'accounts' | 'journals' | 'periods' | 'banks' | 'taxes' | 'assets' | 'integrations';
 
 interface Account {
   id: string;
@@ -30,6 +30,12 @@ interface JournalLine {
   id?: string;
   accountId: string;
   account?: { code: string; name: string };
+  branchId?: string;
+  branch?: { id: string; name: string };
+  customerId?: string;
+  customer?: { id: string; name: string; documentNumber?: string };
+  costCenter?: string;
+  projectCode?: string;
   description: string;
   debit: number;
   credit: number;
@@ -43,9 +49,43 @@ interface JournalEntry {
   reference?: string;
   status: JournalStatus;
   lines?: JournalLine[];
+  approval?: JournalApproval | null;
+  approvalFlow?: JournalApproval[];
+  attachments?: JournalAttachment[];
+  reversalOf?: { id: string; number: string; date: string } | null;
+  reversals?: Array<{ id: string; number: string; date: string; status?: string }>;
   totalDebit?: number;
   totalCredit?: number;
   createdAt: string;
+}
+
+interface JournalApproval {
+  id: string;
+  status: string;
+  reason?: string | null;
+  requestedAt: string;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectedReason?: string | null;
+  requestedByName?: string | null;
+  approvedByName?: string | null;
+}
+
+interface JournalAttachment {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  createdAt: string;
+  uploadedByName?: string | null;
+}
+
+interface JournalAuditTrailItem {
+  id: string;
+  action: string;
+  createdAt: string;
+  before?: any;
+  after?: any;
+  userName?: string | null;
 }
 
 interface AccountingPeriod {
@@ -176,6 +216,278 @@ interface FinancialStatementsResponse {
   dateTo: string;
 }
 
+interface AccountingIntegrationSummaryRow {
+  module: string;
+  label: string;
+  eligible: number;
+  integrated: number;
+  pending: number;
+  failed: number;
+  lastActivityAt?: string | null;
+}
+
+interface AccountingIntegrationsSummaryResponse {
+  data: AccountingIntegrationSummaryRow[];
+  totals: {
+    eligible: number;
+    integrated: number;
+    pending: number;
+    failed: number;
+  };
+}
+
+interface AccountingIntegrationActivity {
+  id: string;
+  module: string;
+  resourceType: string;
+  resourceId: string;
+  sourceId?: string | null;
+  entryId?: string | null;
+  status: 'SUCCESS' | 'FAILED' | 'SKIPPED';
+  message?: string | null;
+  createdAt: string;
+  payload?: {
+    number?: string;
+    date?: string;
+    description?: string;
+    status?: string;
+  } | null;
+}
+
+interface BankCatalogOption {
+  code: string;
+  name: string;
+}
+
+interface AccountingBankAccount {
+  id: string;
+  bankCode?: string | null;
+  name: string;
+  accountNumber: string;
+  currency: string;
+  openingBalance: number;
+  currentBalance: number;
+  isActive: boolean;
+  createdAt: string;
+  bank?: { code: string; name: string | null } | null;
+  accountingAccount: { id: string; code: string; name: string };
+}
+
+interface AccountingBankMovement {
+  id: string;
+  bankAccountId: string;
+  bankAccountName: string;
+  accountNumber: string;
+  movementDate: string;
+  reference?: string | null;
+  description?: string | null;
+  amount: number;
+  status: string;
+  reconciledEntryId?: string | null;
+  reconciledEntryNumber?: string | null;
+  reconciledEntryDate?: string | null;
+  reconciledAt?: string | null;
+  createdAt: string;
+}
+
+interface PendingBankLedgerItem {
+  entryId: string;
+  number: string;
+  date: string;
+  description: string;
+  reference?: string | null;
+  amount: number;
+}
+
+interface PendingBankReconciliationResponse {
+  bankAccount: AccountingBankAccount;
+  summary: {
+    bankPendingCount: number;
+    bankPendingTotal: number;
+    ledgerPendingCount: number;
+    ledgerPendingTotal: number;
+  };
+  bankPending: AccountingBankMovement[];
+  ledgerPending: PendingBankLedgerItem[];
+}
+
+interface AccountingTaxConfig {
+  id: string;
+  taxCode: string;
+  label: string;
+  rate?: number | null;
+  isActive: boolean;
+  account: { id: string; code: string; name: string };
+}
+
+interface FiscalSummaryResponse {
+  dateFrom: string;
+  dateTo: string;
+  sales: { count: number; taxableBase: number; iva: number; total: number };
+  purchases: { count: number; taxableBase: number; iva: number; total: number };
+  withholdings: { retefuente: number; ica: number; count: number };
+}
+
+interface VatSalesBookItem {
+  id: string;
+  invoiceNumber: string;
+  type: string;
+  issueDate: string;
+  customerDocumentNumber: string;
+  customerName: string;
+  taxableBase: number;
+  iva: number;
+  total: number;
+}
+
+interface VatPurchasesBookItem {
+  id: string;
+  number: string;
+  supplierInvoiceNumber: string;
+  issueDate: string;
+  supplierDocumentNumber: string;
+  supplierName: string;
+  taxableBase: number;
+  iva: number;
+  total: number;
+}
+
+interface WithholdingBookItem {
+  taxCode: string;
+  label: string;
+  entryId: string;
+  number: string;
+  date: string;
+  reference?: string | null;
+  description: string;
+  accountCode: string;
+  accountName: string;
+  amount: number;
+}
+
+interface TaxConfigForm {
+  taxCode: string;
+  label: string;
+  rate: number | null;
+  accountId: string;
+}
+
+interface JournalAttachmentForm {
+  fileName: string;
+  fileUrl: string;
+}
+
+interface AccountingAssetsSummaryResponse {
+  fixedAssets: {
+    count: number;
+    cost: number;
+    accumulatedDepreciation: number;
+    netBookValue: number;
+  };
+  deferredCharges: {
+    count: number;
+    amount: number;
+    amortized: number;
+    pending: number;
+  };
+  provisions: {
+    count: number;
+    monthlyAmount: number;
+    activeCount: number;
+    dueCount: number;
+  };
+}
+
+interface AccountingFixedAsset {
+  id: string;
+  assetCode: string;
+  name: string;
+  acquisitionDate: string;
+  startDepreciationDate: string;
+  cost: number;
+  salvageValue: number;
+  usefulLifeMonths: number;
+  status: string;
+  notes?: string | null;
+  accumulatedDepreciation: number;
+  netBookValue: number;
+  pendingDepreciation: number;
+  assetAccount: { id: string; code: string; name: string };
+  accumulatedDepAccount: { id: string; code: string; name: string };
+  depreciationExpenseAccount: { id: string; code: string; name: string };
+}
+
+interface AccountingDeferredCharge {
+  id: string;
+  chargeCode: string;
+  name: string;
+  startDate: string;
+  amount: number;
+  amortizedAmount: number;
+  pendingAmount: number;
+  termMonths: number;
+  status: string;
+  notes?: string | null;
+  assetAccount: { id: string; code: string; name: string };
+  amortizationExpenseAccount: { id: string; code: string; name: string };
+}
+
+interface AccountingProvisionTemplate {
+  id: string;
+  provisionCode: string;
+  name: string;
+  amount: number;
+  frequencyMonths: number;
+  startDate: string;
+  nextRunDate: string;
+  endDate?: string | null;
+  isActive: boolean;
+  notes?: string | null;
+  lastRunAmount?: number;
+  lastRunDate?: string | null;
+  expenseAccount: { id: string; code: string; name: string };
+  liabilityAccount: { id: string; code: string; name: string };
+}
+
+interface FixedAssetForm {
+  assetCode: string;
+  name: string;
+  acquisitionDate: string;
+  startDepreciationDate: string;
+  cost: number | null;
+  salvageValue: number | null;
+  usefulLifeMonths: number | null;
+  assetAccountId: string;
+  accumulatedDepAccountId: string;
+  depreciationExpenseAccountId: string;
+  notes: string;
+}
+
+interface DeferredChargeForm {
+  chargeCode: string;
+  name: string;
+  startDate: string;
+  amount: number | null;
+  termMonths: number | null;
+  assetAccountId: string;
+  amortizationExpenseAccountId: string;
+  notes: string;
+}
+
+interface ProvisionTemplateForm {
+  provisionCode: string;
+  name: string;
+  amount: number | null;
+  frequencyMonths: number | null;
+  startDate: string;
+  nextRunDate: string;
+  endDate: string;
+  expenseAccountId: string;
+  liabilityAccountId: string;
+  isActive: boolean;
+  notes: string;
+}
+
 interface AccountForm {
   code: string;
   name: string;
@@ -193,15 +505,46 @@ interface JournalForm {
 
 interface JournalLineForm {
   accountId: string;
+  branchId: string;
+  customerId: string;
+  costCenter: string;
+  projectCode: string;
   description: string;
   debit: number | null;
   credit: number | null;
+}
+
+interface BranchOption {
+  id: string;
+  name: string;
+}
+
+interface CustomerOption {
+  id: string;
+  name: string;
+  documentNumber?: string;
 }
 
 interface PeriodForm {
   year: number | null;
   month: number | null;
   name: string;
+}
+
+interface BankAccountForm {
+  bankCode: string;
+  accountingAccountId: string;
+  name: string;
+  accountNumber: string;
+  currency: string;
+  openingBalance: number | null;
+}
+
+interface BankStatementForm {
+  bankAccountId: string;
+  delimiter: string;
+  csvText: string;
+  autoMatchEntries: boolean;
 }
 
 interface PaginatedResponse<T> {
@@ -237,14 +580,38 @@ const LEVEL_LABELS: Record<number, string> = {
             <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
               <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
             </svg>
-            {{ activeTab() === 'accounts' ? 'Nueva Cuenta' : activeTab() === 'journals' ? 'Nuevo Comprobante' : 'Nuevo Período' }}
+            {{ activeTab() === 'accounts' ? 'Nueva Cuenta'
+              : activeTab() === 'journals' ? 'Nuevo Comprobante'
+              : activeTab() === 'banks' ? 'Importar extracto'
+              : activeTab() === 'taxes' ? 'Nueva configuración fiscal'
+              : activeTab() === 'assets' ? 'Nuevo activo o provisión'
+              : activeTab() === 'integrations' ? 'Sincronizar pendientes'
+              : 'Nuevo Período' }}
           </button>
         </div>
         <div class="hero-aside">
           <div class="hero-highlight">
-            <span class="hero-highlight-label">{{ activeTab() === 'accounts' ? 'Cuentas visibles' : activeTab() === 'journals' ? 'Comprobantes' : 'Períodos configurados' }}</span>
-            <strong>{{ activeTab() === 'accounts' ? totalAccounts() : activeTab() === 'journals' ? totalJournals() : periods().length }}</strong>
-            <small>{{ activeTab() === 'accounts' ? 'Plan de cuentas PUC activo' : activeTab() === 'journals' ? 'Registros del período' : 'Control de cierre y bloqueo contable' }}</small>
+            <span class="hero-highlight-label">{{ activeTab() === 'accounts' ? 'Cuentas visibles'
+              : activeTab() === 'journals' ? 'Comprobantes'
+              : activeTab() === 'banks' ? 'Cuentas bancarias'
+              : activeTab() === 'taxes' ? 'Conceptos fiscales'
+              : activeTab() === 'assets' ? 'Registros enterprise'
+              : activeTab() === 'integrations' ? 'Módulos integrados'
+              : 'Períodos configurados' }}</span>
+            <strong>{{ activeTab() === 'accounts' ? totalAccounts()
+              : activeTab() === 'journals' ? totalJournals()
+              : activeTab() === 'banks' ? bankAccounts().length
+              : activeTab() === 'taxes' ? taxConfigs().length
+              : activeTab() === 'assets' ? (fixedAssets().length + deferredCharges().length + provisionTemplates().length)
+              : activeTab() === 'integrations' ? (integrationsSummary()?.totals?.eligible ?? 0)
+              : periods().length }}</strong>
+            <small>{{ activeTab() === 'accounts' ? 'Plan de cuentas PUC activo'
+              : activeTab() === 'journals' ? 'Registros del período'
+              : activeTab() === 'banks' ? 'Extractos, conciliación y pendientes'
+              : activeTab() === 'taxes' ? 'IVA, retefuente, ICA y libros fiscales'
+              : activeTab() === 'assets' ? 'Activos fijos, diferidos y provisiones'
+              : activeTab() === 'integrations' ? 'Automatización intermodular'
+              : 'Control de cierre y bloqueo contable' }}</small>
           </div>
           <div class="hero-mini-grid">
             <div class="hero-mini-card">
@@ -263,28 +630,122 @@ const LEVEL_LABELS: Record<number, string> = {
         </div>
       </section>
 
-      <!-- ── Pestañas ──────────────────────────────────────────────────────── -->
-      <div class="tabs-bar">
-        <button class="tab-btn" [class.active]="activeTab() === 'accounts'" (click)="switchTab('accounts')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15">
-            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-            <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
-          </svg>
-          Plan de Cuentas
-        </button>
-        <button class="tab-btn" [class.active]="activeTab() === 'journals'" (click)="switchTab('journals')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15">
-            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
-          </svg>
-          Comprobantes
-        </button>
-        <button class="tab-btn" [class.active]="activeTab() === 'periods'" (click)="switchTab('periods')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15">
-            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v9a3 3 0 003 3h10a3 3 0 003-3V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm9 7H5v6a1 1 0 001 1h8a1 1 0 001-1V9z" clip-rule="evenodd"/>
-          </svg>
-          Períodos y Reportes
-        </button>
-      </div>
+      <!-- ── Navegación del módulo ─────────────────────────────────────────── -->
+      <section class="tabs-shell">
+        <div class="tabs-shell__head">
+          <div>
+            <span class="tabs-shell__eyebrow">Navegación del módulo</span>
+            <h3>Áreas de Contabilidad</h3>
+          </div>
+          <p>Organiza la operación contable entre estructura, control financiero, cumplimiento fiscal y gestión enterprise.</p>
+        </div>
+
+        <div class="tabs-groups">
+          <section class="tab-group">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Base contable</span>
+              <small>Configuración y operación diaria del módulo.</small>
+            </div>
+            <div class="tab-grid">
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'accounts'" (click)="switchTab('accounts')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                  <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Plan de Cuentas</span>
+                  <span class="tab-btn__meta">PUC, jerarquías, niveles y activación de cuentas.</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'journals'" (click)="switchTab('journals')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Comprobantes</span>
+                  <span class="tab-btn__meta">Asientos manuales, trazabilidad y control de estados.</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section class="tab-group">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Control y cumplimiento</span>
+              <small>Cierre contable, conciliación bancaria y reportes fiscales.</small>
+            </div>
+            <div class="tab-grid">
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'periods'" (click)="switchTab('periods')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v9a3 3 0 003 3h10a3 3 0 003-3V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm9 7H5v6a1 1 0 001 1h8a1 1 0 001-1V9z" clip-rule="evenodd"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Períodos y Reportes</span>
+                  <span class="tab-btn__meta">Cierres, balances, auxiliares y estados financieros.</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'banks'" (click)="switchTab('banks')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M2 6.5A2.5 2.5 0 014.5 4h11A2.5 2.5 0 0118 6.5v7a2.5 2.5 0 01-2.5 2.5h-11A2.5 2.5 0 012 13.5v-7z"/>
+                  <path fill="#fff" opacity=".32" d="M3.75 7.5h12.5v1.5H3.75z"/>
+                  <path d="M13.5 12.5a1 1 0 100-2 1 1 0 000 2z"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Bancos</span>
+                  <span class="tab-btn__meta">Extractos, conciliación y partidas pendientes.</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'taxes'" (click)="switchTab('taxes')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V8.414A2 2 0 0016.414 7L13 3.586A2 2 0 0011.586 3H5z"/>
+                  <path fill="#fff" opacity=".36" d="M7 9h6v1.5H7zm0 3h6v1.5H7z"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Impuestos</span>
+                  <span class="tab-btn__meta">IVA, retefuente, ICA y libros fiscales.</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section class="tab-group">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Enterprise accounting</span>
+              <small>Gestión avanzada de activos, diferidos y provisiones.</small>
+            </div>
+            <div class="tab-grid tab-grid--compact">
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'assets'" (click)="switchTab('assets')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M4 4.75A1.75 1.75 0 015.75 3h8.5A1.75 1.75 0 0116 4.75v10.5A1.75 1.75 0 0114.25 17h-8.5A1.75 1.75 0 014 15.25V4.75z"/>
+                  <path fill="#fff" opacity=".34" d="M6.5 6.5h7v1.5h-7zm0 3h7V11h-7zm0 3h4.5V14H6.5z"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Activos y Provisiones</span>
+                  <span class="tab-btn__meta">Depreciación, amortización y provisiones periódicas.</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section class="tab-group tab-group--utility">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Automatización intermodular</span>
+              <small>Monitorea sincronizaciones contables con el resto del ERP.</small>
+            </div>
+            <div class="tab-grid tab-grid--compact">
+              <button class="tab-btn tab-btn--utility" [class.tab-btn--active]="activeTab() === 'integrations'" (click)="switchTab('integrations')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M7 4a3 3 0 00-2.83 2H3a1 1 0 100 2h1.17A3.001 3.001 0 007 10a3 3 0 002.83-2h.34A3.001 3.001 0 0013 10a3 3 0 002.83-2H17a1 1 0 100-2h-1.17A3.001 3.001 0 0013 4a3 3 0 00-2.83 2h-.34A3.001 3.001 0 007 4zm0 2a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2zM3 12a1 1 0 011-1h1.17A3.001 3.001 0 008 13a3 3 0 002.83-2h4.34A3.001 3.001 0 0018 13a1 1 0 110 2 3 3 0 01-2.83-2h-4.34A3.001 3.001 0 008 15a3 3 0 01-2.83-2H4a1 1 0 01-1-1zm5 0a1 1 0 100 2 1 1 0 000-2z"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Integraciones</span>
+                  <span class="tab-btn__meta">Sync, resync y monitoreo de asientos automáticos.</span>
+                </span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
 
       <!-- ══════════════════════════════════════════════════════════════════════
            PESTAÑA: PLAN DE CUENTAS
@@ -1020,11 +1481,980 @@ const LEVEL_LABELS: Record<number, string> = {
         </section>
       }
 
+      @if (activeTab() === 'banks') {
+        <section class="panel-grid">
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Cuentas bancarias</p>
+                <h3>Configura bancos y controla saldos</h3>
+              </div>
+              <div class="panel-card__filters">
+                <button class="btn btn-secondary btn-sm" (click)="openBankAccountModal()">Nueva cuenta bancaria</button>
+                <button class="btn btn-primary btn-sm" (click)="openImportStatementModal()">Importar extracto</button>
+              </div>
+            </div>
+
+            @if (loadingBanks()) {
+              <div class="table-loading">
+                @for (i of [1,2,3]; track i) {
+                  <div class="skeleton-row">
+                    <div class="sk sk-line" style="width:160px"></div>
+                    <div class="sk sk-line" style="width:120px"></div>
+                    <div class="sk sk-line" style="width:100px"></div>
+                  </div>
+                }
+              </div>
+            } @else if (bankAccounts().length === 0) {
+              <div class="empty-state">
+                <p>No hay cuentas bancarias configuradas aún</p>
+                <button class="btn btn-primary btn-sm" (click)="openBankAccountModal()">Crear cuenta bancaria</button>
+              </div>
+            } @else {
+              <div class="bank-summary-grid">
+                @for (account of bankAccounts(); track account.id) {
+                  <button
+                    class="bank-account-card"
+                    [class.active]="selectedBankAccountId() === account.id"
+                    (click)="selectBankAccount(account.id)">
+                    <div class="bank-account-card__top">
+                      <strong>{{ account.name }}</strong>
+                      <span class="status-badge" [class.active]="account.isActive" [class.inactive]="!account.isActive">
+                        {{ account.isActive ? 'Activa' : 'Inactiva' }}
+                      </span>
+                    </div>
+                    <div class="bank-account-card__meta">{{ account.bank?.name || 'Banco manual' }} · {{ account.accountNumber }}</div>
+                    <div class="bank-account-card__meta">{{ account.accountingAccount.code }} · {{ account.accountingAccount.name }}</div>
+                    <div class="bank-account-card__amount">{{ formatCurrency(account.currentBalance) }}</div>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Partidas pendientes</p>
+                <h3>Conciliación bancaria vs comprobantes</h3>
+              </div>
+              <div class="panel-card__filters">
+                <select [(ngModel)]="filterBankStatus" (ngModelChange)="loadBankMovements()" class="filter-select">
+                  <option value="">Todos los estados</option>
+                  <option value="UNRECONCILED">Sin conciliar</option>
+                  <option value="RECONCILED">Conciliados</option>
+                </select>
+              </div>
+            </div>
+
+            @if (!selectedBankAccountId()) {
+              <div class="empty-state">
+                <p>Selecciona una cuenta bancaria para revisar extractos y pendientes.</p>
+              </div>
+            } @else {
+              <div class="integration-metrics">
+                <div class="metric-pill">
+                  <span>Extracto pendiente</span>
+                  <strong>{{ pendingBankReconciliation()?.summary?.bankPendingCount ?? 0 }}</strong>
+                  <small>{{ formatCurrency(pendingBankReconciliation()?.summary?.bankPendingTotal ?? 0) }}</small>
+                </div>
+                <div class="metric-pill">
+                  <span>Contabilidad pendiente</span>
+                  <strong>{{ pendingBankReconciliation()?.summary?.ledgerPendingCount ?? 0 }}</strong>
+                  <small>{{ formatCurrency(pendingBankReconciliation()?.summary?.ledgerPendingTotal ?? 0) }}</small>
+                </div>
+              </div>
+
+              <div class="subsection-title">Movimientos importados</div>
+              @if (loadingBankMovements()) {
+                <div class="table-loading">
+                  @for (i of [1,2,3,4]; track i) {
+                    <div class="skeleton-row">
+                      <div class="sk sk-line" style="width:90px"></div>
+                      <div class="sk sk-line" style="width:220px"></div>
+                      <div class="sk sk-line" style="width:100px"></div>
+                    </div>
+                  }
+                </div>
+              } @else if (bankMovements().length === 0) {
+                <div class="empty-state compact">
+                  <p>No hay movimientos importados para esta cuenta.</p>
+                </div>
+              } @else {
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Referencia</th>
+                      <th>Descripción</th>
+                      <th>Valor</th>
+                      <th>Estado</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (movement of bankMovements(); track movement.id) {
+                      <tr>
+                        <td class="text-muted">{{ formatDate(movement.movementDate) }}</td>
+                        <td>{{ movement.reference || '—' }}</td>
+                        <td>{{ movement.description || '—' }}</td>
+                        <td>{{ formatCurrency(movement.amount) }}</td>
+                        <td>
+                          <span class="status-badge" [class.active]="movement.status === 'RECONCILED'" [class.inactive]="movement.status !== 'RECONCILED'">
+                            {{ movement.status === 'RECONCILED' ? 'Conciliado' : 'Pendiente' }}
+                          </span>
+                        </td>
+                        <td class="actions-cell">
+                          @if (movement.status !== 'RECONCILED') {
+                            <button class="btn-icon btn-icon-success" title="Conciliar" (click)="openReconcileBankMovement(movement)">
+                              <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                              </svg>
+                            </button>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+
+              <div class="subsection-title">Comprobantes pendientes de conciliar</div>
+              @if ((pendingBankReconciliation()?.ledgerPending?.length ?? 0) === 0) {
+                <div class="empty-state compact">
+                  <p>No hay comprobantes pendientes para esta cuenta bancaria.</p>
+                </div>
+              } @else {
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Comprobante</th>
+                      <th>Fecha</th>
+                      <th>Referencia</th>
+                      <th>Descripción</th>
+                      <th>Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (item of pendingBankReconciliation()?.ledgerPending ?? []; track item.entryId) {
+                      <tr>
+                        <td><span class="journal-number">{{ item.number }}</span></td>
+                        <td class="text-muted">{{ formatDate(item.date) }}</td>
+                        <td>{{ item.reference || '—' }}</td>
+                        <td>{{ item.description }}</td>
+                        <td>{{ formatCurrency(item.amount) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            }
+          </div>
+        </section>
+      }
+
+      @if (activeTab() === 'taxes') {
+        <section class="panel-grid">
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Configuración fiscal</p>
+                <h3>IVA, retefuente e ICA</h3>
+              </div>
+              <div class="panel-card__filters">
+                <button class="btn btn-primary btn-sm" (click)="openTaxConfigModal()">Configurar impuesto</button>
+              </div>
+            </div>
+
+            <div class="integration-metrics">
+              <div class="metric-pill">
+                <span>IVA ventas</span>
+                <strong>{{ formatCurrency(fiscalSummary()?.sales?.iva ?? 0) }}</strong>
+                <small>{{ fiscalSummary()?.sales?.count ?? 0 }} documentos</small>
+              </div>
+              <div class="metric-pill">
+                <span>IVA compras</span>
+                <strong>{{ formatCurrency(fiscalSummary()?.purchases?.iva ?? 0) }}</strong>
+                <small>{{ fiscalSummary()?.purchases?.count ?? 0 }} facturas</small>
+              </div>
+              <div class="metric-pill">
+                <span>Retenciones</span>
+                <strong>{{ formatCurrency((fiscalSummary()?.withholdings?.retefuente ?? 0) + (fiscalSummary()?.withholdings?.ica ?? 0)) }}</strong>
+                <small>{{ fiscalSummary()?.withholdings?.count ?? 0 }} partidas</small>
+              </div>
+            </div>
+
+            @if (taxConfigs().length === 0) {
+              <div class="empty-state compact">
+                <p>No hay configuraciones fiscales aún.</p>
+              </div>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Concepto</th>
+                    <th>Tasa</th>
+                    <th>Cuenta</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of taxConfigs(); track item.id) {
+                    <tr>
+                      <td><strong>{{ item.label }}</strong><div class="text-muted">{{ item.taxCode }}</div></td>
+                      <td>{{ item.rate ?? '—' }}@if (item.rate !== null && item.rate !== undefined) { % }</td>
+                      <td>{{ item.account.code }} · {{ item.account.name }}</td>
+                      <td>
+                        <span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">
+                          {{ item.isActive ? 'Activo' : 'Inactivo' }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Libros fiscales</p>
+                <h3>Ventas, compras y retenciones</h3>
+              </div>
+            </div>
+
+            <div class="subsection-title">Libro de IVA ventas</div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Documento</th>
+                  <th>Fecha</th>
+                  <th>Cliente</th>
+                  <th>Base</th>
+                  <th>IVA</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of vatSalesBook(); track row.id) {
+                  <tr>
+                    <td>{{ row.invoiceNumber }}</td>
+                    <td>{{ formatDate(row.issueDate) }}</td>
+                    <td>{{ row.customerName }}</td>
+                    <td>{{ formatCurrency(row.taxableBase) }}</td>
+                    <td>{{ formatCurrency(row.iva) }}</td>
+                    <td>{{ formatCurrency(row.total) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            <div class="subsection-title">Libro de IVA compras</div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Documento</th>
+                  <th>Fecha</th>
+                  <th>Proveedor</th>
+                  <th>Base</th>
+                  <th>IVA</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of vatPurchasesBook(); track row.id) {
+                  <tr>
+                    <td>{{ row.number }}</td>
+                    <td>{{ formatDate(row.issueDate) }}</td>
+                    <td>{{ row.supplierName }}</td>
+                    <td>{{ formatCurrency(row.taxableBase) }}</td>
+                    <td>{{ formatCurrency(row.iva) }}</td>
+                    <td>{{ formatCurrency(row.total) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            <div class="subsection-title">Libro de retenciones</div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th>Comprobante</th>
+                  <th>Fecha</th>
+                  <th>Cuenta</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of withholdingsBook(); track row.entryId + '-' + row.taxCode) {
+                  <tr>
+                    <td>{{ row.label }}</td>
+                    <td>{{ row.number }}</td>
+                    <td>{{ formatDate(row.date) }}</td>
+                    <td>{{ row.accountCode }} · {{ row.accountName }}</td>
+                    <td>{{ formatCurrency(row.amount) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+
+      @if (activeTab() === 'assets') {
+        <section class="panel-grid">
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Enterprise accounting</p>
+                <h3>Activos fijos, diferidos y provisiones</h3>
+              </div>
+              <div class="panel-card__filters">
+                <button class="btn btn-secondary btn-sm" (click)="openFixedAssetModal()">Nuevo activo fijo</button>
+                <button class="btn btn-secondary btn-sm" (click)="openDeferredChargeModal()">Nuevo diferido</button>
+                <button class="btn btn-primary btn-sm" (click)="openProvisionTemplateModal()">Nueva provisión</button>
+              </div>
+            </div>
+
+            <div class="analytics-cards">
+              <div class="analytics-card">
+                <span class="analytics-card__label">Activos fijos</span>
+                <strong>{{ assetsSummary()?.fixedAssets?.count ?? 0 }}</strong>
+                <small>Valor neto {{ formatCurrency(assetsSummary()?.fixedAssets?.netBookValue ?? 0) }}</small>
+              </div>
+              <div class="analytics-card">
+                <span class="analytics-card__label">Diferidos</span>
+                <strong>{{ assetsSummary()?.deferredCharges?.count ?? 0 }}</strong>
+                <small>Pendiente {{ formatCurrency(assetsSummary()?.deferredCharges?.pending ?? 0) }}</small>
+              </div>
+              <div class="analytics-card">
+                <span class="analytics-card__label">Provisiones</span>
+                <strong>{{ assetsSummary()?.provisions?.count ?? 0 }}</strong>
+                <small>Por ejecutar {{ assetsSummary()?.provisions?.dueCount ?? 0 }}</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Depreciación</p>
+                <h3>Activos fijos</h3>
+              </div>
+            </div>
+            @if (loadingAssets()) {
+              <div class="table-loading">
+                @for (i of [1,2,3,4]; track i) {
+                  <div class="skeleton-row">
+                    <div class="sk sk-line" style="width:120px"></div>
+                    <div class="sk sk-line" style="width:220px"></div>
+                    <div class="sk sk-line" style="width:100px"></div>
+                  </div>
+                }
+              </div>
+            } @else if (fixedAssets().length === 0) {
+              <div class="empty-state compact"><p>No hay activos fijos registrados.</p></div>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Activo</th>
+                    <th>Inicio</th>
+                    <th>Costo</th>
+                    <th>Dep. acumulada</th>
+                    <th>Valor neto</th>
+                    <th>Estado</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (asset of fixedAssets(); track asset.id) {
+                    <tr>
+                      <td><strong>{{ asset.assetCode }}</strong><div class="text-muted">{{ asset.name }}</div></td>
+                      <td>{{ formatDate(asset.startDepreciationDate) }}</td>
+                      <td>{{ formatCurrency(asset.cost) }}</td>
+                      <td>{{ formatCurrency(asset.accumulatedDepreciation) }}</td>
+                      <td>{{ formatCurrency(asset.netBookValue) }}</td>
+                      <td><span class="status-badge" [class.active]="asset.status === 'ACTIVE'" [class.inactive]="asset.status !== 'ACTIVE'">{{ asset.status === 'ACTIVE' ? 'Activo' : 'Depreciado' }}</span></td>
+                      <td class="actions-cell">
+                        @if (asset.status === 'ACTIVE') {
+                          <button class="btn-icon btn-icon-success" title="Depreciar" (click)="depreciateFixedAsset(asset)">
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Amortización</p>
+                <h3>Cargos diferidos</h3>
+              </div>
+            </div>
+            @if (!loadingAssets() && deferredCharges().length === 0) {
+              <div class="empty-state compact"><p>No hay diferidos registrados.</p></div>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Diferido</th>
+                    <th>Inicio</th>
+                    <th>Valor</th>
+                    <th>Amortizado</th>
+                    <th>Pendiente</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of deferredCharges(); track item.id) {
+                    <tr>
+                      <td><strong>{{ item.chargeCode }}</strong><div class="text-muted">{{ item.name }}</div></td>
+                      <td>{{ formatDate(item.startDate) }}</td>
+                      <td>{{ formatCurrency(item.amount) }}</td>
+                      <td>{{ formatCurrency(item.amortizedAmount) }}</td>
+                      <td>{{ formatCurrency(item.pendingAmount) }}</td>
+                      <td class="actions-cell">
+                        @if (item.status === 'ACTIVE') {
+                          <button class="btn-icon btn-icon-success" title="Amortizar" (click)="amortizeDeferredCharge(item)">
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Provisiones periódicas</p>
+                <h3>Plantillas de provisión</h3>
+              </div>
+            </div>
+            @if (!loadingAssets() && provisionTemplates().length === 0) {
+              <div class="empty-state compact"><p>No hay provisiones configuradas.</p></div>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Plantilla</th>
+                    <th>Próxima ejecución</th>
+                    <th>Frecuencia</th>
+                    <th>Valor</th>
+                    <th>Estado</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of provisionTemplates(); track item.id) {
+                    <tr>
+                      <td><strong>{{ item.provisionCode }}</strong><div class="text-muted">{{ item.name }}</div></td>
+                      <td>{{ formatDate(item.nextRunDate) }}</td>
+                      <td>Cada {{ item.frequencyMonths }} mes(es)</td>
+                      <td>{{ formatCurrency(item.amount) }}</td>
+                      <td><span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">{{ item.isActive ? 'Activa' : 'Inactiva' }}</span></td>
+                      <td class="actions-cell">
+                        @if (item.isActive) {
+                          <button class="btn-icon btn-icon-success" title="Ejecutar provisión" (click)="runProvisionTemplate(item)">
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+        </section>
+      }
+
+      @if (activeTab() === 'integrations') {
+        <section class="panel-grid">
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Integración automática</p>
+                <h3>Contabilidad conectada con el ERP</h3>
+              </div>
+              <button class="btn btn-primary btn-sm" [disabled]="syncingIntegrations()" (click)="syncPendingIntegrations()">
+                {{ syncingIntegrations() ? 'Sincronizando...' : 'Sincronizar pendientes' }}
+              </button>
+            </div>
+
+            <div class="analytics-cards">
+              <div class="analytics-card">
+                <span class="analytics-card__label">Elegibles</span>
+                <strong>{{ integrationsSummary()?.totals?.eligible ?? 0 }}</strong>
+                <small>Documentos detectados para automatización</small>
+              </div>
+              <div class="analytics-card">
+                <span class="analytics-card__label">Integrados</span>
+                <strong>{{ integrationsSummary()?.totals?.integrated ?? 0 }}</strong>
+                <small>Asientos creados automáticamente</small>
+              </div>
+              <div class="analytics-card">
+                <span class="analytics-card__label">Pendientes</span>
+                <strong>{{ integrationsSummary()?.totals?.pending ?? 0 }}</strong>
+                <small>Procesos por sincronizar</small>
+              </div>
+              <div class="analytics-card">
+                <span class="analytics-card__label">Fallidos</span>
+                <strong>{{ integrationsSummary()?.totals?.failed ?? 0 }}</strong>
+                <small>Requieren revisión contable</small>
+              </div>
+            </div>
+
+            <div class="integration-summary-grid">
+              @for (row of integrationsSummary()?.data ?? []; track row.module) {
+                <article class="integration-summary-card">
+                  <div class="integration-summary-card__head">
+                    <h4>{{ row.label }}</h4>
+                    <span class="journal-badge" [class.journal-posted]="row.failed === 0" [class.journal-cancelled]="row.failed > 0">
+                      {{ row.failed > 0 ? 'Con alertas' : 'Operativo' }}
+                    </span>
+                  </div>
+                  <div class="integration-metrics">
+                    <div><small>Integrados</small><strong>{{ row.integrated }}</strong></div>
+                    <div><small>Pendientes</small><strong>{{ row.pending }}</strong></div>
+                    <div><small>Fallidos</small><strong>{{ row.failed }}</strong></div>
+                  </div>
+                  <small class="text-muted">Última actividad: {{ row.lastActivityAt ? formatDateTime(row.lastActivityAt) : 'Sin registros' }}</small>
+                </article>
+              }
+            </div>
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Actividad reciente</p>
+                <h3>Historial de sincronizaciones</h3>
+              </div>
+            </div>
+
+            <div class="filters-bar panel-card__report-filters">
+              <select [(ngModel)]="integrationFilterModule" (ngModelChange)="integrationPage.set(1); loadIntegrations()" class="filter-select">
+                <option value="">Todos los módulos</option>
+                <option value="invoices">Facturación</option>
+                <option value="purchasing">Compras</option>
+                <option value="cartera">Cartera</option>
+                <option value="payroll">Nómina</option>
+                <option value="inventory">Inventario</option>
+              </select>
+              <select [(ngModel)]="integrationFilterStatus" (ngModelChange)="integrationPage.set(1); loadIntegrations()" class="filter-select">
+                <option value="">Todos los estados</option>
+                <option value="SUCCESS">Exitosas</option>
+                <option value="FAILED">Fallidas</option>
+                <option value="SKIPPED">Omitidas</option>
+              </select>
+            </div>
+
+            @if (loadingIntegrations()) {
+              <div class="table-loading">
+                @for (i of [1,2,3,4,5]; track i) {
+                  <div class="skeleton-row">
+                    <div class="sk sk-line" style="width:140px"></div>
+                    <div class="sk sk-line" style="width:220px"></div>
+                    <div class="sk sk-line" style="width:100px"></div>
+                  </div>
+                }
+              </div>
+            } @else if (integrationsActivity().length === 0) {
+              <div class="empty-state">
+                <p>No hay eventos de integración registrados todavía</p>
+              </div>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Módulo</th>
+                    <th>Documento</th>
+                    <th>Resultado</th>
+                    <th>Comprobante</th>
+                    <th>Fecha</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of integrationsActivity(); track item.id) {
+                    <tr>
+                      <td>
+                        <div class="journal-desc">{{ moduleLabel(item.module) }}</div>
+                        <div class="text-muted">{{ item.resourceType }} · {{ item.resourceId }}</div>
+                      </td>
+                      <td>
+                        <div class="journal-desc">{{ item.message || 'Sin detalle' }}</div>
+                        <div class="text-muted">{{ item.sourceId || 'Sin sourceId' }}</div>
+                      </td>
+                      <td>
+                        <span class="journal-badge journal-{{ integrationBadge(item.status) }}">
+                          {{ integrationStatusLabel(item.status) }}
+                        </span>
+                      </td>
+                      <td>
+                        @if (item.payload?.number) {
+                          <div class="journal-desc">{{ item.payload?.number }}</div>
+                          <div class="text-muted">{{ item.payload?.status || 'POSTED' }}</div>
+                        } @else {
+                          <span class="text-muted">Sin comprobante</span>
+                        }
+                      </td>
+                      <td class="text-muted">{{ formatDateTime(item.createdAt) }}</td>
+                      <td class="actions-cell">
+                        @if (item.status === 'FAILED' && (item.module === 'invoices' || item.module === 'payroll')) {
+                          <button class="btn-icon" title="Reintentar" (click)="retryIntegration(item)">
+                            <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                              <path fill-rule="evenodd" d="M4 4v5h.582m10.356-2A8.001 8.001 0 004.582 9m0 0H9m7 7v-5h-.581m0 0A8.003 8.003 0 015.03 13M11 11H8a1 1 0 010-2h3a1 1 0 010 2z" clip-rule="evenodd"/>
+                            </svg>
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+
+              @if (integrationTotalPages() > 1) {
+                <div class="pagination">
+                  <span class="pagination-info">{{ (integrationPage()-1)*limit + 1 }}–{{ min(integrationPage()*limit, integrationTotal()) }} de {{ integrationTotal() }}</span>
+                  <div class="pagination-btns">
+                    <button class="btn-page" [disabled]="integrationPage() === 1" (click)="setIntegrationPage(integrationPage()-1)">‹</button>
+                    @for (p of integrationPageRange(); track p) {
+                      <button class="btn-page" [class.active]="p === integrationPage()" (click)="setIntegrationPage(p)">{{ p }}</button>
+                    }
+                    <button class="btn-page" [disabled]="integrationPage() === integrationTotalPages()" (click)="setIntegrationPage(integrationPage()+1)">›</button>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </section>
+      }
+
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════════════
          MODAL: NUEVA / EDITAR CUENTA
          ══════════════════════════════════════════════════════════════════════ -->
+    @if (showBankAccountModal()) {
+      <div class="modal-backdrop" (click)="closeBankAccountModal()"></div>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-card">
+          <div class="modal-head">
+            <div>
+              <h3>Nueva cuenta bancaria</h3>
+              <p>Asocia una cuenta bancaria del extracto con una cuenta contable.</p>
+            </div>
+            <button class="modal-close" (click)="closeBankAccountModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <label class="field">
+                <span>Banco</span>
+                <select [(ngModel)]="bankAccountForm.bankCode">
+                  <option value="">Selecciona un banco</option>
+                  @for (bank of banksCatalog(); track bank.code) {
+                    <option [value]="bank.code">{{ bank.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Cuenta contable</span>
+                <select [(ngModel)]="bankAccountForm.accountingAccountId">
+                  <option value="">Selecciona una cuenta</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Nombre interno</span>
+                <input type="text" [(ngModel)]="bankAccountForm.name" placeholder="Banco principal empresa"/>
+              </label>
+              <label class="field">
+                <span>Número de cuenta</span>
+                <input type="text" [(ngModel)]="bankAccountForm.accountNumber" placeholder="000123456789"/>
+              </label>
+              <label class="field">
+                <span>Moneda</span>
+                <input type="text" [(ngModel)]="bankAccountForm.currency" placeholder="COP"/>
+              </label>
+              <label class="field">
+                <span>Saldo inicial</span>
+                <input type="number" [(ngModel)]="bankAccountForm.openingBalance" placeholder="0"/>
+              </label>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-secondary" (click)="closeBankAccountModal()">Cancelar</button>
+            <button class="btn btn-primary" (click)="saveBankAccount()" [disabled]="savingBankAccount()">Guardar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showImportStatementModal()) {
+      <div class="modal-backdrop" (click)="closeImportStatementModal()"></div>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-card modal-card--wide">
+          <div class="modal-head">
+            <div>
+              <h3>Importar extracto bancario</h3>
+              <p>Carga el CSV del banco para iniciar la conciliación.</p>
+            </div>
+            <button class="modal-close" (click)="closeImportStatementModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <label class="field">
+                <span>Cuenta bancaria</span>
+                <select [(ngModel)]="bankStatementForm.bankAccountId">
+                  <option value="">Selecciona una cuenta</option>
+                  @for (account of bankAccounts(); track account.id) {
+                    <option [value]="account.id">{{ account.name }} · {{ account.accountNumber }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Separador</span>
+                <input type="text" maxlength="3" [(ngModel)]="bankStatementForm.delimiter" placeholder=","/>
+              </label>
+              <label class="field field-checkbox">
+                <input type="checkbox" [(ngModel)]="bankStatementForm.autoMatchEntries"/>
+                <span>Intentar conciliación automática por referencia</span>
+              </label>
+              <label class="field field-full">
+                <span>CSV del extracto</span>
+                <textarea rows="10" [(ngModel)]="bankStatementForm.csvText" placeholder="date,reference,description,amount"></textarea>
+              </label>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-secondary" (click)="closeImportStatementModal()">Cancelar</button>
+            <button class="btn btn-primary" (click)="importBankStatement()" [disabled]="savingBankStatement()">Importar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showTaxConfigModal()) {
+      <div class="modal-backdrop" (click)="closeTaxConfigModal()"></div>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-card">
+          <div class="modal-head">
+            <div>
+              <h3>Configurar impuesto o retención</h3>
+              <p>Relaciona el concepto fiscal con su cuenta contable.</p>
+            </div>
+            <button class="modal-close" (click)="closeTaxConfigModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <label class="field">
+                <span>Código</span>
+                <select [(ngModel)]="taxConfigForm.taxCode">
+                  <option value="">Selecciona un concepto</option>
+                  <option value="IVA_GENERATED">IVA generado</option>
+                  <option value="IVA_DEDUCTIBLE">IVA descontable</option>
+                  <option value="RETEFUENTE">Retefuente</option>
+                  <option value="ICA">ICA</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Etiqueta</span>
+                <input type="text" [(ngModel)]="taxConfigForm.label" placeholder="IVA generado"/>
+              </label>
+              <label class="field">
+                <span>Tasa</span>
+                <input type="number" [(ngModel)]="taxConfigForm.rate" placeholder="19"/>
+              </label>
+              <label class="field">
+                <span>Cuenta contable</span>
+                <select [(ngModel)]="taxConfigForm.accountId">
+                  <option value="">Selecciona una cuenta</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-secondary" (click)="closeTaxConfigModal()">Cancelar</button>
+            <button class="btn btn-primary" (click)="saveTaxConfig()" [disabled]="savingTaxConfig()">Guardar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showFixedAssetModal()) {
+      <div class="modal-backdrop" (click)="closeFixedAssetModal()"></div>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-card modal-card--wide">
+          <div class="modal-head">
+            <div>
+              <h3>Nuevo activo fijo</h3>
+              <p>Configura depreciación lineal y cuentas contables asociadas.</p>
+            </div>
+            <button class="modal-close" (click)="closeFixedAssetModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <label class="field"><span>Código</span><input type="text" [(ngModel)]="fixedAssetForm.assetCode" /></label>
+              <label class="field"><span>Nombre</span><input type="text" [(ngModel)]="fixedAssetForm.name" /></label>
+              <label class="field"><span>Fecha adquisición</span><input type="date" [(ngModel)]="fixedAssetForm.acquisitionDate" /></label>
+              <label class="field"><span>Inicio depreciación</span><input type="date" [(ngModel)]="fixedAssetForm.startDepreciationDate" /></label>
+              <label class="field"><span>Costo</span><input type="number" [(ngModel)]="fixedAssetForm.cost" /></label>
+              <label class="field"><span>Valor residual</span><input type="number" [(ngModel)]="fixedAssetForm.salvageValue" /></label>
+              <label class="field"><span>Vida útil (meses)</span><input type="number" [(ngModel)]="fixedAssetForm.usefulLifeMonths" /></label>
+              <label class="field"><span>Cuenta activo</span>
+                <select [(ngModel)]="fixedAssetForm.assetAccountId"><option value="">Selecciona</option>@for (acc of allAccounts(); track acc.id) {<option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>}</select>
+              </label>
+              <label class="field"><span>Depreciación acumulada</span>
+                <select [(ngModel)]="fixedAssetForm.accumulatedDepAccountId"><option value="">Selecciona</option>@for (acc of allAccounts(); track acc.id) {<option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>}</select>
+              </label>
+              <label class="field"><span>Gasto depreciación</span>
+                <select [(ngModel)]="fixedAssetForm.depreciationExpenseAccountId"><option value="">Selecciona</option>@for (acc of allAccounts(); track acc.id) {<option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>}</select>
+              </label>
+              <label class="field field-full"><span>Notas</span><textarea rows="3" [(ngModel)]="fixedAssetForm.notes"></textarea></label>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-secondary" (click)="closeFixedAssetModal()">Cancelar</button>
+            <button class="btn btn-primary" (click)="saveFixedAsset()" [disabled]="savingAssets()">Guardar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showDeferredChargeModal()) {
+      <div class="modal-backdrop" (click)="closeDeferredChargeModal()"></div>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-card modal-card--wide">
+          <div class="modal-head">
+            <div>
+              <h3>Nuevo diferido</h3>
+              <p>Registra activos amortizables y su gasto periódico.</p>
+            </div>
+            <button class="modal-close" (click)="closeDeferredChargeModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <label class="field"><span>Código</span><input type="text" [(ngModel)]="deferredChargeForm.chargeCode" /></label>
+              <label class="field"><span>Nombre</span><input type="text" [(ngModel)]="deferredChargeForm.name" /></label>
+              <label class="field"><span>Fecha inicio</span><input type="date" [(ngModel)]="deferredChargeForm.startDate" /></label>
+              <label class="field"><span>Valor</span><input type="number" [(ngModel)]="deferredChargeForm.amount" /></label>
+              <label class="field"><span>Plazo (meses)</span><input type="number" [(ngModel)]="deferredChargeForm.termMonths" /></label>
+              <label class="field"><span>Cuenta diferido</span>
+                <select [(ngModel)]="deferredChargeForm.assetAccountId"><option value="">Selecciona</option>@for (acc of allAccounts(); track acc.id) {<option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>}</select>
+              </label>
+              <label class="field"><span>Gasto amortización</span>
+                <select [(ngModel)]="deferredChargeForm.amortizationExpenseAccountId"><option value="">Selecciona</option>@for (acc of allAccounts(); track acc.id) {<option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>}</select>
+              </label>
+              <label class="field field-full"><span>Notas</span><textarea rows="3" [(ngModel)]="deferredChargeForm.notes"></textarea></label>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-secondary" (click)="closeDeferredChargeModal()">Cancelar</button>
+            <button class="btn btn-primary" (click)="saveDeferredCharge()" [disabled]="savingAssets()">Guardar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showProvisionTemplateModal()) {
+      <div class="modal-backdrop" (click)="closeProvisionTemplateModal()"></div>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-card modal-card--wide">
+          <div class="modal-head">
+            <div>
+              <h3>Nueva provisión periódica</h3>
+              <p>Automatiza provisiones mensuales o periódicas con asiento automático.</p>
+            </div>
+            <button class="modal-close" (click)="closeProvisionTemplateModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <label class="field"><span>Código</span><input type="text" [(ngModel)]="provisionTemplateForm.provisionCode" /></label>
+              <label class="field"><span>Nombre</span><input type="text" [(ngModel)]="provisionTemplateForm.name" /></label>
+              <label class="field"><span>Valor</span><input type="number" [(ngModel)]="provisionTemplateForm.amount" /></label>
+              <label class="field"><span>Frecuencia (meses)</span><input type="number" [(ngModel)]="provisionTemplateForm.frequencyMonths" /></label>
+              <label class="field"><span>Inicio</span><input type="date" [(ngModel)]="provisionTemplateForm.startDate" /></label>
+              <label class="field"><span>Próxima ejecución</span><input type="date" [(ngModel)]="provisionTemplateForm.nextRunDate" /></label>
+              <label class="field"><span>Fecha final</span><input type="date" [(ngModel)]="provisionTemplateForm.endDate" /></label>
+              <label class="field"><span>Cuenta gasto</span>
+                <select [(ngModel)]="provisionTemplateForm.expenseAccountId"><option value="">Selecciona</option>@for (acc of allAccounts(); track acc.id) {<option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>}</select>
+              </label>
+              <label class="field"><span>Cuenta pasivo</span>
+                <select [(ngModel)]="provisionTemplateForm.liabilityAccountId"><option value="">Selecciona</option>@for (acc of allAccounts(); track acc.id) {<option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>}</select>
+              </label>
+              <label class="field field-checkbox">
+                <input type="checkbox" [(ngModel)]="provisionTemplateForm.isActive" />
+                <span>Plantilla activa</span>
+              </label>
+              <label class="field field-full"><span>Notas</span><textarea rows="3" [(ngModel)]="provisionTemplateForm.notes"></textarea></label>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-secondary" (click)="closeProvisionTemplateModal()">Cancelar</button>
+            <button class="btn btn-primary" (click)="saveProvisionTemplate()" [disabled]="savingAssets()">Guardar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (reconcileBankMovementTarget()) {
+      <div class="modal-backdrop" (click)="closeReconcileBankMovementModal()"></div>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-card">
+          <div class="modal-head">
+            <div>
+              <h3>Conciliar movimiento bancario</h3>
+              <p>Selecciona el comprobante contable pendiente que corresponde al movimiento.</p>
+            </div>
+            <button class="modal-close" (click)="closeReconcileBankMovementModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="detail-grid compact-grid">
+              <div class="detail-item">
+                <span>Fecha</span>
+                <strong>{{ formatDate(reconcileBankMovementTarget()!.movementDate) }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Valor</span>
+                <strong>{{ formatCurrency(reconcileBankMovementTarget()!.amount) }}</strong>
+              </div>
+            </div>
+            <label class="field">
+              <span>Comprobante contable</span>
+              <select [(ngModel)]="selectedLedgerEntryId">
+                <option value="">Selecciona un comprobante</option>
+                @for (item of pendingBankReconciliation()?.ledgerPending ?? []; track item.entryId) {
+                  <option [value]="item.entryId">{{ item.number }} · {{ formatCurrency(item.amount) }} · {{ item.reference || item.description }}</option>
+                }
+              </select>
+            </label>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-secondary" (click)="closeReconcileBankMovementModal()">Cancelar</button>
+            <button class="btn btn-primary" (click)="confirmReconcileBankMovement()" [disabled]="savingBankReconciliation()">Conciliar</button>
+          </div>
+        </div>
+      </div>
+    }
+
     @if (showAccountModal()) {
       <div class="modal-overlay">
         <div class="modal" (click)="$event.stopPropagation()">
@@ -1180,6 +2610,10 @@ const LEVEL_LABELS: Record<number, string> = {
                 <thead>
                   <tr>
                     <th>Cuenta</th>
+                    <th>Sucursal</th>
+                    <th>Cliente</th>
+                    <th>Centro costo</th>
+                    <th>Proyecto</th>
                     <th>Descripción</th>
                     <th>Débito</th>
                     <th>Crédito</th>
@@ -1198,12 +2632,34 @@ const LEVEL_LABELS: Record<number, string> = {
                         </select>
                       </td>
                       <td>
+                        <select [(ngModel)]="line.branchId" class="form-control form-control-sm">
+                          <option value="">— Sucursal —</option>
+                          @for (branch of branches(); track branch.id) {
+                            <option [value]="branch.id">{{ branch.name }}</option>
+                          }
+                        </select>
+                      </td>
+                      <td>
+                        <select [(ngModel)]="line.customerId" class="form-control form-control-sm">
+                          <option value="">— Cliente —</option>
+                          @for (customer of customers(); track customer.id) {
+                            <option [value]="customer.id">{{ customer.name }}</option>
+                          }
+                        </select>
+                      </td>
+                      <td>
+                        <input type="text" [(ngModel)]="line.costCenter" class="form-control form-control-sm" placeholder="CC-001"/>
+                      </td>
+                      <td>
+                        <input type="text" [(ngModel)]="line.projectCode" class="form-control form-control-sm" placeholder="PRJ-001"/>
+                      </td>
+                      <td>
                         <input type="text" [(ngModel)]="line.description" class="form-control form-control-sm" placeholder="Concepto"/>
                       </td>
-                      <td>
+                      <td class="line-value-cell">
                         <input type="number" [(ngModel)]="line.debit" (ngModelChange)="recalculateJournalBalance()" class="form-control form-control-sm text-right" placeholder="0" min="0"/>
                       </td>
-                      <td>
+                      <td class="line-value-cell">
                         <input type="number" [(ngModel)]="line.credit" (ngModelChange)="recalculateJournalBalance()" class="form-control form-control-sm text-right" placeholder="0" min="0"/>
                       </td>
                       <td>
@@ -1299,6 +2755,169 @@ const LEVEL_LABELS: Record<number, string> = {
               <div class="detail-item"><span>Referencia</span><strong>{{ detailJournal()!.reference || '—' }}</strong></div>
             </div>
 
+            <div class="governance-summary-grid">
+              <div class="governance-card">
+                <div class="governance-card-label">Aprobación</div>
+                <div class="governance-card-value">
+                  <span class="journal-badge" [class.journal-posted]="approvalStatus(detailJournal()) === 'APPROVED'"
+                    [class.journal-draft]="approvalStatus(detailJournal()) === 'PENDING'"
+                    [class.journal-cancelled]="approvalStatus(detailJournal()) === 'REJECTED'">
+                    {{ approvalStatusLabel(approvalStatus(detailJournal())) }}
+                  </span>
+                </div>
+                <div class="governance-card-note">
+                  @if (detailJournal()!.approval?.requestedByName) {
+                    Solicitado por {{ detailJournal()!.approval?.requestedByName }}
+                  } @else {
+                    Sin flujo activo
+                  }
+                </div>
+              </div>
+              <div class="governance-card">
+                <div class="governance-card-label">Soportes</div>
+                <div class="governance-card-value">{{ detailJournal()!.attachments?.length || 0 }}</div>
+                <div class="governance-card-note">Adjuntos registrados al comprobante</div>
+              </div>
+              <div class="governance-card">
+                <div class="governance-card-label">Bitácora</div>
+                <div class="governance-card-value">{{ journalAuditTrail().length }}</div>
+                <div class="governance-card-note">Eventos visibles de control interno</div>
+              </div>
+            </div>
+
+            @if (detailJournal()!.reversalOf || detailJournal()!.reversals?.length) {
+              <div class="detail-section-title">Relación de reversos</div>
+              <div class="governance-panel">
+                @if (detailJournal()!.reversalOf) {
+                  <div class="governance-inline-item">
+                    <span class="governance-inline-label">Este comprobante reversa</span>
+                    <strong>{{ detailJournal()!.reversalOf!.number }}</strong>
+                    <span class="text-muted">{{ formatDate(detailJournal()!.reversalOf!.date) }}</span>
+                  </div>
+                }
+                @if (detailJournal()!.reversals?.length) {
+                  @for (reversal of detailJournal()!.reversals; track reversal.id) {
+                    <div class="governance-inline-item">
+                      <span class="governance-inline-label">Reverso generado</span>
+                      <strong>{{ reversal.number }}</strong>
+                      <span class="text-muted">{{ formatDate(reversal.date) }}</span>
+                    </div>
+                  }
+                }
+              </div>
+            }
+
+            <div class="detail-section-title">Control interno</div>
+            <div class="governance-actions">
+              @if (detailJournal()!.status === 'DRAFT' && canRequestApproval(detailJournal()!)) {
+                <button class="btn btn-secondary" [disabled]="savingJournal() || loadingJournalGovernance()" (click)="requestJournalApproval(detailJournal()!)">
+                  Solicitar aprobación
+                </button>
+              }
+              @if (detailJournal()!.status === 'DRAFT' && hasPendingApproval(detailJournal()!)) {
+                <button class="btn btn-primary" [disabled]="savingJournal() || loadingJournalGovernance()" (click)="approveJournal(detailJournal()!)">
+                  Aprobar comprobante
+                </button>
+                <button class="btn btn-danger" [disabled]="savingJournal() || loadingJournalGovernance()" (click)="rejectJournal(detailJournal()!)">
+                  Rechazar
+                </button>
+              }
+              @if (detailJournal()!.status === 'POSTED' && canReverseJournal(detailJournal()!)) {
+                <button class="btn btn-danger" [disabled]="savingJournal() || loadingJournalGovernance()" (click)="reverseJournal(detailJournal()!)">
+                  Generar reverso
+                </button>
+              }
+            </div>
+
+            <div class="detail-section-title">Flujo de aprobación</div>
+            <div class="governance-panel">
+              @if (detailJournal()!.approvalFlow?.length) {
+                <div class="approval-timeline">
+                  @for (approval of detailJournal()!.approvalFlow; track approval.id) {
+                    <div class="approval-item">
+                      <div class="approval-item-header">
+                        <span class="journal-badge" [class.journal-posted]="approval.status === 'APPROVED'"
+                          [class.journal-draft]="approval.status === 'PENDING'"
+                          [class.journal-cancelled]="approval.status === 'REJECTED'">
+                          {{ approvalStatusLabel(approval.status) }}
+                        </span>
+                        <strong>{{ approval.requestedByName || 'Usuario interno' }}</strong>
+                      </div>
+                      <div class="approval-item-meta">
+                        <span>Solicitado: {{ formatDateTime(approval.requestedAt) }}</span>
+                        @if (approval.approvedAt) {
+                          <span>Aprobado: {{ formatDateTime(approval.approvedAt) }}</span>
+                        }
+                        @if (approval.rejectedAt) {
+                          <span>Rechazado: {{ formatDateTime(approval.rejectedAt) }}</span>
+                        }
+                      </div>
+                      @if (approval.reason) {
+                        <div class="approval-item-note">Motivo: {{ approval.reason }}</div>
+                      }
+                      @if (approval.rejectedReason) {
+                        <div class="approval-item-note approval-item-note-danger">Rechazo: {{ approval.rejectedReason }}</div>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="empty-inline-state">Todavía no hay solicitudes de aprobación para este comprobante.</div>
+              }
+            </div>
+
+            <div class="detail-section-title">Adjuntos y soportes</div>
+            <div class="governance-panel">
+              @if (detailJournal()!.status !== 'CANCELLED') {
+                <div class="attachment-form-grid">
+                  <input class="input" type="text" placeholder="Nombre del soporte" [(ngModel)]="journalAttachmentForm.fileName" />
+                  <input class="input" type="text" placeholder="URL o ruta del soporte" [(ngModel)]="journalAttachmentForm.fileUrl" />
+                  <button class="btn btn-secondary" [disabled]="savingJournal() || loadingJournalGovernance()" (click)="saveJournalAttachment()">
+                    Agregar soporte
+                  </button>
+                </div>
+              }
+              @if (detailJournal()!.attachments?.length) {
+                <div class="attachment-list">
+                  @for (attachment of detailJournal()!.attachments; track attachment.id) {
+                    <div class="attachment-item">
+                      <div>
+                        <strong>{{ attachment.fileName }}</strong>
+                        <div class="attachment-meta">
+                          {{ attachment.uploadedByName || 'Usuario interno' }} · {{ formatDateTime(attachment.createdAt) }}
+                        </div>
+                      </div>
+                      <a class="btn btn-secondary btn-sm" [href]="attachment.fileUrl" target="_blank" rel="noopener noreferrer">Abrir</a>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="empty-inline-state">No hay soportes documentales registrados.</div>
+              }
+            </div>
+
+            <div class="detail-section-title">Bitácora de auditoría</div>
+            <div class="governance-panel">
+              @if (journalAuditTrail().length) {
+                <div class="audit-list">
+                  @for (item of journalAuditTrail(); track item.id) {
+                    <div class="audit-item">
+                      <div class="audit-item-header">
+                        <strong>{{ auditActionLabel(item.action) }}</strong>
+                        <span>{{ formatDateTime(item.createdAt) }}</span>
+                      </div>
+                      <div class="audit-item-meta">{{ item.userName || 'Sistema' }}</div>
+                      @if (item.after) {
+                        <pre class="audit-json">{{ formatAuditPayload(item.after) }}</pre>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else if (!loadingJournalGovernance()) {
+                <div class="empty-inline-state">No hay eventos de auditoría visibles para este comprobante.</div>
+              }
+            </div>
+
             <!-- Líneas del asiento -->
             @if (detailJournal()!.lines && detailJournal()!.lines!.length > 0) {
               <div class="detail-section-title">Líneas del asiento</div>
@@ -1306,6 +2925,7 @@ const LEVEL_LABELS: Record<number, string> = {
                 <thead>
                   <tr>
                     <th>Cuenta</th>
+                    <th>Dimensiones</th>
                     <th>Descripción</th>
                     <th class="text-right">Débito</th>
                     <th class="text-right">Crédito</th>
@@ -1319,6 +2939,25 @@ const LEVEL_LABELS: Record<number, string> = {
                           <span class="code-badge code-level-3">{{ line.account.code }}</span>
                           <span class="line-account-name">{{ line.account.name }}</span>
                         } @else { — }
+                      </td>
+                      <td>
+                        <div class="line-dimensions">
+                          @if (line.branch?.name) {
+                            <span class="dimension-chip">{{ line.branch?.name }}</span>
+                          }
+                          @if (line.customer?.name) {
+                            <span class="dimension-chip">{{ line.customer?.name }}</span>
+                          }
+                          @if (line.costCenter) {
+                            <span class="dimension-chip">{{ line.costCenter }}</span>
+                          }
+                          @if (line.projectCode) {
+                            <span class="dimension-chip">{{ line.projectCode }}</span>
+                          }
+                          @if (!line.branch?.name && !line.customer?.name && !line.costCenter && !line.projectCode) {
+                            <span class="text-muted">—</span>
+                          }
+                        </div>
                       </td>
                       <td class="text-muted">{{ line.description || '—' }}</td>
                       <td class="text-right">
@@ -1344,10 +2983,10 @@ const LEVEL_LABELS: Record<number, string> = {
 
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="detailJournal.set(null)">Cerrar</button>
+            <button class="btn btn-secondary" (click)="closeDetailJournal()">Cerrar</button>
             @if (detailJournal()!.status === 'DRAFT') {
               <button class="btn btn-secondary" (click)="openJournalModal(detailJournal()!)">Editar</button>
-              <button class="btn btn-primary" [disabled]="savingJournal()" (click)="postJournal(detailJournal()!)">
+              <button class="btn btn-primary" [disabled]="savingJournal() || !canPostJournal(detailJournal()!)" (click)="postJournal(detailJournal()!)">
                 {{ savingJournal() ? 'Procesando...' : 'Contabilizar' }}
               </button>
             }
@@ -1503,33 +3142,173 @@ const LEVEL_LABELS: Record<number, string> = {
       letter-spacing:-.04em;
     }
 
-    /* ── Pestañas ─────────────────────────────────────────────────────────── */
-    .tabs-bar {
-      display:flex;
-      gap:6px;
+    /* ── Navegación del módulo ────────────────────────────────────────────── */
+    .tabs-shell {
       margin-bottom:18px;
-      padding:6px;
-      background:#fff;
+      padding:18px;
+      border-radius:24px;
+      background:linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(245,248,252,.98) 100%);
       border:1px solid #dce6f0;
-      border-radius:16px;
-      box-shadow:0 8px 20px rgba(12,28,53,.04);
+      box-shadow:0 18px 34px rgba(12,28,53,.06);
+    }
+    .tabs-shell__head {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:18px;
+      margin-bottom:16px;
+      padding-bottom:14px;
+      border-bottom:1px solid #e4edf5;
+    }
+    .tabs-shell__eyebrow {
+      display:inline-flex;
+      margin-bottom:6px;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      color:#6f85a0;
+    }
+    .tabs-shell__head h3 {
+      margin:0;
+      font-size:20px;
+      line-height:1.1;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+      font-family:'Sora',sans-serif;
+    }
+    .tabs-shell__head p {
+      margin:0;
+      max-width:380px;
+      font-size:13px;
+      line-height:1.55;
+      color:#6d7f94;
+      text-align:right;
+    }
+    .tabs-groups {
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:14px;
+    }
+    .tab-group {
+      padding:14px;
+      border-radius:20px;
+      background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border:1px solid #dde7f1;
+      box-shadow:0 12px 24px rgba(12,28,53,.04);
+    }
+    .tab-group--utility {
+      background:linear-gradient(180deg, #fcfdff 0%, #f3f8ff 100%);
+    }
+    .tab-group__header {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .tab-group__label {
+      display:block;
+      font-size:12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#173d73;
+    }
+    .tab-group__header small {
+      font-size:11.5px;
+      color:#7c8fa5;
+      text-align:right;
+      line-height:1.4;
+    }
+    .tab-grid {
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:10px;
+    }
+    .tab-grid--compact {
+      grid-template-columns:1fr;
     }
     .tab-btn {
       display:flex;
-      align-items:center;
-      gap:7px;
-      padding:9px 18px;
-      border:none;
-      border-radius:10px;
-      background:transparent;
+      align-items:flex-start;
+      gap:12px;
+      min-height:72px;
+      width:100%;
+      padding:14px 15px;
+      text-align:left;
+      border:1px solid #dce6f0;
+      border-radius:16px;
+      background:linear-gradient(180deg, #fcfdff 0%, #f3f7fb 100%);
       cursor:pointer;
-      font-size:13.5px;
-      font-weight:600;
-      color:#64748b;
-      transition:all .15s;
+      font-size:13px;
+      font-weight:700;
+      line-height:1.25;
+      color:#4b647f;
+      transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
+      box-shadow:0 8px 16px rgba(12,28,53,.035);
     }
-    .tab-btn:hover { background:#f0f4f9; color:#1a407e; }
-    .tab-btn.active { background:#1a407e; color:#fff; box-shadow:0 4px 12px rgba(26,64,126,.25); }
+    .tab-btn svg {
+      flex-shrink:0;
+      width:18px;
+      height:18px;
+      margin-top:2px;
+      color:#6b85a3;
+      transition:color .16s ease, transform .16s ease;
+    }
+    .tab-btn__content {
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:0;
+    }
+    .tab-btn__title {
+      display:block;
+      font-size:13.5px;
+      font-weight:800;
+      color:inherit;
+    }
+    .tab-btn__meta {
+      display:block;
+      font-size:11.5px;
+      line-height:1.45;
+      color:#7b8fa8;
+    }
+    .tab-btn:hover {
+      color:#123b6d;
+      border-color:#bfd2e6;
+      background:linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+      transform:translateY(-1px);
+      box-shadow:0 14px 24px rgba(26,64,126,.08);
+    }
+    .tab-btn:hover svg {
+      color:#1a407e;
+      transform:scale(1.05);
+    }
+    .tab-btn--active {
+      color:#fff;
+      border-color:rgba(15,138,127,.28);
+      background:linear-gradient(135deg,#163c72 0%, #0f8a7f 100%);
+      box-shadow:0 16px 28px rgba(15,62,114,.2);
+    }
+    .tab-btn--active svg { color:#dffef5; }
+    .tab-btn--active .tab-btn__meta { color:rgba(236,244,255,.82); }
+    .tab-btn--active:hover {
+      color:#fff;
+      border-color:rgba(15,138,127,.34);
+      background:linear-gradient(135deg,#143866 0%, #0d7b72 100%);
+      box-shadow:0 18px 30px rgba(15,62,114,.24);
+    }
+    .tab-btn--active:hover svg {
+      color:#dffef5;
+      transform:scale(1.05);
+    }
+    .tab-btn--active:hover .tab-btn__meta {
+      color:rgba(236,244,255,.86);
+    }
+    .tab-btn--utility {
+      min-height:68px;
+    }
 
     /* ── Filtros ──────────────────────────────────────────────────────────── */
     .filters-shell {
@@ -1593,6 +3372,34 @@ const LEVEL_LABELS: Record<number, string> = {
     .panel-card__header h3 { margin:0; font-family:'Sora',sans-serif; font-size:18px; letter-spacing:-.04em; color:#0c1c35; }
     .panel-card__filters { display:flex; gap:12px; flex-wrap:wrap; }
     .panel-card__report-filters { margin-bottom:16px; }
+    .integration-summary-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; margin-top:16px; }
+    .integration-summary-card { padding:16px; border:1px solid #dce6f0; border-radius:18px; background:linear-gradient(180deg, #fff, #f8fbff); box-shadow:0 10px 24px rgba(12,28,53,.04); }
+    .integration-summary-card__head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+    .integration-summary-card__head h4 { margin:0; font-size:15px; color:#0c1c35; }
+    .integration-metrics { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-bottom:10px; }
+    .integration-metrics div { padding:10px 12px; border-radius:14px; background:#f8fbff; border:1px solid #e4edf5; }
+    .integration-metrics small { display:block; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:#7b8fa8; margin-bottom:5px; }
+    .integration-metrics strong { font-family:'Sora',sans-serif; font-size:18px; color:#0c1c35; }
+    .metric-pill span { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#7b8fa8; margin-bottom:6px; }
+    .metric-pill small { margin-top:6px; }
+    .bank-summary-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:14px; }
+    .bank-account-card {
+      text-align:left;
+      border:1px solid #dce6f0;
+      border-radius:18px;
+      padding:16px;
+      background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      box-shadow:0 10px 24px rgba(12,28,53,.04);
+      cursor:pointer;
+      transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+    .bank-account-card:hover { transform:translateY(-1px); border-color:#9db8dc; box-shadow:0 14px 28px rgba(12,28,53,.08); }
+    .bank-account-card.active { border-color:#1a407e; background:linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%); box-shadow:0 18px 32px rgba(26,64,126,.14); }
+    .bank-account-card__top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:8px; }
+    .bank-account-card__top strong { color:#0c1c35; font-size:15px; }
+    .bank-account-card__meta { color:#64748b; font-size:12px; margin-bottom:6px; }
+    .bank-account-card__amount { margin-top:10px; font-family:'Sora',sans-serif; font-size:20px; color:#1a407e; }
+    .subsection-title { margin:18px 0 10px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#1a407e; }
     .report-summary { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-bottom:16px; }
     .report-mini-card { background:#f8fbff; border:1px solid #dce6f0; }
     .report-mini-card strong { color:#0c1c35; }
@@ -1681,11 +3488,43 @@ const LEVEL_LABELS: Record<number, string> = {
     .sk { background:linear-gradient(90deg,#f0f4f8 25%,#e8eef8 50%,#f0f4f8 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:6px; height:14px; }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
     .empty-state { padding:64px 24px; text-align:center; color:#9ca3af; }
+    .empty-state.compact { padding:24px 18px; }
     .empty-state p { margin:16px 0; font-size:14px; }
     .text-muted { color:#9ca3af; }
 
     /* ── Modal ────────────────────────────────────────────────────────────── */
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; display:flex; align-items:center; justify-content:center; padding:16px; }
+    .modal-backdrop { position:fixed; inset:0; background:rgba(10,18,35,.46); z-index:210; backdrop-filter:blur(2px); }
+    .modal[role="dialog"] { position:fixed; inset:0; z-index:211; display:flex; align-items:center; justify-content:center; padding:20px; background:transparent; }
+    .modal-card { width:min(760px, 100%); max-height:90vh; display:flex; flex-direction:column; overflow:hidden; border-radius:22px; background:#fff; border:1px solid #dce6f0; box-shadow:0 28px 60px rgba(12,28,53,.24); }
+    .modal-card--wide { width:min(920px, 100%); }
+    .modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:20px 22px 16px; border-bottom:1px solid #e8eef8; }
+    .modal-head h3 { margin:0; font-family:'Sora',sans-serif; font-size:18px; color:#0c1c35; }
+    .modal-head p { margin:6px 0 0; color:#64748b; font-size:13px; }
+    .modal-close { border:none; background:#f3f7fb; width:36px; height:36px; border-radius:10px; color:#64748b; cursor:pointer; font-size:22px; line-height:1; }
+    .modal-close:hover { background:#e8eef8; color:#0c1c35; }
+    .modal-foot { display:flex; justify-content:flex-end; gap:10px; padding:16px 22px 20px; border-top:1px solid #e8eef8; }
+    .form-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; }
+    .field { display:flex; flex-direction:column; gap:8px; }
+    .field span { font-size:12px; font-weight:700; color:#334155; }
+    .field input, .field select, .field textarea {
+      width:100%;
+      min-height:44px;
+      padding:10px 12px;
+      border:1px solid #dce6f0;
+      border-radius:12px;
+      background:#fff;
+      color:#0c1c35;
+      outline:none;
+      box-sizing:border-box;
+      font:inherit;
+    }
+    .field textarea { min-height:180px; resize:vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,.08); }
+    .field-full { grid-column:1 / -1; }
+    .field-checkbox { grid-column:1 / -1; flex-direction:row; align-items:center; gap:10px; padding-top:6px; }
+    .field-checkbox input { width:auto; min-height:0; }
+    .compact-grid { margin-bottom:16px; }
     .modal { background:#fff; border-radius:16px; width:100%; max-width:580px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.2); }
     .modal-lg { max-width:820px; }
     .modal-sm { max-width:400px; }
@@ -1713,6 +3552,9 @@ const LEVEL_LABELS: Record<number, string> = {
     .lines-table th { padding:9px 12px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:#8aa0b8; background:#f8fbff; border-bottom:1px solid #dce6f0; text-align:left; }
     .lines-table td { padding:8px 10px; border-bottom:1px solid #f0f4f8; }
     .lines-table tr:last-child td { border-bottom:none; }
+    .line-value-cell { min-width:120px; }
+    .line-dimensions { display:flex; flex-wrap:wrap; gap:6px; }
+    .dimension-chip { display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; background:#eef6ff; border:1px solid #cfe0f5; color:#315275; font-size:11px; font-weight:700; line-height:1.2; }
     .lines-actions { margin-bottom:16px; }
 
     /* ── Indicador de cuadre ──────────────────────────────────────────────── */
@@ -1740,6 +3582,26 @@ const LEVEL_LABELS: Record<number, string> = {
     .detail-lines-table tfoot td { padding:12px 16px; border-top:2px solid #dce6f0; background:#f8fbff; }
     .totals-row td { font-weight:700; color:#0c1c35; }
     .line-account-name { margin-left:8px; font-size:13px; color:#374151; }
+    .governance-summary-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-bottom:18px; }
+    .governance-card { border:1px solid #dbe7f3; background:linear-gradient(180deg,#f8fbff 0%,#eef6ff 100%); border-radius:16px; padding:14px; }
+    .governance-card-label { font-size:11px; font-weight:700; color:#6b7a90; text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; }
+    .governance-card-value { font-size:24px; font-weight:800; color:#0f2744; }
+    .governance-card-note { margin-top:8px; font-size:12px; color:#5f6f86; }
+    .governance-panel { border:1px solid #e2e8f0; border-radius:18px; padding:14px; background:#fbfdff; margin-bottom:8px; }
+    .governance-actions { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:8px; }
+    .governance-inline-item { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 0; border-bottom:1px dashed #dbe4ef; }
+    .governance-inline-item:last-child { border-bottom:none; }
+    .governance-inline-label { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#7a8799; font-weight:700; }
+    .approval-timeline, .audit-list, .attachment-list { display:flex; flex-direction:column; gap:10px; }
+    .approval-item, .audit-item, .attachment-item { border:1px solid #e5edf6; border-radius:14px; padding:12px 14px; background:#fff; }
+    .approval-item-header, .audit-item-header { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .approval-item-meta, .attachment-meta, .audit-item-meta { display:flex; flex-wrap:wrap; gap:10px; margin-top:6px; font-size:12px; color:#64748b; }
+    .approval-item-note { margin-top:8px; font-size:13px; color:#3f536d; }
+    .approval-item-note-danger { color:#b45309; }
+    .attachment-form-grid { display:grid; grid-template-columns:1fr 1.2fr auto; gap:10px; margin-bottom:12px; }
+    .attachment-item { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+    .audit-json { margin:10px 0 0; padding:10px 12px; background:#f8fafc; border-radius:12px; font-size:12px; color:#334155; white-space:pre-wrap; word-break:break-word; }
+    .empty-inline-state { padding:14px; border-radius:12px; background:#f8fafc; color:#64748b; font-size:13px; }
 
     /* ── Botones ──────────────────────────────────────────────────────────── */
     .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; white-space:nowrap; }
@@ -1763,24 +3625,49 @@ const LEVEL_LABELS: Record<number, string> = {
       .page-header { flex-direction:column; align-items:stretch; gap:10px; }
       .page-header .btn { width:100%; justify-content:center; }
       .hero-mini-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+      .tabs-shell { padding:16px; }
+      .tabs-shell__head { align-items:flex-start; flex-direction:column; }
+      .tabs-shell__head p { max-width:none; text-align:left; }
+      .tabs-groups { grid-template-columns:1fr; }
+      .tab-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+      .tab-btn { min-height:68px; padding:13px 14px; font-size:13px; }
       .filters-head { flex-direction:column; align-items:flex-start; }
       .filters-bar { gap:8px; }
       .search-wrap { max-width:100%; flex:1 1 100%; }
       .panel-card__header { flex-direction:column; align-items:stretch; }
       .panel-card__filters { width:100%; }
+      .integration-summary-grid { grid-template-columns:1fr; }
+      .integration-metrics { grid-template-columns:1fr; }
+      .bank-summary-grid { grid-template-columns:1fr; }
       .report-summary { grid-template-columns:1fr; }
       .statements-grid { grid-template-columns:1fr; }
       .form-row { grid-template-columns:1fr; }
+      .form-grid { grid-template-columns:1fr; }
       .detail-grid { grid-template-columns:1fr; }
+      .governance-summary-grid { grid-template-columns:1fr; }
+      .attachment-form-grid { grid-template-columns:1fr; }
     }
     @media (max-width: 640px) {
       .hero-shell { padding:16px; gap:14px; }
       .hero-mini-grid { grid-template-columns:1fr 1fr; }
+      .tabs-shell { padding:14px; border-radius:20px; }
+      .tabs-shell__head { margin-bottom:14px; padding-bottom:12px; }
+      .tabs-shell__head h3 { font-size:18px; }
+      .tab-group { padding:12px; border-radius:18px; }
+      .tab-group__header { align-items:flex-start; flex-direction:column; margin-bottom:10px; }
+      .tab-group__header small { text-align:left; }
+      .tab-grid { grid-template-columns:1fr; gap:8px; }
+      .tab-btn { min-height:64px; padding:12px 13px; border-radius:14px; }
+      .tab-btn__title { font-size:13px; }
+      .tab-btn__meta { font-size:11px; }
       .filters-shell { padding:14px; }
       .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
       .data-table { min-width:560px; }
       .modal-overlay { align-items:flex-end; padding:0; }
       .modal { border-radius:20px 20px 0 0; max-height:95dvh; max-width:100%; }
+      .modal[role="dialog"] { align-items:flex-end; padding:0; }
+      .modal-card, .modal-card--wide { width:100%; max-height:95dvh; border-radius:22px 22px 0 0; }
+      .modal-foot { flex-direction:column-reverse; }
       .modal-footer { flex-direction:column-reverse; gap:8px; }
       .modal-footer .btn { width:100%; justify-content:center; }
       .pagination { flex-direction:column; gap:8px; align-items:center; }
@@ -1799,6 +3686,32 @@ export class AccountingComponent implements OnInit {
   private readonly GENERAL_LEDGER_API = `${environment.apiUrl}/accounting/reports/general-ledger`;
   private readonly ACCOUNT_AUXILIARY_API = `${environment.apiUrl}/accounting/reports/account-auxiliary`;
   private readonly FINANCIAL_STATEMENTS_API = `${environment.apiUrl}/accounting/reports/financial-statements`;
+  private readonly ACCOUNTING_INTEGRATIONS_SUMMARY_API = `${environment.apiUrl}/accounting/integrations/summary`;
+  private readonly ACCOUNTING_INTEGRATIONS_ACTIVITY_API = `${environment.apiUrl}/accounting/integrations/activity`;
+  private readonly ACCOUNTING_SYNC_PENDING_API = `${environment.apiUrl}/accounting/integrations/sync-pending`;
+  private readonly ACCOUNTING_SYNC_RESOURCE_API = `${environment.apiUrl}/accounting/integrations/sync`;
+  private readonly BANKS_API = `${environment.apiUrl}/banks`;
+  private readonly ACCOUNTING_BANK_ACCOUNTS_API = `${environment.apiUrl}/accounting/bank-accounts`;
+  private readonly ACCOUNTING_BANK_MOVEMENTS_API = `${environment.apiUrl}/accounting/bank-movements`;
+  private readonly ACCOUNTING_BANK_RECONCILIATION_API = `${environment.apiUrl}/accounting/bank-reconciliation/pending`;
+  private readonly ACCOUNTING_TAX_CONFIG_API = `${environment.apiUrl}/accounting/taxes/config`;
+  private readonly ACCOUNTING_FISCAL_SUMMARY_API = `${environment.apiUrl}/accounting/reports/fiscal-summary`;
+  private readonly ACCOUNTING_VAT_SALES_BOOK_API = `${environment.apiUrl}/accounting/reports/vat-sales-book`;
+  private readonly ACCOUNTING_VAT_PURCHASES_BOOK_API = `${environment.apiUrl}/accounting/reports/vat-purchases-book`;
+  private readonly ACCOUNTING_WITHHOLDINGS_BOOK_API = `${environment.apiUrl}/accounting/reports/withholdings-book`;
+  private readonly ACCOUNTING_ASSETS_SUMMARY_API = `${environment.apiUrl}/accounting/assets/summary`;
+  private readonly ACCOUNTING_FIXED_ASSETS_API = `${environment.apiUrl}/accounting/fixed-assets`;
+  private readonly ACCOUNTING_DEFERRED_CHARGES_API = `${environment.apiUrl}/accounting/deferred-charges`;
+  private readonly ACCOUNTING_PROVISION_TEMPLATES_API = `${environment.apiUrl}/accounting/provision-templates`;
+  private readonly BRANCHES_API = `${environment.apiUrl}/branches`;
+  private readonly CUSTOMERS_API = `${environment.apiUrl}/customers`;
+  private readonly JOURNAL_APPROVAL_FLOW_API = (id: string) => `${this.JOURNALS_API}/${id}/approval-flow`;
+  private readonly JOURNAL_REQUEST_APPROVAL_API = (id: string) => `${this.JOURNALS_API}/${id}/request-approval`;
+  private readonly JOURNAL_APPROVE_API = (id: string) => `${this.JOURNALS_API}/${id}/approve`;
+  private readonly JOURNAL_REJECT_API = (id: string) => `${this.JOURNALS_API}/${id}/reject`;
+  private readonly JOURNAL_ATTACHMENTS_API = (id: string) => `${this.JOURNALS_API}/${id}/attachments`;
+  private readonly JOURNAL_AUDIT_TRAIL_API = (id: string) => `${this.JOURNALS_API}/${id}/audit-trail`;
+  private readonly JOURNAL_REVERSE_API = (id: string) => `${this.JOURNALS_API}/${id}/reverse`;
 
   // ── Pestaña activa ───────────────────────────────────────────────────────────
   activeTab = signal<AccountingTab>('accounts');
@@ -1806,6 +3719,9 @@ export class AccountingComponent implements OnInit {
   // ── Plan de cuentas ──────────────────────────────────────────────────────────
   accounts       = signal<Account[]>([]);
   allAccounts    = signal<Account[]>([]);  // catálogo completo para selectores
+  banksCatalog   = signal<BankCatalogOption[]>([]);
+  branches       = signal<BranchOption[]>([]);
+  customers      = signal<CustomerOption[]>([]);
   loadingAccounts = signal(true);
   savingAccount   = signal(false);
   totalAccounts   = signal(0);
@@ -1845,6 +3761,40 @@ export class AccountingComponent implements OnInit {
   accountAuxiliaryAccountId = '';
   financialStatements = signal<FinancialStatementsResponse | null>(null);
   loadingFinancialStatements = signal(false);
+  integrationsSummary = signal<AccountingIntegrationsSummaryResponse | null>(null);
+  integrationsActivity = signal<AccountingIntegrationActivity[]>([]);
+  loadingIntegrations = signal(false);
+  syncingIntegrations = signal(false);
+  integrationFilterModule = '';
+  integrationFilterStatus = '';
+  integrationPage = signal(1);
+  integrationTotal = signal(0);
+  integrationTotalPages = signal(1);
+  bankAccounts = signal<AccountingBankAccount[]>([]);
+  bankMovements = signal<AccountingBankMovement[]>([]);
+  pendingBankReconciliation = signal<PendingBankReconciliationResponse | null>(null);
+  loadingBanks = signal(false);
+  loadingBankMovements = signal(false);
+  savingBankAccount = signal(false);
+  savingBankStatement = signal(false);
+  savingBankReconciliation = signal(false);
+  selectedBankAccountId = signal('');
+  filterBankStatus = '';
+  taxConfigs = signal<AccountingTaxConfig[]>([]);
+  fiscalSummary = signal<FiscalSummaryResponse | null>(null);
+  vatSalesBook = signal<VatSalesBookItem[]>([]);
+  vatPurchasesBook = signal<VatPurchasesBookItem[]>([]);
+  withholdingsBook = signal<WithholdingBookItem[]>([]);
+  loadingTaxes = signal(false);
+  savingTaxConfig = signal(false);
+  assetsSummary = signal<AccountingAssetsSummaryResponse | null>(null);
+  fixedAssets = signal<AccountingFixedAsset[]>([]);
+  deferredCharges = signal<AccountingDeferredCharge[]>([]);
+  provisionTemplates = signal<AccountingProvisionTemplate[]>([]);
+  loadingAssets = signal(false);
+  savingAssets = signal(false);
+  journalAuditTrail = signal<JournalAuditTrailItem[]>([]);
+  loadingJournalGovernance = signal(false);
 
   // ── Comprobantes ─────────────────────────────────────────────────────────────
   journals       = signal<JournalEntry[]>([]);
@@ -1864,12 +3814,27 @@ export class AccountingComponent implements OnInit {
   draftCount  = computed(() => this.journals().filter(j => j.status === 'DRAFT').length);
   // ── Modales de comprobante ───────────────────────────────────────────────────
   showJournalModal = signal(false);
+  showBankAccountModal = signal(false);
+  showImportStatementModal = signal(false);
+  showTaxConfigModal = signal(false);
+  showFixedAssetModal = signal(false);
+  showDeferredChargeModal = signal(false);
+  showProvisionTemplateModal = signal(false);
+  reconcileBankMovementTarget = signal<AccountingBankMovement | null>(null);
   editingJournalId = signal<string | null>(null);
   detailJournal    = signal<JournalEntry | null>(null);
   cancelTarget     = signal<JournalEntry | null>(null);
   deleteJournalTarget = signal<DeleteJournalTarget | null>(null);
   deleteAccountTarget = signal<Account | null>(null);
   journalForm: JournalForm = this.emptyJournalForm();
+  bankAccountForm: BankAccountForm = this.emptyBankAccountForm();
+  bankStatementForm: BankStatementForm = this.emptyBankStatementForm();
+  taxConfigForm: TaxConfigForm = this.emptyTaxConfigForm();
+  fixedAssetForm: FixedAssetForm = this.emptyFixedAssetForm();
+  deferredChargeForm: DeferredChargeForm = this.emptyDeferredChargeForm();
+  provisionTemplateForm: ProvisionTemplateForm = this.emptyProvisionTemplateForm();
+  journalAttachmentForm: JournalAttachmentForm = this.emptyJournalAttachmentForm();
+  selectedLedgerEntryId = '';
   journalTotalDebit = signal(0);
   journalTotalCredit = signal(0);
   journalIsBalanced = signal(false);
@@ -1884,11 +3849,18 @@ export class AccountingComponent implements OnInit {
     this.initializeTrialBalanceRange();
     this.loadAccounts();
     this.loadAllAccounts();
+    this.loadBanksCatalog();
+    this.loadBranches();
+    this.loadCustomers();
     this.loadJournals();
     this.loadPeriods();
     this.loadTrialBalance();
     this.loadGeneralLedger();
     this.loadFinancialStatements();
+    this.loadBankAccounts();
+    this.loadTaxReports();
+    this.loadEnterpriseAssets();
+    this.loadIntegrations();
     this.recalculateJournalBalance();
   }
 
@@ -1896,6 +3868,14 @@ export class AccountingComponent implements OnInit {
 
   switchTab(tab: AccountingTab) {
     this.activeTab.set(tab);
+    if (tab === 'banks') {
+      this.loadBankAccounts();
+      this.loadBankMovements();
+      this.loadPendingBankReconciliation();
+    }
+    if (tab === 'taxes') this.loadTaxReports();
+    if (tab === 'assets') this.loadEnterpriseAssets();
+    if (tab === 'integrations') this.loadIntegrations();
   }
 
   openPrimaryAction() {
@@ -1906,6 +3886,26 @@ export class AccountingComponent implements OnInit {
 
     if (this.activeTab() === 'journals') {
       this.openJournalModal();
+      return;
+    }
+
+    if (this.activeTab() === 'integrations') {
+      this.syncPendingIntegrations();
+      return;
+    }
+
+    if (this.activeTab() === 'banks') {
+      this.openImportStatementModal();
+      return;
+    }
+
+    if (this.activeTab() === 'taxes') {
+      this.openTaxConfigModal();
+      return;
+    }
+
+    if (this.activeTab() === 'assets') {
+      this.openFixedAssetModal();
       return;
     }
 
@@ -1944,6 +3944,27 @@ export class AccountingComponent implements OnInit {
   private loadAllAccounts() {
     this.http.get<PaginatedResponse<Account>>(this.ACCOUNTS_API, { params: { limit: '1000' } }).subscribe({
       next: ({ data }) => this.allAccounts.set(data ?? []),
+      error: () => { /* no bloqueante */ },
+    });
+  }
+
+  private loadBanksCatalog() {
+    this.http.get<BankCatalogOption[]>(this.BANKS_API).subscribe({
+      next: (data) => this.banksCatalog.set(data ?? []),
+      error: () => { /* no bloqueante */ },
+    });
+  }
+
+  private loadBranches() {
+    this.http.get<BranchOption[]>(this.BRANCHES_API).subscribe({
+      next: (data) => this.branches.set(data ?? []),
+      error: () => { /* no bloqueante */ },
+    });
+  }
+
+  private loadCustomers() {
+    this.http.get<PaginatedResponse<CustomerOption>>(this.CUSTOMERS_API, { params: { limit: '1000' } }).subscribe({
+      next: ({ data }) => this.customers.set(data ?? []),
       error: () => { /* no bloqueante */ },
     });
   }
@@ -2195,6 +4216,555 @@ export class AccountingComponent implements OnInit {
     });
   }
 
+  loadIntegrations() {
+    this.loadingIntegrations.set(true);
+
+    const params: Record<string, string> = {
+      page: String(this.integrationPage()),
+      limit: String(this.limit),
+    };
+    if (this.integrationFilterModule) params['module'] = this.integrationFilterModule;
+    if (this.integrationFilterStatus) params['status'] = this.integrationFilterStatus;
+
+    this.http.get<AccountingIntegrationsSummaryResponse>(this.ACCOUNTING_INTEGRATIONS_SUMMARY_API).subscribe({
+      next: (summary) => this.integrationsSummary.set(summary),
+      error: () => this.integrationsSummary.set(null),
+    });
+
+    this.http.get<PaginatedResponse<AccountingIntegrationActivity>>(this.ACCOUNTING_INTEGRATIONS_ACTIVITY_API, { params }).subscribe({
+      next: ({ data, total, totalPages }) => {
+        this.integrationsActivity.set(data ?? []);
+        this.integrationTotal.set(total ?? 0);
+        this.integrationTotalPages.set(totalPages ?? 1);
+        this.loadingIntegrations.set(false);
+      },
+      error: (e) => {
+        this.loadingIntegrations.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al cargar integraciones contables');
+      },
+    });
+  }
+
+  loadBankAccounts() {
+    this.loadingBanks.set(true);
+    this.http.get<AccountingBankAccount[]>(this.ACCOUNTING_BANK_ACCOUNTS_API).subscribe({
+      next: (data) => {
+        const accounts = data ?? [];
+        this.bankAccounts.set(accounts);
+        if (!this.selectedBankAccountId() && accounts.length) {
+          this.selectedBankAccountId.set(accounts[0].id);
+        } else if (this.selectedBankAccountId() && !accounts.some((item) => item.id === this.selectedBankAccountId())) {
+          this.selectedBankAccountId.set(accounts[0]?.id ?? '');
+        }
+        this.loadingBanks.set(false);
+        this.loadBankMovements();
+        this.loadPendingBankReconciliation();
+      },
+      error: (e) => {
+        this.loadingBanks.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al cargar cuentas bancarias');
+      },
+    });
+  }
+
+  loadTaxReports() {
+    this.loadingTaxes.set(true);
+    const params = {
+      dateFrom: this.trialBalanceDateFrom,
+      dateTo: this.trialBalanceDateTo,
+    };
+
+    this.http.get<AccountingTaxConfig[]>(this.ACCOUNTING_TAX_CONFIG_API).subscribe({
+      next: (data) => this.taxConfigs.set(data ?? []),
+      error: () => this.taxConfigs.set([]),
+    });
+
+    this.http.get<FiscalSummaryResponse>(this.ACCOUNTING_FISCAL_SUMMARY_API, { params }).subscribe({
+      next: (data) => this.fiscalSummary.set(data),
+      error: () => this.fiscalSummary.set(null),
+    });
+
+    this.http.get<{ data: VatSalesBookItem[] }>(this.ACCOUNTING_VAT_SALES_BOOK_API, { params }).subscribe({
+      next: (data) => this.vatSalesBook.set(data.data ?? []),
+      error: () => this.vatSalesBook.set([]),
+    });
+
+    this.http.get<{ data: VatPurchasesBookItem[] }>(this.ACCOUNTING_VAT_PURCHASES_BOOK_API, { params }).subscribe({
+      next: (data) => this.vatPurchasesBook.set(data.data ?? []),
+      error: () => this.vatPurchasesBook.set([]),
+    });
+
+    this.http.get<{ data: WithholdingBookItem[] } & { summary: any }>(this.ACCOUNTING_WITHHOLDINGS_BOOK_API, { params }).subscribe({
+      next: (data) => {
+        this.withholdingsBook.set(data.data ?? []);
+        this.loadingTaxes.set(false);
+      },
+      error: () => {
+        this.withholdingsBook.set([]);
+        this.loadingTaxes.set(false);
+      },
+    });
+  }
+
+  openTaxConfigModal() {
+    this.taxConfigForm = this.emptyTaxConfigForm();
+    this.showTaxConfigModal.set(true);
+  }
+
+  closeTaxConfigModal() {
+    this.showTaxConfigModal.set(false);
+    this.taxConfigForm = this.emptyTaxConfigForm();
+  }
+
+  saveTaxConfig() {
+    const form = this.taxConfigForm;
+    if (!form.taxCode || !form.label.trim() || !form.accountId) {
+      this.notify.warning('Código, etiqueta y cuenta contable son obligatorios');
+      return;
+    }
+
+    this.savingTaxConfig.set(true);
+    this.http.post<AccountingTaxConfig>(this.ACCOUNTING_TAX_CONFIG_API, {
+      taxCode: form.taxCode,
+      label: form.label.trim(),
+      rate: form.rate ?? undefined,
+      accountId: form.accountId,
+      isActive: true,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Configuración fiscal guardada');
+        this.savingTaxConfig.set(false);
+        this.closeTaxConfigModal();
+        this.loadTaxReports();
+      },
+      error: (e) => {
+        this.savingTaxConfig.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al guardar la configuración fiscal');
+      },
+    });
+  }
+
+  loadEnterpriseAssets() {
+    this.loadingAssets.set(true);
+
+    this.http.get<AccountingAssetsSummaryResponse>(this.ACCOUNTING_ASSETS_SUMMARY_API).subscribe({
+      next: (data) => this.assetsSummary.set(data),
+      error: () => this.assetsSummary.set(null),
+    });
+
+    this.http.get<AccountingFixedAsset[]>(this.ACCOUNTING_FIXED_ASSETS_API).subscribe({
+      next: (data) => this.fixedAssets.set(data ?? []),
+      error: () => this.fixedAssets.set([]),
+    });
+
+    this.http.get<AccountingDeferredCharge[]>(this.ACCOUNTING_DEFERRED_CHARGES_API).subscribe({
+      next: (data) => this.deferredCharges.set(data ?? []),
+      error: () => this.deferredCharges.set([]),
+    });
+
+    this.http.get<AccountingProvisionTemplate[]>(this.ACCOUNTING_PROVISION_TEMPLATES_API).subscribe({
+      next: (data) => {
+        this.provisionTemplates.set(data ?? []);
+        this.loadingAssets.set(false);
+      },
+      error: () => {
+        this.provisionTemplates.set([]);
+        this.loadingAssets.set(false);
+      },
+    });
+  }
+
+  openFixedAssetModal() {
+    this.fixedAssetForm = this.emptyFixedAssetForm();
+    this.showFixedAssetModal.set(true);
+  }
+
+  closeFixedAssetModal() {
+    this.showFixedAssetModal.set(false);
+    this.fixedAssetForm = this.emptyFixedAssetForm();
+  }
+
+  saveFixedAsset() {
+    const form = this.fixedAssetForm;
+    if (!form.assetCode.trim() || !form.name.trim() || !form.acquisitionDate || !form.startDepreciationDate || !form.cost || !form.usefulLifeMonths || !form.assetAccountId || !form.accumulatedDepAccountId || !form.depreciationExpenseAccountId) {
+      this.notify.warning('Completa los datos obligatorios del activo fijo');
+      return;
+    }
+
+    this.savingAssets.set(true);
+    this.http.post(this.ACCOUNTING_FIXED_ASSETS_API, {
+      assetCode: form.assetCode.trim(),
+      name: form.name.trim(),
+      acquisitionDate: form.acquisitionDate,
+      startDepreciationDate: form.startDepreciationDate,
+      cost: Number(form.cost),
+      salvageValue: Number(form.salvageValue ?? 0),
+      usefulLifeMonths: Number(form.usefulLifeMonths),
+      assetAccountId: form.assetAccountId,
+      accumulatedDepAccountId: form.accumulatedDepAccountId,
+      depreciationExpenseAccountId: form.depreciationExpenseAccountId,
+      notes: form.notes.trim() || undefined,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Activo fijo creado');
+        this.savingAssets.set(false);
+        this.closeFixedAssetModal();
+        this.loadEnterpriseAssets();
+      },
+      error: (e) => {
+        this.savingAssets.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al crear el activo fijo');
+      },
+    });
+  }
+
+  depreciateFixedAsset(asset: AccountingFixedAsset) {
+    if (!confirm(`¿Deseas ejecutar la depreciación del activo ${asset.assetCode}?`)) return;
+    this.savingAssets.set(true);
+    this.http.post<{ entry?: { number?: string } }>(`${this.ACCOUNTING_FIXED_ASSETS_API}/${asset.id}/depreciate`, {}).subscribe({
+      next: (response) => {
+        this.notify.success(`Depreciación registrada${response?.entry?.number ? ` en ${response.entry.number}` : ''}`);
+        this.savingAssets.set(false);
+        this.loadEnterpriseAssets();
+        this.loadJournals();
+      },
+      error: (e) => {
+        this.savingAssets.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al depreciar el activo fijo');
+      },
+    });
+  }
+
+  openDeferredChargeModal() {
+    this.deferredChargeForm = this.emptyDeferredChargeForm();
+    this.showDeferredChargeModal.set(true);
+  }
+
+  closeDeferredChargeModal() {
+    this.showDeferredChargeModal.set(false);
+    this.deferredChargeForm = this.emptyDeferredChargeForm();
+  }
+
+  saveDeferredCharge() {
+    const form = this.deferredChargeForm;
+    if (!form.chargeCode.trim() || !form.name.trim() || !form.startDate || !form.amount || !form.termMonths || !form.assetAccountId || !form.amortizationExpenseAccountId) {
+      this.notify.warning('Completa los datos obligatorios del diferido');
+      return;
+    }
+
+    this.savingAssets.set(true);
+    this.http.post(this.ACCOUNTING_DEFERRED_CHARGES_API, {
+      chargeCode: form.chargeCode.trim(),
+      name: form.name.trim(),
+      startDate: form.startDate,
+      amount: Number(form.amount),
+      termMonths: Number(form.termMonths),
+      assetAccountId: form.assetAccountId,
+      amortizationExpenseAccountId: form.amortizationExpenseAccountId,
+      notes: form.notes.trim() || undefined,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Diferido creado');
+        this.savingAssets.set(false);
+        this.closeDeferredChargeModal();
+        this.loadEnterpriseAssets();
+      },
+      error: (e) => {
+        this.savingAssets.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al crear el diferido');
+      },
+    });
+  }
+
+  amortizeDeferredCharge(item: AccountingDeferredCharge) {
+    if (!confirm(`¿Deseas ejecutar la amortización de ${item.chargeCode}?`)) return;
+    this.savingAssets.set(true);
+    this.http.post<{ entry?: { number?: string } }>(`${this.ACCOUNTING_DEFERRED_CHARGES_API}/${item.id}/amortize`, {}).subscribe({
+      next: (response) => {
+        this.notify.success(`Amortización registrada${response?.entry?.number ? ` en ${response.entry.number}` : ''}`);
+        this.savingAssets.set(false);
+        this.loadEnterpriseAssets();
+        this.loadJournals();
+      },
+      error: (e) => {
+        this.savingAssets.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al amortizar el diferido');
+      },
+    });
+  }
+
+  openProvisionTemplateModal() {
+    this.provisionTemplateForm = this.emptyProvisionTemplateForm();
+    this.showProvisionTemplateModal.set(true);
+  }
+
+  closeProvisionTemplateModal() {
+    this.showProvisionTemplateModal.set(false);
+    this.provisionTemplateForm = this.emptyProvisionTemplateForm();
+  }
+
+  saveProvisionTemplate() {
+    const form = this.provisionTemplateForm;
+    if (!form.provisionCode.trim() || !form.name.trim() || !form.amount || !form.frequencyMonths || !form.startDate || !form.nextRunDate || !form.expenseAccountId || !form.liabilityAccountId) {
+      this.notify.warning('Completa los datos obligatorios de la provisión');
+      return;
+    }
+
+    this.savingAssets.set(true);
+    this.http.post(this.ACCOUNTING_PROVISION_TEMPLATES_API, {
+      provisionCode: form.provisionCode.trim(),
+      name: form.name.trim(),
+      amount: Number(form.amount),
+      frequencyMonths: Number(form.frequencyMonths),
+      startDate: form.startDate,
+      nextRunDate: form.nextRunDate,
+      endDate: form.endDate || undefined,
+      expenseAccountId: form.expenseAccountId,
+      liabilityAccountId: form.liabilityAccountId,
+      isActive: form.isActive,
+      notes: form.notes.trim() || undefined,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Plantilla de provisión creada');
+        this.savingAssets.set(false);
+        this.closeProvisionTemplateModal();
+        this.loadEnterpriseAssets();
+      },
+      error: (e) => {
+        this.savingAssets.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al guardar la provisión');
+      },
+    });
+  }
+
+  runProvisionTemplate(item: AccountingProvisionTemplate) {
+    if (!confirm(`¿Deseas ejecutar la provisión ${item.provisionCode}?`)) return;
+    this.savingAssets.set(true);
+    this.http.post<{ entry?: { number?: string } }>(`${this.ACCOUNTING_PROVISION_TEMPLATES_API}/${item.id}/run`, {}).subscribe({
+      next: (response) => {
+        this.notify.success(`Provisión ejecutada${response?.entry?.number ? ` en ${response.entry.number}` : ''}`);
+        this.savingAssets.set(false);
+        this.loadEnterpriseAssets();
+        this.loadJournals();
+      },
+      error: (e) => {
+        this.savingAssets.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al ejecutar la provisión');
+      },
+    });
+  }
+
+  loadBankMovements() {
+    if (!this.selectedBankAccountId()) {
+      this.bankMovements.set([]);
+      this.loadingBankMovements.set(false);
+      return;
+    }
+
+    this.loadingBankMovements.set(true);
+    const params: Record<string, string> = { bankAccountId: this.selectedBankAccountId() };
+    if (this.filterBankStatus) params['status'] = this.filterBankStatus;
+
+    this.http.get<PaginatedResponse<AccountingBankMovement>>(this.ACCOUNTING_BANK_MOVEMENTS_API, { params }).subscribe({
+      next: ({ data }) => {
+        this.bankMovements.set(data ?? []);
+        this.loadingBankMovements.set(false);
+      },
+      error: (e) => {
+        this.loadingBankMovements.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al cargar movimientos bancarios');
+      },
+    });
+  }
+
+  loadPendingBankReconciliation() {
+    if (!this.selectedBankAccountId()) {
+      this.pendingBankReconciliation.set(null);
+      return;
+    }
+
+    this.http.get<PendingBankReconciliationResponse>(this.ACCOUNTING_BANK_RECONCILIATION_API, {
+      params: { bankAccountId: this.selectedBankAccountId() },
+    }).subscribe({
+      next: (data) => this.pendingBankReconciliation.set(data),
+      error: () => this.pendingBankReconciliation.set(null),
+    });
+  }
+
+  selectBankAccount(id: string) {
+    this.selectedBankAccountId.set(id);
+    this.loadBankMovements();
+    this.loadPendingBankReconciliation();
+  }
+
+  openBankAccountModal() {
+    this.bankAccountForm = this.emptyBankAccountForm();
+    this.showBankAccountModal.set(true);
+  }
+
+  closeBankAccountModal() {
+    this.showBankAccountModal.set(false);
+    this.bankAccountForm = this.emptyBankAccountForm();
+  }
+
+  saveBankAccount() {
+    const form = this.bankAccountForm;
+    if (!form.accountingAccountId || !form.name.trim() || !form.accountNumber.trim()) {
+      this.notify.warning('Cuenta contable, nombre y número de cuenta son obligatorios');
+      return;
+    }
+
+    this.savingBankAccount.set(true);
+    this.http.post<AccountingBankAccount>(this.ACCOUNTING_BANK_ACCOUNTS_API, {
+      bankCode: form.bankCode || undefined,
+      accountingAccountId: form.accountingAccountId,
+      name: form.name.trim(),
+      accountNumber: form.accountNumber.trim(),
+      currency: form.currency.trim() || 'COP',
+      openingBalance: Number(form.openingBalance ?? 0),
+    }).subscribe({
+      next: () => {
+        this.notify.success('Cuenta bancaria creada');
+        this.savingBankAccount.set(false);
+        this.closeBankAccountModal();
+        this.loadBankAccounts();
+      },
+      error: (e) => {
+        this.savingBankAccount.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al crear la cuenta bancaria');
+      },
+    });
+  }
+
+  openImportStatementModal() {
+    if (!this.bankAccounts().length) {
+      this.notify.warning('Primero debes crear una cuenta bancaria');
+      return;
+    }
+
+    this.bankStatementForm = {
+      ...this.emptyBankStatementForm(),
+      bankAccountId: this.selectedBankAccountId() || this.bankAccounts()[0]?.id || '',
+    };
+    this.showImportStatementModal.set(true);
+  }
+
+  closeImportStatementModal() {
+    this.showImportStatementModal.set(false);
+    this.bankStatementForm = this.emptyBankStatementForm();
+  }
+
+  importBankStatement() {
+    const form = this.bankStatementForm;
+    if (!form.bankAccountId || !form.csvText.trim()) {
+      this.notify.warning('Selecciona una cuenta y pega el CSV del extracto');
+      return;
+    }
+
+    this.savingBankStatement.set(true);
+    this.http.post(this.ACCOUNTING_BANK_MOVEMENTS_API + '/import', {
+      bankAccountId: form.bankAccountId,
+      delimiter: form.delimiter || ',',
+      csvText: form.csvText,
+      autoMatchEntries: form.autoMatchEntries,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Extracto importado correctamente');
+        this.savingBankStatement.set(false);
+        this.closeImportStatementModal();
+        this.selectedBankAccountId.set(form.bankAccountId);
+        this.loadBankAccounts();
+      },
+      error: (e) => {
+        this.savingBankStatement.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al importar el extracto');
+      },
+    });
+  }
+
+  openReconcileBankMovement(movement: AccountingBankMovement) {
+    this.reconcileBankMovementTarget.set(movement);
+    this.selectedLedgerEntryId = '';
+  }
+
+  closeReconcileBankMovementModal() {
+    this.reconcileBankMovementTarget.set(null);
+    this.selectedLedgerEntryId = '';
+  }
+
+  confirmReconcileBankMovement() {
+    const movement = this.reconcileBankMovementTarget();
+    if (!movement || !this.selectedLedgerEntryId) {
+      this.notify.warning('Debes seleccionar el comprobante contable a conciliar');
+      return;
+    }
+
+    this.savingBankReconciliation.set(true);
+    this.http.patch(`${this.ACCOUNTING_BANK_MOVEMENTS_API}/${movement.id}/reconcile`, {
+      entryId: this.selectedLedgerEntryId,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Movimiento conciliado correctamente');
+        this.savingBankReconciliation.set(false);
+        this.closeReconcileBankMovementModal();
+        this.loadBankMovements();
+        this.loadPendingBankReconciliation();
+      },
+      error: (e) => {
+        this.savingBankReconciliation.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al conciliar el movimiento');
+      },
+    });
+  }
+
+  setIntegrationPage(page: number) {
+    this.integrationPage.set(page);
+    this.loadIntegrations();
+  }
+
+  integrationPageRange(): number[] {
+    const tp = this.integrationTotalPages();
+    const cp = this.integrationPage();
+    const range: number[] = [];
+    for (let i = Math.max(1, cp - 2); i <= Math.min(tp, cp + 2); i++) range.push(i);
+    return range;
+  }
+
+  syncPendingIntegrations() {
+    this.syncingIntegrations.set(true);
+    this.http.post(this.ACCOUNTING_SYNC_PENDING_API, {}).subscribe({
+      next: () => {
+        this.notify.success('Sincronización automática ejecutada');
+        this.syncingIntegrations.set(false);
+        this.loadIntegrations();
+        this.loadJournals();
+      },
+      error: (e) => {
+        this.syncingIntegrations.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al sincronizar pendientes');
+      },
+    });
+  }
+
+  retryIntegration(item: AccountingIntegrationActivity) {
+    this.syncingIntegrations.set(true);
+    this.http.post(this.ACCOUNTING_SYNC_RESOURCE_API, {
+      module: item.module,
+      resourceId: item.resourceId,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Integración resincronizada');
+        this.syncingIntegrations.set(false);
+        this.loadIntegrations();
+        this.loadJournals();
+      },
+      error: (e) => {
+        this.syncingIntegrations.set(false);
+        this.notify.error(e?.error?.message ?? 'No fue posible resincronizar');
+      },
+    });
+  }
+
   loadTrialBalance() {
     if (!this.trialBalanceDateFrom || !this.trialBalanceDateTo) {
       this.notify.warning('Selecciona un rango de fechas para generar el balance de prueba');
@@ -2373,6 +4943,10 @@ export class AccountingComponent implements OnInit {
         reference: full.reference ?? '',
         lines: (full.lines ?? []).map((line) => ({
           accountId: line.accountId,
+          branchId: line.branchId ?? '',
+          customerId: line.customerId ?? '',
+          costCenter: line.costCenter ?? '',
+          projectCode: line.projectCode ?? '',
           description: line.description ?? '',
           debit: Number(line.debit ?? 0) || null,
           credit: Number(line.credit ?? 0) || null,
@@ -2401,7 +4975,7 @@ export class AccountingComponent implements OnInit {
   }
 
   addLine() {
-    this.journalForm.lines.push({ accountId: '', description: '', debit: null, credit: null });
+    this.journalForm.lines.push({ accountId: '', branchId: '', customerId: '', costCenter: '', projectCode: '', description: '', debit: null, credit: null });
     this.recalculateJournalBalance();
   }
 
@@ -2434,6 +5008,10 @@ export class AccountingComponent implements OnInit {
       reference:   f.reference?.trim() || undefined,
       lines: f.lines.map((l, index) => ({
         accountId:   l.accountId,
+        branchId:    l.branchId || undefined,
+        customerId:  l.customerId || undefined,
+        costCenter:  l.costCenter?.trim() || undefined,
+        projectCode: l.projectCode?.trim() || undefined,
         description: l.description?.trim() || undefined,
         debit:       Number(l.debit)  || 0,
         credit:      Number(l.credit) || 0,
@@ -2460,11 +5038,27 @@ export class AccountingComponent implements OnInit {
   }
 
   openDetail(je: JournalEntry) {
-    // Cargar detalle completo con líneas
+    this.loadingJournalGovernance.set(true);
+    this.journalAuditTrail.set([]);
+    this.journalAttachmentForm = this.emptyJournalAttachmentForm();
+
     this.http.get<JournalEntry>(`${this.JOURNALS_API}/${je.id}`).subscribe({
-      next: (data) => this.detailJournal.set(data),
-      error: () => this.detailJournal.set(je), // fallback al dato que ya tenemos
+      next: (data) => {
+        this.detailJournal.set(data);
+        this.loadJournalAuditTrail(data.id);
+      },
+      error: () => {
+        this.detailJournal.set(je);
+        this.loadJournalAuditTrail(je.id);
+      },
     });
+  }
+
+  closeDetailJournal() {
+    this.detailJournal.set(null);
+    this.journalAuditTrail.set([]);
+    this.loadingJournalGovernance.set(false);
+    this.journalAttachmentForm = this.emptyJournalAttachmentForm();
   }
 
   postJournal(je: JournalEntry) {
@@ -2529,7 +5123,181 @@ export class AccountingComponent implements OnInit {
     });
   }
 
+  requestJournalApproval(je: JournalEntry) {
+    this.savingJournal.set(true);
+    this.http.post<JournalApproval[]>(this.JOURNAL_REQUEST_APPROVAL_API(je.id), {}).subscribe({
+      next: (flow) => {
+        this.notify.success('Solicitud de aprobación registrada');
+        this.savingJournal.set(false);
+        this.patchDetailGovernance({ approvalFlow: flow, approval: flow.find((item) => item.status === 'PENDING') ?? flow[0] ?? null });
+        this.loadJournalAuditTrail(je.id);
+        this.loadJournals();
+      },
+      error: (e) => {
+        this.savingJournal.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al solicitar aprobación');
+      },
+    });
+  }
+
+  approveJournal(je: JournalEntry) {
+    this.savingJournal.set(true);
+    this.http.patch<JournalApproval[]>(this.JOURNAL_APPROVE_API(je.id), {}).subscribe({
+      next: (flow) => {
+        this.notify.success('Comprobante aprobado');
+        this.savingJournal.set(false);
+        this.patchDetailGovernance({ approvalFlow: flow, approval: flow.find((item) => item.status === 'PENDING') ?? flow[0] ?? null });
+        this.loadJournalAuditTrail(je.id);
+        this.loadJournals();
+      },
+      error: (e) => {
+        this.savingJournal.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al aprobar el comprobante');
+      },
+    });
+  }
+
+  rejectJournal(je: JournalEntry) {
+    const confirmed = globalThis.confirm('¿Deseas rechazar la aprobación del comprobante?');
+    if (!confirmed) return;
+
+    this.savingJournal.set(true);
+    this.http.patch<JournalApproval[]>(this.JOURNAL_REJECT_API(je.id), { reason: 'Rechazado por control interno' }).subscribe({
+      next: (flow) => {
+        this.notify.success('Aprobación rechazada');
+        this.savingJournal.set(false);
+        this.patchDetailGovernance({ approvalFlow: flow, approval: flow.find((item) => item.status === 'PENDING') ?? flow[0] ?? null });
+        this.loadJournalAuditTrail(je.id);
+        this.loadJournals();
+      },
+      error: (e) => {
+        this.savingJournal.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al rechazar la aprobación');
+      },
+    });
+  }
+
+  saveJournalAttachment() {
+    const je = this.detailJournal();
+    if (!je) return;
+    if (!this.journalAttachmentForm.fileName.trim() || !this.journalAttachmentForm.fileUrl.trim()) {
+      this.notify.error('Debes completar el nombre y la ubicación del soporte');
+      return;
+    }
+
+    this.savingJournal.set(true);
+    this.http.post<JournalAttachment[]>(this.JOURNAL_ATTACHMENTS_API(je.id), {
+      fileName: this.journalAttachmentForm.fileName.trim(),
+      fileUrl: this.journalAttachmentForm.fileUrl.trim(),
+    }).subscribe({
+      next: (attachments) => {
+        this.notify.success('Soporte agregado');
+        this.savingJournal.set(false);
+        this.journalAttachmentForm = this.emptyJournalAttachmentForm();
+        this.patchDetailGovernance({ attachments });
+        this.loadJournalAuditTrail(je.id);
+      },
+      error: (e) => {
+        this.savingJournal.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al agregar el soporte');
+      },
+    });
+  }
+
+  reverseJournal(je: JournalEntry) {
+    const confirmed = globalThis.confirm(`¿Deseas generar un reverso controlado para ${je.number}?`);
+    if (!confirmed) return;
+
+    this.savingJournal.set(true);
+    this.http.post<JournalEntry>(this.JOURNAL_REVERSE_API(je.id), {}).subscribe({
+      next: (reversal) => {
+        this.notify.success(`Reverso generado: ${reversal.number}`);
+        this.savingJournal.set(false);
+        this.loadJournals();
+        this.openDetail(reversal);
+      },
+      error: (e) => {
+        this.savingJournal.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al generar el reverso');
+      },
+    });
+  }
+
+  private loadJournalAuditTrail(entryId: string) {
+    this.loadingJournalGovernance.set(true);
+    this.http.get<JournalAuditTrailItem[]>(this.JOURNAL_AUDIT_TRAIL_API(entryId)).subscribe({
+      next: (data) => {
+        this.journalAuditTrail.set(data);
+        this.loadingJournalGovernance.set(false);
+      },
+      error: () => {
+        this.journalAuditTrail.set([]);
+        this.loadingJournalGovernance.set(false);
+      },
+    });
+  }
+
+  private patchDetailGovernance(patch: Partial<JournalEntry>) {
+    const current = this.detailJournal();
+    if (!current) return;
+    this.detailJournal.set({ ...current, ...patch });
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  approvalStatus(entry: JournalEntry | null | undefined): string {
+    return entry?.approval?.status ?? 'NOT_REQUESTED';
+  }
+
+  approvalStatusLabel(status?: string | null): string {
+    const map: Record<string, string> = {
+      NOT_REQUESTED: 'Sin solicitar',
+      PENDING: 'Pendiente',
+      APPROVED: 'Aprobado',
+      REJECTED: 'Rechazado',
+    };
+    return map[status ?? 'NOT_REQUESTED'] ?? (status || 'Sin solicitar');
+  }
+
+  canRequestApproval(entry: JournalEntry): boolean {
+    return !entry.approval || ['APPROVED', 'REJECTED'].includes(entry.approval.status) || !entry.approvalFlow?.length;
+  }
+
+  hasPendingApproval(entry: JournalEntry): boolean {
+    return entry.approval?.status === 'PENDING';
+  }
+
+  canPostJournal(entry: JournalEntry): boolean {
+    return !this.hasPendingApproval(entry) && entry.approval?.status !== 'REJECTED';
+  }
+
+  canReverseJournal(entry: JournalEntry): boolean {
+    return !entry.reversalOf && !(entry.reversals?.length);
+  }
+
+  auditActionLabel(action: string): string {
+    const map: Record<string, string> = {
+      ACCOUNTING_ENTRY_CREATED: 'Comprobante creado',
+      ACCOUNTING_ENTRY_UPDATED: 'Comprobante actualizado',
+      ACCOUNTING_ENTRY_POSTED: 'Comprobante contabilizado',
+      ACCOUNTING_ENTRY_CANCELLED: 'Comprobante anulado',
+      ACCOUNTING_ENTRY_DELETED: 'Comprobante eliminado',
+      ACCOUNTING_ENTRY_APPROVAL_REQUESTED: 'Aprobación solicitada',
+      ACCOUNTING_ENTRY_APPROVED: 'Comprobante aprobado',
+      ACCOUNTING_ENTRY_REJECTED: 'Aprobación rechazada',
+      ACCOUNTING_ENTRY_ATTACHMENT_ADDED: 'Soporte agregado',
+      ACCOUNTING_ENTRY_REVERSED: 'Reverso generado',
+    };
+    return map[action] ?? action;
+  }
+
+  formatAuditPayload(value: any): string {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value ?? '');
+    }
+  }
 
   levelLabel(level: number): string {
     return LEVEL_LABELS[level] ?? '';
@@ -2542,6 +5310,32 @@ export class AccountingComponent implements OnInit {
       CANCELLED: 'Anulado',
     };
     return map[status] ?? status;
+  }
+
+  moduleLabel(module: string): string {
+    const map: Record<string, string> = {
+      invoices: 'Facturación',
+      purchasing: 'Compras',
+      cartera: 'Cartera',
+      payroll: 'Nómina',
+      inventory: 'Inventario',
+    };
+    return map[module] ?? module;
+  }
+
+  integrationStatusLabel(status: 'SUCCESS' | 'FAILED' | 'SKIPPED'): string {
+    const map = {
+      SUCCESS: 'Exitosa',
+      FAILED: 'Fallida',
+      SKIPPED: 'Omitida',
+    };
+    return map[status] ?? status;
+  }
+
+  integrationBadge(status: 'SUCCESS' | 'FAILED' | 'SKIPPED'): 'posted' | 'cancelled' | 'draft' {
+    if (status === 'SUCCESS') return 'posted';
+    if (status === 'FAILED') return 'cancelled';
+    return 'draft';
   }
 
   periodYearOptions(): number[] {
@@ -2609,6 +5403,19 @@ export class AccountingComponent implements OnInit {
     return d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
+  formatDateTime(iso: string): string {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
   min(a: number, b: number): number { return Math.min(a, b); }
 
   getAvailableParentAccounts(): Account[] {
@@ -2645,8 +5452,8 @@ export class AccountingComponent implements OnInit {
       description: '',
       reference:   '',
       lines: [
-        { accountId: '', description: '', debit: null, credit: null },
-        { accountId: '', description: '', debit: null, credit: null },
+        { accountId: '', branchId: '', customerId: '', costCenter: '', projectCode: '', description: '', debit: null, credit: null },
+        { accountId: '', branchId: '', customerId: '', costCenter: '', projectCode: '', description: '', debit: null, credit: null },
       ],
     };
   }
@@ -2657,6 +5464,90 @@ export class AccountingComponent implements OnInit {
       year: current.getFullYear(),
       month: current.getMonth() + 1,
       name: '',
+    };
+  }
+
+  private emptyBankAccountForm(): BankAccountForm {
+    return {
+      bankCode: '',
+      accountingAccountId: '',
+      name: '',
+      accountNumber: '',
+      currency: 'COP',
+      openingBalance: 0,
+    };
+  }
+
+  private emptyBankStatementForm(): BankStatementForm {
+    return {
+      bankAccountId: '',
+      delimiter: ',',
+      csvText: '',
+      autoMatchEntries: true,
+    };
+  }
+
+  private emptyTaxConfigForm(): TaxConfigForm {
+    return {
+      taxCode: '',
+      label: '',
+      rate: null,
+      accountId: '',
+    };
+  }
+
+  private emptyFixedAssetForm(): FixedAssetForm {
+    const today = new Date().toISOString().split('T')[0];
+    return {
+      assetCode: '',
+      name: '',
+      acquisitionDate: today,
+      startDepreciationDate: today,
+      cost: null,
+      salvageValue: 0,
+      usefulLifeMonths: 60,
+      assetAccountId: '',
+      accumulatedDepAccountId: '',
+      depreciationExpenseAccountId: '',
+      notes: '',
+    };
+  }
+
+  private emptyDeferredChargeForm(): DeferredChargeForm {
+    const today = new Date().toISOString().split('T')[0];
+    return {
+      chargeCode: '',
+      name: '',
+      startDate: today,
+      amount: null,
+      termMonths: 12,
+      assetAccountId: '',
+      amortizationExpenseAccountId: '',
+      notes: '',
+    };
+  }
+
+  private emptyProvisionTemplateForm(): ProvisionTemplateForm {
+    const today = new Date().toISOString().split('T')[0];
+    return {
+      provisionCode: '',
+      name: '',
+      amount: null,
+      frequencyMonths: 1,
+      startDate: today,
+      nextRunDate: today,
+      endDate: '',
+      expenseAccountId: '',
+      liabilityAccountId: '',
+      isActive: true,
+      notes: '',
+    };
+  }
+
+  private emptyJournalAttachmentForm(): JournalAttachmentForm {
+    return {
+      fileName: '',
+      fileUrl: '',
     };
   }
 
