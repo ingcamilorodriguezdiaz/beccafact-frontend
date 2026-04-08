@@ -3785,6 +3785,19 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
     }
     .tab-btn--active svg { color:#dffef5; }
     .tab-btn--active .tab-btn__meta { color:rgba(236,244,255,.82); }
+    .tab-btn--active:hover {
+      color:#fff;
+      border-color:rgba(15,138,127,.34);
+      background:linear-gradient(135deg,#143866 0%, #0d7b72 100%);
+      box-shadow:0 18px 30px rgba(15,62,114,.24);
+    }
+    .tab-btn--active:hover svg {
+      color:#dffef5;
+      transform:scale(1.05);
+    }
+    .tab-btn--active:hover .tab-btn__meta {
+      color:rgba(236,244,255,.86);
+    }
 
     /* ── Filtros ───────────────────────────────────────────────── */
     .filters-shell { margin-bottom:18px; padding:14px 18px; border-radius:16px; background:rgba(255,255,255,.84); border:1px solid #dce6f0; box-shadow:0 8px 20px rgba(12,28,53,.04); backdrop-filter:blur(10px); }
