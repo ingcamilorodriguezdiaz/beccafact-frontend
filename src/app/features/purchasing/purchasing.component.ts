@@ -724,56 +724,137 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
       </section>
 
       <!-- ── Pestañas ───────────────────────────────────────────── -->
-      <div class="tabs-bar">
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'customers'" (click)="switchTab('customers')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
-          Clientes
-        </button>
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'budgets'" (click)="switchTab('budgets')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v1H4V4zm0 3h12v9a2 2 0 01-2 2H6a2 2 0 01-2-2V7zm3 2a1 1 0 000 2h6a1 1 0 100-2H7zm0 3a1 1 0 100 2h3a1 1 0 100-2H7z"/></svg>
-          Presupuestos
-        </button>
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'requests'" (click)="switchTab('requests')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8.414A2 2 0 0013.414 7L10 3.586A2 2 0 008.586 3H4zm5 4a1 1 0 10-2 0v1H6a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2H9V7z" clip-rule="evenodd"/></svg>
-          Solicitudes
-        </button>
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'orders'" (click)="switchTab('orders')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
-          Órdenes de Compra
-        </button>
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'receipts'" (click)="switchTab('receipts')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 4a2 2 0 012-2h8a2 2 0 011.414.586l2 2A2 2 0 0117 6v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm4 4a1 1 0 000 2h6a1 1 0 100-2H7zm0 4a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
-          Recepciones
-        </button>
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'purchaseInvoices'" (click)="switchTab('purchaseInvoices')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7.414A2 2 0 0016.414 6l-2.414-2.414A2 2 0 0012.586 3H5zm2 5a1 1 0 000 2h6a1 1 0 100-2H7zm0 4a1 1 0 100 2h4a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
-          Facturas Proveedor
-        </button>
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'accountsPayable'" (click)="switchTab('accountsPayable')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v2H4V4zm0 4h12v8a2 2 0 01-2 2H6a2 2 0 01-2-2V8zm3 2a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg>
-          Cuentas por Pagar
-        </button>
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'purchaseAdvances'" (click)="switchTab('purchaseAdvances')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M10 2a1 1 0 011 1v2h2a1 1 0 110 2h-2v2a1 1 0 11-2 0V7H7a1 1 0 110-2h2V3a1 1 0 011-1z"/><path d="M4 11a2 2 0 012-2h8a2 2 0 012 2v4a3 3 0 01-3 3H7a3 3 0 01-3-3v-4z"/></svg>
-          Anticipos
-        </button>
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'adjustments'" (click)="switchTab('adjustments')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.268a7.001 7.001 0 013.95 1.636l.896-.518a1 1 0 111 1.732l-.897.518a7.036 7.036 0 010 3.728l.897.518a1 1 0 01-1 1.732l-.896-.518A7.001 7.001 0 0111 15.732V17a1 1 0 11-2 0v-1.268a7.001 7.001 0 01-3.95-1.636l-.896.518a1 1 0 01-1-1.732l.897-.518a7.036 7.036 0 010-3.728l-.897-.518a1 1 0 111-1.732l.896.518A7.001 7.001 0 019 4.268V3a1 1 0 011-1zm0 5a3 3 0 100 6 3 3 0 000-6z" clip-rule="evenodd"/></svg>
-          Ajustes
-        </button>
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'supplierQuotes'" (click)="switchTab('supplierQuotes')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v3H4V4zm0 5h12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V9zm3 2a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg>
-          Cotizaciones Proveedor
-        </button>
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'frameworkAgreements'" (click)="switchTab('frameworkAgreements')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V8l-5-5H4zm8 1.414L16.586 9H13a1 1 0 01-1-1V4.414zM6 11a1 1 0 000 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
-          Acuerdos Marco
-        </button>
-        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'analytics'" (click)="switchTab('analytics')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M3 3h2v14H3V3zm6 5h2v9H9V8zm6-4h2v13h-2V4z"/></svg>
-          Analítica
-        </button>
-      </div>
+      <section class="tabs-shell">
+        <div class="tabs-shell__head">
+          <div>
+            <span class="tabs-shell__eyebrow">Navegación del módulo</span>
+            <h3>Áreas de Compras</h3>
+          </div>
+          <p>Organiza el flujo por operación, abastecimiento y control financiero.</p>
+        </div>
+
+        <div class="tabs-groups">
+          <section class="tab-group">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Base comercial</span>
+              <small>Terceros y control inicial</small>
+            </div>
+            <div class="tab-grid tab-grid--compact">
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'customers'" (click)="switchTab('customers')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Clientes</span>
+                  <span class="tab-btn__meta">Terceros asociados a compras</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'budgets'" (click)="switchTab('budgets')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v1H4V4zm0 3h12v9a2 2 0 01-2 2H6a2 2 0 01-2-2V7zm3 2a1 1 0 000 2h6a1 1 0 100-2H7zm0 3a1 1 0 100 2h3a1 1 0 100-2H7z"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Presupuestos</span>
+                  <span class="tab-btn__meta">Cupos y control financiero</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section class="tab-group">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Operación de compra</span>
+              <small>Solicitud, orden, recepción y causación</small>
+            </div>
+            <div class="tab-grid">
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'requests'" (click)="switchTab('requests')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8.414A2 2 0 0013.414 7L10 3.586A2 2 0 008.586 3H4zm5 4a1 1 0 10-2 0v1H6a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2H9V7z" clip-rule="evenodd"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Solicitudes</span>
+                  <span class="tab-btn__meta">Requerimientos internos</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'orders'" (click)="switchTab('orders')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Órdenes de Compra</span>
+                  <span class="tab-btn__meta">Órdenes emitidas al proveedor</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'receipts'" (click)="switchTab('receipts')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 4a2 2 0 012-2h8a2 2 0 011.414.586l2 2A2 2 0 0117 6v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm4 4a1 1 0 000 2h6a1 1 0 100-2H7zm0 4a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Recepciones</span>
+                  <span class="tab-btn__meta">Ingreso y control de recepción</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'purchaseInvoices'" (click)="switchTab('purchaseInvoices')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7.414A2 2 0 0016.414 6l-2.414-2.414A2 2 0 0012.586 3H5zm2 5a1 1 0 000 2h6a1 1 0 100-2H7zm0 4a1 1 0 100 2h4a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Facturas de Proveedor</span>
+                  <span class="tab-btn__meta">Causación y soporte documental</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section class="tab-group">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Tesorería y ajustes</span>
+              <small>Obligaciones, anticipos y novedades</small>
+            </div>
+            <div class="tab-grid">
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'accountsPayable'" (click)="switchTab('accountsPayable')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v2H4V4zm0 4h12v8a2 2 0 01-2 2H6a2 2 0 01-2-2V8zm3 2a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Cuentas por Pagar</span>
+                  <span class="tab-btn__meta">Obligaciones pendientes</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'purchaseAdvances'" (click)="switchTab('purchaseAdvances')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M10 2a1 1 0 011 1v2h2a1 1 0 110 2h-2v2a1 1 0 11-2 0V7H7a1 1 0 110-2h2V3a1 1 0 011-1z"/><path d="M4 11a2 2 0 012-2h8a2 2 0 012 2v4a3 3 0 01-3 3H7a3 3 0 01-3-3v-4z"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Anticipos</span>
+                  <span class="tab-btn__meta">Pagos adelantados al proveedor</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'adjustments'" (click)="switchTab('adjustments')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.268a7.001 7.001 0 013.95 1.636l.896-.518a1 1 0 111 1.732l-.897.518a7.036 7.036 0 010 3.728l.897.518a1 1 0 01-1 1.732l-.896-.518A7.001 7.001 0 0111 15.732V17a1 1 0 11-2 0v-1.268a7.001 7.001 0 01-3.95-1.636l-.896.518a1 1 0 01-1-1.732l.897-.518a7.036 7.036 0 010-3.728l-.897-.518a1 1 0 111-1.732l.896.518A7.001 7.001 0 019 4.268V3a1 1 0 011-1zm0 5a3 3 0 100 6 3 3 0 000-6z" clip-rule="evenodd"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Ajustes</span>
+                  <span class="tab-btn__meta">Novedades, devoluciones y cambios</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section class="tab-group">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Abastecimiento estratégico</span>
+              <small>Negociación y acuerdos con proveedores</small>
+            </div>
+            <div class="tab-grid tab-grid--compact">
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'supplierQuotes'" (click)="switchTab('supplierQuotes')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v3H4V4zm0 5h12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V9zm3 2a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Cotizaciones de Proveedor</span>
+                  <span class="tab-btn__meta">Comparación de ofertas</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'frameworkAgreements'" (click)="switchTab('frameworkAgreements')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V8l-5-5H4zm8 1.414L16.586 9H13a1 1 0 01-1-1V4.414zM6 11a1 1 0 000 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Acuerdos Marco</span>
+                  <span class="tab-btn__meta">Condiciones negociadas vigentes</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'analytics'" (click)="switchTab('analytics')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M3 3h2v14H3V3zm6 5h2v9H9V8zm6-4h2v13h-2V4z"/></svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Analítica</span>
+                  <span class="tab-btn__meta">Desempeño y trazabilidad</span>
+                </span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
 
       <!-- ── Filtros ─────────────────────────────────────────────── -->
       <section class="filters-shell">
@@ -3560,42 +3641,130 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
     .section-head h3 { margin:0; font-size:16px; color:#0c1c35; }
 
     /* ── Pestañas ──────────────────────────────────────────────── */
-    .tabs-bar {
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(168px, 1fr));
-      gap:10px;
+    .tabs-shell {
       margin-bottom:18px;
-      padding:14px;
-      border-radius:22px;
-      background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(244,248,252,.98) 100%);
+      padding:18px;
+      border-radius:24px;
+      background:linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(245,248,252,.98) 100%);
       border:1px solid #dce6f0;
       box-shadow:0 18px 34px rgba(12,28,53,.06);
     }
+    .tabs-shell__head {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:18px;
+      margin-bottom:16px;
+      padding-bottom:14px;
+      border-bottom:1px solid #e4edf5;
+    }
+    .tabs-shell__eyebrow {
+      display:inline-flex;
+      margin-bottom:6px;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      color:#6f85a0;
+    }
+    .tabs-shell__head h3 {
+      margin:0;
+      font-size:20px;
+      line-height:1.1;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+      font-family:'Sora',sans-serif;
+    }
+    .tabs-shell__head p {
+      margin:0;
+      max-width:360px;
+      font-size:13px;
+      line-height:1.55;
+      color:#6d7f94;
+      text-align:right;
+    }
+    .tabs-groups {
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:14px;
+    }
+    .tab-group {
+      padding:14px;
+      border-radius:20px;
+      background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border:1px solid #dde7f1;
+      box-shadow:0 12px 24px rgba(12,28,53,.04);
+    }
+    .tab-group__header {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .tab-group__label {
+      display:block;
+      font-size:12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#173d73;
+    }
+    .tab-group__header small {
+      font-size:11.5px;
+      color:#7c8fa5;
+      text-align:right;
+      line-height:1.4;
+    }
+    .tab-grid {
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:10px;
+    }
     .tab-btn {
       display:flex;
-      align-items:center;
-      gap:10px;
-      min-height:56px;
-      padding:13px 14px;
+      align-items:flex-start;
+      gap:12px;
+      min-height:72px;
+      padding:14px 15px;
       width:100%;
       text-align:left;
-      border:1px solid transparent;
+      border:1px solid #dce6f0;
       border-radius:16px;
-      background:linear-gradient(180deg, #f8fbff 0%, #f1f6fb 100%);
+      background:linear-gradient(180deg, #fcfdff 0%, #f3f7fb 100%);
       cursor:pointer;
-      font-size:13.5px;
+      font-size:13px;
       font-weight:700;
       line-height:1.25;
       color:#4b647f;
       transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
-      box-shadow:0 8px 16px rgba(12,28,53,.04);
+      box-shadow:0 8px 16px rgba(12,28,53,.035);
     }
     .tab-btn svg {
       flex-shrink:0;
-      width:16px;
-      height:16px;
+      width:18px;
+      height:18px;
+      margin-top:2px;
       color:#6b85a3;
       transition:color .16s ease, transform .16s ease;
+    }
+    .tab-btn__content {
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:0;
+    }
+    .tab-btn__title {
+      display:block;
+      font-size:13.5px;
+      font-weight:800;
+      color:inherit;
+    }
+    .tab-btn__meta {
+      display:block;
+      font-size:11.5px;
+      line-height:1.45;
+      color:#7b8fa8;
     }
     .tab-btn:hover {
       color:#123b6d;
@@ -3615,6 +3784,7 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
       box-shadow:0 16px 28px rgba(15,62,114,.2);
     }
     .tab-btn--active svg { color:#dffef5; }
+    .tab-btn--active .tab-btn__meta { color:rgba(236,244,255,.82); }
 
     /* ── Filtros ───────────────────────────────────────────────── */
     .filters-shell { margin-bottom:18px; padding:14px 18px; border-radius:16px; background:rgba(255,255,255,.84); border:1px solid #dce6f0; box-shadow:0 8px 20px rgba(12,28,53,.04); backdrop-filter:blur(10px); }
@@ -3830,16 +4000,28 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
       .page-header { flex-direction:column; align-items:stretch; gap:10px; }
       .page-header .btn { width:100%; justify-content:center; }
       .hero-mini-grid, .kpi-strip, .analytics-cards, .analytics-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
-      .tabs-bar { grid-template-columns:repeat(2, minmax(0, 1fr)); padding:12px; }
-      .tab-btn { min-height:52px; padding:12px 13px; font-size:13px; }
+      .tabs-shell { padding:16px; }
+      .tabs-shell__head { align-items:flex-start; flex-direction:column; }
+      .tabs-shell__head p { max-width:none; text-align:left; }
+      .tabs-groups { grid-template-columns:1fr; }
+      .tab-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+      .tab-btn { min-height:68px; padding:13px 14px; font-size:13px; }
       .filters-bar { gap:8px; }
       .search-wrap { max-width:100%; flex:1 1 100%; }
       .results-pill { margin-left:0; }
       .view-toggle { margin-left:0; }
     }
     @media (max-width: 640px) {
-      .tabs-bar { grid-template-columns:1fr; gap:8px; padding:10px; border-radius:18px; }
-      .tab-btn { min-height:50px; padding:11px 12px; border-radius:14px; }
+      .tabs-shell { padding:14px; border-radius:20px; }
+      .tabs-shell__head { margin-bottom:14px; padding-bottom:12px; }
+      .tabs-shell__head h3 { font-size:18px; }
+      .tab-group { padding:12px; border-radius:18px; }
+      .tab-group__header { align-items:flex-start; flex-direction:column; margin-bottom:10px; }
+      .tab-group__header small { text-align:left; }
+      .tab-grid { grid-template-columns:1fr; gap:8px; }
+      .tab-btn { min-height:64px; padding:12px 13px; border-radius:14px; }
+      .tab-btn__title { font-size:13px; }
+      .tab-btn__meta { font-size:11px; }
       .hero-mini-grid, .kpi-strip, .analytics-cards, .analytics-grid { grid-template-columns:1fr; }
       .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
       .data-table { min-width:520px; }
