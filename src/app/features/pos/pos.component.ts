@@ -4746,14 +4746,14 @@ export class PosComponent implements OnInit, OnDestroy {
   terminalForm = this.emptyTerminalForm();
   shiftForm = this.emptyShiftForm();
   loyaltyCampaignForm = this.emptyLoyaltyCampaignForm();
+  selectedPriceListId = signal<string>('');
+  selectedInventoryLocationId = signal<string>('');
   inventoryLocationForm = this.emptyInventoryLocationForm();
   inventoryStockForm = this.emptyInventoryStockForm();
   inventoryTransferForm = this.emptyInventoryTransferForm();
   priceLists = signal<PosPriceList[]>([]);
   promotions = signal<PosPromotion[]>([]);
   combos = signal<PosCombo[]>([]);
-  selectedPriceListId = signal<string>('');
-  selectedInventoryLocationId = signal<string>('');
   pricingPreview = signal<PosPricingPreview | null>(null);
   loadingPricingPreview = signal(false);
   readonly governanceRoles = ['ADMIN', 'MANAGER', 'OPERATOR', 'CAJERO'];
