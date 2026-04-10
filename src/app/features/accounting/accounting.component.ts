@@ -320,6 +320,22 @@ interface AccountingTaxConfig {
   account: { id: string; code: string; name: string };
 }
 
+interface InvoiceAccountingProfile {
+  id: string;
+  profileName: string;
+  invoiceType: string;
+  sourceChannel?: string | null;
+  branchId?: string | null;
+  isActive: boolean;
+  receivableAccount: { id: string; code: string; name: string };
+  revenueAccount: { id: string; code: string; name: string };
+  taxAccount: { id: string; code: string; name: string };
+  withholdingReceivableAccount?: { id: string; code: string; name: string } | null;
+  withholdingRate?: number | null;
+  icaReceivableAccount?: { id: string; code: string; name: string } | null;
+  icaRate?: number | null;
+}
+
 interface FiscalSummaryResponse {
   dateFrom: string;
   dateTo: string;
@@ -486,6 +502,22 @@ interface ProvisionTemplateForm {
   liabilityAccountId: string;
   isActive: boolean;
   notes: string;
+}
+
+interface InvoiceAccountingProfileForm {
+  id?: string;
+  profileName: string;
+  invoiceType: string;
+  sourceChannel: string;
+  branchId: string;
+  receivableAccountId: string;
+  revenueAccountId: string;
+  taxAccountId: string;
+  withholdingReceivableAccountId: string;
+  withholdingRate: number | null;
+  icaReceivableAccountId: string;
+  icaRate: number | null;
+  isActive: boolean;
 }
 
 interface AccountForm {
@@ -1663,6 +1695,7 @@ const LEVEL_LABELS: Record<number, string> = {
               </div>
               <div class="panel-card__filters">
                 <button class="btn btn-primary btn-sm" (click)="openTaxConfigModal()">Configurar impuesto</button>
+                <button class="btn btn-outline btn-sm" (click)="openInvoiceAccountingProfileModal()">Perfil facturación</button>
               </div>
             </div>
 
@@ -1708,6 +1741,63 @@ const LEVEL_LABELS: Record<number, string> = {
                         <span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">
                           {{ item.isActive ? 'Activo' : 'Inactivo' }}
                         </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Integración contable avanzada</p>
+                <h3>Perfiles por tipo de factura</h3>
+              </div>
+            </div>
+
+            @if (invoiceAccountingProfiles().length === 0) {
+              <div class="empty-state compact">
+                <p>No hay perfiles contables de facturación configurados aún.</p>
+              </div>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Perfil</th>
+                    <th>Tipo</th>
+                    <th>Canal / sucursal</th>
+                    <th>Retenciones</th>
+                    <th>Cuentas</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of invoiceAccountingProfiles(); track item.id) {
+                    <tr>
+                      <td>
+                        <strong>{{ item.profileName }}</strong>
+                        <div class="text-muted">{{ item.isActive ? 'Activo' : 'Inactivo' }}</div>
+                      </td>
+                      <td>{{ item.invoiceType }}</td>
+                      <td>
+                        <div>{{ item.sourceChannel || 'Todos los canales' }}</div>
+                        <div class="text-muted">{{ item.branchId || 'Todas las sucursales' }}</div>
+                      </td>
+                      <td>
+                        <div>Rete: {{ item.withholdingRate ?? 0 }}%</div>
+                        <div class="text-muted">ICA: {{ item.icaRate ?? 0 }}%</div>
+                      </td>
+                      <td>
+                        <div class="text-muted">{{ item.receivableAccount.code }} · CxC</div>
+                        <div class="text-muted">{{ item.revenueAccount.code }} · Ingreso</div>
+                        <div class="text-muted">{{ item.taxAccount.code }} · IVA</div>
+                      </td>
+                      <td class="actions-cell">
+                        <button class="btn-icon" title="Editar perfil" (click)="openInvoiceAccountingProfileModal(item)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                        </button>
                       </td>
                     </tr>
                   }
@@ -2294,6 +2384,120 @@ const LEVEL_LABELS: Record<number, string> = {
           <div class="modal-foot">
             <button class="btn btn-secondary" (click)="closeTaxConfigModal()">Cancelar</button>
             <button class="btn btn-primary" (click)="saveTaxConfig()" [disabled]="savingTaxConfig()">Guardar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showInvoiceAccountingProfileModal()) {
+      <div class="modal-backdrop" (click)="closeInvoiceAccountingProfileModal()"></div>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-card modal-card--wide">
+          <div class="modal-head">
+            <div>
+              <h3>Perfil contable de facturación</h3>
+              <p>Define cuentas y retenciones por tipo, canal o sucursal.</p>
+            </div>
+            <button class="modal-close" (click)="closeInvoiceAccountingProfileModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <label class="field">
+                <span>Nombre del perfil</span>
+                <input type="text" [(ngModel)]="invoiceAccountingProfileForm.profileName" placeholder="Factura venta POS principal"/>
+              </label>
+              <label class="field">
+                <span>Tipo de factura</span>
+                <select [(ngModel)]="invoiceAccountingProfileForm.invoiceType">
+                  <option value="VENTA">VENTA</option>
+                  <option value="NOTA_CREDITO">NOTA_CREDITO</option>
+                  <option value="NOTA_DEBITO">NOTA_DEBITO</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Canal</span>
+                <select [(ngModel)]="invoiceAccountingProfileForm.sourceChannel">
+                  <option value="">Todos</option>
+                  <option value="DIRECT">DIRECT</option>
+                  <option value="POS">POS</option>
+                  <option value="ONLINE">ONLINE</option>
+                  <option value="WHOLESALE">WHOLESALE</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Sucursal</span>
+                <select [(ngModel)]="invoiceAccountingProfileForm.branchId">
+                  <option value="">Todas</option>
+                  @for (branch of branches(); track branch.id) {
+                    <option [value]="branch.id">{{ branch.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Cuenta por cobrar</span>
+                <select [(ngModel)]="invoiceAccountingProfileForm.receivableAccountId">
+                  <option value="">Selecciona una cuenta</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Cuenta de ingreso</span>
+                <select [(ngModel)]="invoiceAccountingProfileForm.revenueAccountId">
+                  <option value="">Selecciona una cuenta</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Cuenta de IVA</span>
+                <select [(ngModel)]="invoiceAccountingProfileForm.taxAccountId">
+                  <option value="">Selecciona una cuenta</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Cuenta retefuente por cobrar</span>
+                <select [(ngModel)]="invoiceAccountingProfileForm.withholdingReceivableAccountId">
+                  <option value="">Sin retefuente</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>% retefuente</span>
+                <input type="number" [(ngModel)]="invoiceAccountingProfileForm.withholdingRate" placeholder="2.5"/>
+              </label>
+              <label class="field">
+                <span>Cuenta ICA por cobrar</span>
+                <select [(ngModel)]="invoiceAccountingProfileForm.icaReceivableAccountId">
+                  <option value="">Sin ICA</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>% ICA</span>
+                <input type="number" [(ngModel)]="invoiceAccountingProfileForm.icaRate" placeholder="0.966"/>
+              </label>
+              <label class="field">
+                <span>Estado</span>
+                <select [(ngModel)]="invoiceAccountingProfileForm.isActive">
+                  <option [ngValue]="true">Activo</option>
+                  <option [ngValue]="false">Inactivo</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-secondary" (click)="closeInvoiceAccountingProfileModal()">Cancelar</button>
+            <button class="btn btn-primary" (click)="saveInvoiceAccountingProfile()" [disabled]="savingTaxConfig()">Guardar</button>
           </div>
         </div>
       </div>
@@ -3695,6 +3899,7 @@ export class AccountingComponent implements OnInit {
   private readonly ACCOUNTING_BANK_MOVEMENTS_API = `${environment.apiUrl}/accounting/bank-movements`;
   private readonly ACCOUNTING_BANK_RECONCILIATION_API = `${environment.apiUrl}/accounting/bank-reconciliation/pending`;
   private readonly ACCOUNTING_TAX_CONFIG_API = `${environment.apiUrl}/accounting/taxes/config`;
+  private readonly ACCOUNTING_INVOICE_PROFILES_API = `${environment.apiUrl}/accounting/invoice-accounting-profiles`;
   private readonly ACCOUNTING_FISCAL_SUMMARY_API = `${environment.apiUrl}/accounting/reports/fiscal-summary`;
   private readonly ACCOUNTING_VAT_SALES_BOOK_API = `${environment.apiUrl}/accounting/reports/vat-sales-book`;
   private readonly ACCOUNTING_VAT_PURCHASES_BOOK_API = `${environment.apiUrl}/accounting/reports/vat-purchases-book`;
@@ -3781,6 +3986,7 @@ export class AccountingComponent implements OnInit {
   selectedBankAccountId = signal('');
   filterBankStatus = '';
   taxConfigs = signal<AccountingTaxConfig[]>([]);
+  invoiceAccountingProfiles = signal<InvoiceAccountingProfile[]>([]);
   fiscalSummary = signal<FiscalSummaryResponse | null>(null);
   vatSalesBook = signal<VatSalesBookItem[]>([]);
   vatPurchasesBook = signal<VatPurchasesBookItem[]>([]);
@@ -3817,6 +4023,7 @@ export class AccountingComponent implements OnInit {
   showBankAccountModal = signal(false);
   showImportStatementModal = signal(false);
   showTaxConfigModal = signal(false);
+  showInvoiceAccountingProfileModal = signal(false);
   showFixedAssetModal = signal(false);
   showDeferredChargeModal = signal(false);
   showProvisionTemplateModal = signal(false);
@@ -3830,6 +4037,7 @@ export class AccountingComponent implements OnInit {
   bankAccountForm: BankAccountForm = this.emptyBankAccountForm();
   bankStatementForm: BankStatementForm = this.emptyBankStatementForm();
   taxConfigForm: TaxConfigForm = this.emptyTaxConfigForm();
+  invoiceAccountingProfileForm: InvoiceAccountingProfileForm = this.emptyInvoiceAccountingProfileForm();
   fixedAssetForm: FixedAssetForm = this.emptyFixedAssetForm();
   deferredChargeForm: DeferredChargeForm = this.emptyDeferredChargeForm();
   provisionTemplateForm: ProvisionTemplateForm = this.emptyProvisionTemplateForm();
@@ -4279,6 +4487,11 @@ export class AccountingComponent implements OnInit {
       error: () => this.taxConfigs.set([]),
     });
 
+    this.http.get<InvoiceAccountingProfile[]>(this.ACCOUNTING_INVOICE_PROFILES_API).subscribe({
+      next: (data) => this.invoiceAccountingProfiles.set(data ?? []),
+      error: () => this.invoiceAccountingProfiles.set([]),
+    });
+
     this.http.get<FiscalSummaryResponse>(this.ACCOUNTING_FISCAL_SUMMARY_API, { params }).subscribe({
       next: (data) => this.fiscalSummary.set(data),
       error: () => this.fiscalSummary.set(null),
@@ -4311,9 +4524,37 @@ export class AccountingComponent implements OnInit {
     this.showTaxConfigModal.set(true);
   }
 
+  openInvoiceAccountingProfileModal(profile?: InvoiceAccountingProfile) {
+    if (profile) {
+      this.invoiceAccountingProfileForm = {
+        id: profile.id,
+        profileName: profile.profileName,
+        invoiceType: profile.invoiceType,
+        sourceChannel: profile.sourceChannel ?? '',
+        branchId: profile.branchId ?? '',
+        receivableAccountId: profile.receivableAccount.id,
+        revenueAccountId: profile.revenueAccount.id,
+        taxAccountId: profile.taxAccount.id,
+        withholdingReceivableAccountId: profile.withholdingReceivableAccount?.id ?? '',
+        withholdingRate: profile.withholdingRate ?? null,
+        icaReceivableAccountId: profile.icaReceivableAccount?.id ?? '',
+        icaRate: profile.icaRate ?? null,
+        isActive: profile.isActive,
+      };
+    } else {
+      this.invoiceAccountingProfileForm = this.emptyInvoiceAccountingProfileForm();
+    }
+    this.showInvoiceAccountingProfileModal.set(true);
+  }
+
   closeTaxConfigModal() {
     this.showTaxConfigModal.set(false);
     this.taxConfigForm = this.emptyTaxConfigForm();
+  }
+
+  closeInvoiceAccountingProfileModal() {
+    this.showInvoiceAccountingProfileModal.set(false);
+    this.invoiceAccountingProfileForm = this.emptyInvoiceAccountingProfileForm();
   }
 
   saveTaxConfig() {
@@ -4340,6 +4581,42 @@ export class AccountingComponent implements OnInit {
       error: (e) => {
         this.savingTaxConfig.set(false);
         this.notify.error(e?.error?.message ?? 'Error al guardar la configuración fiscal');
+      },
+    });
+  }
+
+  saveInvoiceAccountingProfile() {
+    const form = this.invoiceAccountingProfileForm;
+    if (!form.profileName.trim() || !form.invoiceType || !form.receivableAccountId || !form.revenueAccountId || !form.taxAccountId) {
+      this.notify.warning('Nombre, tipo y cuentas base son obligatorios');
+      return;
+    }
+
+    this.savingTaxConfig.set(true);
+    this.http.post<InvoiceAccountingProfile>(this.ACCOUNTING_INVOICE_PROFILES_API, {
+      id: form.id || undefined,
+      profileName: form.profileName.trim(),
+      invoiceType: form.invoiceType,
+      sourceChannel: form.sourceChannel || undefined,
+      branchId: form.branchId || undefined,
+      receivableAccountId: form.receivableAccountId,
+      revenueAccountId: form.revenueAccountId,
+      taxAccountId: form.taxAccountId,
+      withholdingReceivableAccountId: form.withholdingReceivableAccountId || undefined,
+      withholdingRate: form.withholdingRate ?? undefined,
+      icaReceivableAccountId: form.icaReceivableAccountId || undefined,
+      icaRate: form.icaRate ?? undefined,
+      isActive: form.isActive,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Perfil contable de facturación guardado');
+        this.savingTaxConfig.set(false);
+        this.closeInvoiceAccountingProfileModal();
+        this.loadTaxReports();
+      },
+      error: (e) => {
+        this.savingTaxConfig.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al guardar el perfil contable');
       },
     });
   }
@@ -5493,6 +5770,23 @@ export class AccountingComponent implements OnInit {
       label: '',
       rate: null,
       accountId: '',
+    };
+  }
+
+  private emptyInvoiceAccountingProfileForm(): InvoiceAccountingProfileForm {
+    return {
+      profileName: '',
+      invoiceType: 'VENTA',
+      sourceChannel: '',
+      branchId: '',
+      receivableAccountId: '',
+      revenueAccountId: '',
+      taxAccountId: '',
+      withholdingReceivableAccountId: '',
+      withholdingRate: null,
+      icaReceivableAccountId: '',
+      icaRate: null,
+      isActive: true,
     };
   }
 

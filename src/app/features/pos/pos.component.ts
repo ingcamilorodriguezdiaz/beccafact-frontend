@@ -65,7 +65,7 @@ interface QueuedPosSalePayload {
   <!-- ═══ SESSION BAR ═══ -->
   @if (activeSession()) {
     <div class="session-bar" id="tour-pos-session-bar">
-      <div class="session-left">
+      <div class="session-top">
         <div class="session-headline">
           <div class="session-live">
             <span class="live-dot"></span>
@@ -101,55 +101,55 @@ interface QueuedPosSalePayload {
               </div>
             </div>
         </div>
-        <div class="sb-stats">
-          <div class="sb-stat">
-            <span class="sb-stat-lbl">Apertura</span>
-            <span class="sb-stat-val">{{ fmtCOP(activeSession()!.initialCash) }}</span>
-          </div>
-          <div class="sb-stat accent">
-            <span class="sb-stat-lbl">Ventas hoy</span>
-            <span class="sb-stat-val">{{ fmtCOP(activeSession()!.totalSales) }}</span>
-          </div>
-          <div class="sb-stat">
-            <span class="sb-stat-lbl">Transacciones</span>
-            <span class="sb-stat-val">{{ activeSession()!.totalTransactions }}</span>
-          </div>
-          <div class="sb-stat">
-            <span class="sb-stat-lbl">Ticket prom.</span>
-            <span class="sb-stat-val">{{ fmtCOP(sessionAverageTicket()) }}</span>
-          </div>
-          <div class="sb-stat sb-stat--focus">
-            <span class="sb-stat-lbl">Pendientes</span>
-            <span class="sb-stat-val">{{ cartCount() }} ítems</span>
-          </div>
+        <div class="session-actions">
+          <button class="sb-btn" (click)="openOperatingConfigModal()">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M9.243 1.604a1 1 0 00-1.486 0l-.62.69a1 1 0 01-1.06.27l-.9-.276a1 1 0 00-1.22.74l-.18.923a1 1 0 01-.79.79l-.923.18a1 1 0 00-.74 1.22l.275.9a1 1 0 01-.27 1.06l-.69.62a1 1 0 000 1.486l.69.62a1 1 0 01.27 1.06l-.276.9a1 1 0 00.74 1.22l.923.18a1 1 0 01.79.79l.18.923a1 1 0 001.22.74l.9-.275a1 1 0 011.06.27l.62.69a1 1 0 001.486 0l.62-.69a1 1 0 011.06-.27l.9.276a1 1 0 001.22-.74l.18-.923a1 1 0 01.79-.79l.923-.18a1 1 0 00.74-1.22l-.275-.9a1 1 0 01.27-1.06l.69-.62a1 1 0 000-1.486l-.69-.62a1 1 0 01-.27-1.06l.276-.9a1 1 0 00-.74-1.22l-.923-.18a1 1 0 01-.79-.79l-.18-.923a1 1 0 00-1.22-.74l-.9.275a1 1 0 01-1.06-.27l-.62-.69zM8.5 10.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
+            Configuración POS
+          </button>
+          <button class="sb-btn" (click)="openCashMovementModal()">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M8 1a.5.5 0 01.5.5V3h3a.5.5 0 010 1h-3v2h3a.5.5 0 010 1h-3v2h3a.5.5 0 010 1h-3v2h3a.5.5 0 010 1h-3v1.5a.5.5 0 01-1 0V13H5a2 2 0 01-2-2V5a2 2 0 012-2h2.5V1.5A.5.5 0 018 1z"/></svg>
+            Movimientos de caja
+          </button>
+          <button class="sb-btn sb-btn--fullscreen" (click)="toggleFullscreen()" [attr.aria-pressed]="isFullscreen()" [title]="isFullscreen() ? 'Salir de pantalla completa' : 'Entrar en pantalla completa'">
+            @if (isFullscreen()) {
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M2.5 10a.5.5 0 01.5.5V13h2.5a.5.5 0 010 1h-3A.5.5 0 012 13.5v-3a.5.5 0 01.5-.5zm11 0a.5.5 0 01.5.5v3a.5.5 0 01-.5.5h-3a.5.5 0 010-1H13v-2.5a.5.5 0 01.5-.5zm-8-8A.5.5 0 015 2.5V5H2.5a.5.5 0 010-1h3A.5.5 0 016 4.5v-3a.5.5 0 01.5-.5zm8 0a.5.5 0 01.5.5v3A.5.5 0 0113.5 6h-3a.5.5 0 010-1H13V2.5a.5.5 0 01.5-.5z"/></svg>
+              Salir pantalla completa
+            } @else {
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M1.5 1A.5.5 0 012 1.5V4h2.5a.5.5 0 010 1h-3A.5.5 0 011 4.5v-3A.5.5 0 011.5 1zm13 0a.5.5 0 01.5.5v3a.5.5 0 01-1 0V2h-2.5a.5.5 0 010-1h3zM1 11.5a.5.5 0 011 0V14h2.5a.5.5 0 010 1h-3A.5.5 0 011 14.5v-3zm13 0a.5.5 0 011 0v3a.5.5 0 01-.5.5h-3a.5.5 0 010-1H14v-2.5z"/></svg>
+              Pantalla completa
+            }
+          </button>
+          <button class="sb-btn" id="tour-pos-history" (click)="toggleHistory()">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H4zm3 3a1 1 0 112 0v4a1 1 0 11-2 0V5z" clip-rule="evenodd"/></svg>
+            Historial
+          </button>
+          <button class="sb-btn danger" (click)="loadSessionSummary(); showCloseSessionModal.set(true)">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M10 12.5a.5.5 0 01-.5.5h-8a.5.5 0 01-.5-.5v-9a.5.5 0 01.5-.5h8a.5.5 0 01.5.5v2a.5.5 0 001 0v-2A1.5 1.5 0 009.5 2h-8A1.5 1.5 0 000 3.5v9A1.5 1.5 0 001.5 14h8a1.5 1.5 0 001.5-1.5v-2a.5.5 0 00-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 000-.708l-3-3a.5.5 0 00-.708.708L14.293 7.5H5.5a.5.5 0 000 1h8.793l-2.147 2.146a.5.5 0 00.708.708l3-3z"/></svg>
+            Cerrar Caja
+          </button>
         </div>
       </div>
-      <div class="session-actions">
-        <button class="sb-btn" (click)="openOperatingConfigModal()">
-          <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M9.243 1.604a1 1 0 00-1.486 0l-.62.69a1 1 0 01-1.06.27l-.9-.276a1 1 0 00-1.22.74l-.18.923a1 1 0 01-.79.79l-.923.18a1 1 0 00-.74 1.22l.275.9a1 1 0 01-.27 1.06l-.69.62a1 1 0 000 1.486l.69.62a1 1 0 01.27 1.06l-.276.9a1 1 0 00.74 1.22l.923.18a1 1 0 01.79.79l.18.923a1 1 0 001.22.74l.9-.275a1 1 0 011.06.27l.62.69a1 1 0 001.486 0l.62-.69a1 1 0 011.06-.27l.9.276a1 1 0 001.22-.74l.18-.923a1 1 0 01.79-.79l.923-.18a1 1 0 00.74-1.22l-.275-.9a1 1 0 01.27-1.06l.69-.62a1 1 0 000-1.486l-.69-.62a1 1 0 01-.27-1.06l.276-.9a1 1 0 00-.74-1.22l-.923-.18a1 1 0 01-.79-.79l-.18-.923a1 1 0 00-1.22-.74l-.9.275a1 1 0 01-1.06-.27l-.62-.69zM8.5 10.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
-          Configuración POS
-        </button>
-        <button class="sb-btn" (click)="openCashMovementModal()">
-          <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M8 1a.5.5 0 01.5.5V3h3a.5.5 0 010 1h-3v2h3a.5.5 0 010 1h-3v2h3a.5.5 0 010 1h-3v2h3a.5.5 0 010 1h-3v1.5a.5.5 0 01-1 0V13H5a2 2 0 01-2-2V5a2 2 0 012-2h2.5V1.5A.5.5 0 018 1z"/></svg>
-          Movimientos de caja
-        </button>
-        <button class="sb-btn sb-btn--fullscreen" (click)="toggleFullscreen()" [attr.aria-pressed]="isFullscreen()" [title]="isFullscreen() ? 'Salir de pantalla completa' : 'Entrar en pantalla completa'">
-          @if (isFullscreen()) {
-            <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M2.5 10a.5.5 0 01.5.5V13h2.5a.5.5 0 010 1h-3A.5.5 0 012 13.5v-3a.5.5 0 01.5-.5zm11 0a.5.5 0 01.5.5v3a.5.5 0 01-.5.5h-3a.5.5 0 010-1H13v-2.5a.5.5 0 01.5-.5zm-8-8A.5.5 0 015 2.5V5H2.5a.5.5 0 010-1h3A.5.5 0 016 4.5v-3a.5.5 0 01.5-.5zm8 0a.5.5 0 01.5.5v3A.5.5 0 0113.5 6h-3a.5.5 0 010-1H13V2.5a.5.5 0 01.5-.5z"/></svg>
-            Salir pantalla completa
-          } @else {
-            <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M1.5 1A.5.5 0 012 1.5V4h2.5a.5.5 0 010 1h-3A.5.5 0 011 4.5v-3A.5.5 0 011.5 1zm13 0a.5.5 0 01.5.5v3a.5.5 0 01-1 0V2h-2.5a.5.5 0 010-1h3zM1 11.5a.5.5 0 011 0V14h2.5a.5.5 0 010 1h-3A.5.5 0 011 14.5v-3zm13 0a.5.5 0 011 0v3a.5.5 0 01-.5.5h-3a.5.5 0 010-1H14v-2.5z"/></svg>
-            Pantalla completa
-          }
-        </button>
-        <button class="sb-btn" id="tour-pos-history" (click)="toggleHistory()">
-          <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H4zm3 3a1 1 0 112 0v4a1 1 0 11-2 0V5z" clip-rule="evenodd"/></svg>
-          Historial
-        </button>
-        <button class="sb-btn danger" (click)="loadSessionSummary(); showCloseSessionModal.set(true)">
-          <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M10 12.5a.5.5 0 01-.5.5h-8a.5.5 0 01-.5-.5v-9a.5.5 0 01.5-.5h8a.5.5 0 01.5.5v2a.5.5 0 001 0v-2A1.5 1.5 0 009.5 2h-8A1.5 1.5 0 000 3.5v9A1.5 1.5 0 001.5 14h8a1.5 1.5 0 001.5-1.5v-2a.5.5 0 00-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 000-.708l-3-3a.5.5 0 00-.708.708L14.293 7.5H5.5a.5.5 0 000 1h8.793l-2.147 2.146a.5.5 0 00.708.708l3-3z"/></svg>
-          Cerrar Caja
-        </button>
+      <div class="sb-stats">
+        <div class="sb-stat">
+          <span class="sb-stat-lbl">Apertura</span>
+          <span class="sb-stat-val">{{ fmtCOP(activeSession()!.initialCash) }}</span>
+        </div>
+        <div class="sb-stat accent">
+          <span class="sb-stat-lbl">Ventas hoy</span>
+          <span class="sb-stat-val">{{ fmtCOP(activeSession()!.totalSales) }}</span>
+        </div>
+        <div class="sb-stat">
+          <span class="sb-stat-lbl">Transacciones</span>
+          <span class="sb-stat-val">{{ activeSession()!.totalTransactions }}</span>
+        </div>
+        <div class="sb-stat">
+          <span class="sb-stat-lbl">Ticket prom.</span>
+          <span class="sb-stat-val">{{ fmtCOP(sessionAverageTicket()) }}</span>
+        </div>
+        <div class="sb-stat sb-stat--focus">
+          <span class="sb-stat-lbl">Pendientes</span>
+          <span class="sb-stat-val">{{ cartCount() }} ítems</span>
+        </div>
       </div>
     </div>
   }
@@ -587,6 +587,7 @@ interface QueuedPosSalePayload {
           <div class="pm-grid">
             @for (m of paymentMethods; track m.value) {
               <button class="pm-btn"
+                      type="button"
                       [attr.data-method]="m.value.toLowerCase()"
                       [class.pm-active]="selectedPaymentMethod() === m.value"
                       (click)="setPrimaryPaymentMethod(m.value)">
@@ -3257,15 +3258,22 @@ interface QueuedPosSalePayload {
        SESSION BAR
     ═══════════════════════════════════════ */
     .session-bar {
-      display:flex; align-items:center; justify-content:space-between;
+      display:grid;
+      gap:14px;
       padding:14px 20px;
       background:linear-gradient(135deg, #0d2344 0%, #16386a 52%, #0c7e70 100%);
       border-bottom:1px solid rgba(255,255,255,.08);
-      flex-shrink:0; gap:16px;
+      flex-shrink:0;
       color:#fff;
       box-shadow:0 18px 30px rgba(12,28,53,.12);
     }
-    .session-left { display:flex; align-items:center; justify-content:space-between; gap:18px; min-width:0; flex:1; }
+    .session-top {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:18px;
+      min-width:0;
+    }
     .session-headline { display:grid; gap:10px; min-width:220px; }
     .session-live { display:flex; align-items:center; gap:7px; }
     .live-dot {
@@ -3286,7 +3294,7 @@ interface QueuedPosSalePayload {
     }
     .session-operator strong { display:block; font-size:13px; font-weight:700; color:#fff; }
     .session-operator small { display:block; margin-top:2px; font-size:11px; color:rgba(236,244,255,.72); }
-    .sb-stats { display:grid; grid-template-columns:repeat(5, minmax(92px, 1fr)); gap:10px; flex:1; }
+    .sb-stats { display:grid; grid-template-columns:repeat(5, minmax(110px, 1fr)); gap:10px; }
     .sb-stat {
       display:flex; flex-direction:column; gap:4px;
       padding:10px 12px;
@@ -3300,13 +3308,21 @@ interface QueuedPosSalePayload {
     .sb-stat-val { font-size:13px; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .sb-stat.accent .sb-stat-val { color:#8bf3cb; }
     .sb-stat--focus { background:rgba(0,198,160,.16); border-color:rgba(138,243,203,.22); }
-    .session-actions { display:flex; gap:7px; flex-shrink:0; }
+    .session-actions {
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      gap:7px;
+      flex-shrink:0;
+      max-width:720px;
+    }
     .sb-btn {
       display:flex; align-items:center; gap:5px; padding:5px 12px;
       border-radius:7px; font-size:11.5px; font-weight:600; cursor:pointer;
       background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.12);
       color:#fff; transition:all .14s;
       backdrop-filter:blur(8px);
+      white-space:nowrap;
     }
     .sb-btn:hover { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.22); color:#fff; }
     .sb-btn.danger { background:rgba(239,68,68,.16); border-color:rgba(254,202,202,.32); color:#fff; }
@@ -4531,6 +4547,15 @@ interface QueuedPosSalePayload {
         flex-direction:column;
         padding:12px;
       }
+      .session-top {
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .session-actions {
+        max-width:none;
+        justify-content:flex-start;
+      }
+      .sb-stats { grid-template-columns:repeat(3, minmax(0, 1fr)); }
       .products-panel { border-right:none; }
       .checkout-panel { width:100%; min-width:0; }
     }
@@ -5896,10 +5921,17 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   private syncPaymentSummaryFromLines() {
-    const lines = this.paymentLines().filter((line) => Number(line.amount || 0) > 0);
-    const total = lines.reduce((sum, line) => sum + Number(line.amount || 0), 0);
+    const allLines = this.paymentLines();
+    const linesWithAmount = allLines.filter((line) => Number(line.amount || 0) > 0);
+    const total = linesWithAmount.reduce((sum, line) => sum + Number(line.amount || 0), 0);
     this.amountPaid.set(Math.round(total * 100) / 100);
-    this.selectedPaymentMethod.set(lines.length === 1 ? lines[0].paymentMethod : 'MIXED');
+    if (allLines.length === 1) {
+      this.selectedPaymentMethod.set(allLines[0].paymentMethod);
+      return;
+    }
+    if (allLines.length > 1) {
+      this.selectedPaymentMethod.set('MIXED');
+    }
   }
 
   private updatePaymentLines(lines: EditablePaymentLine[]) {

@@ -136,7 +136,12 @@ import { environment } from '../../../environments/environment';
                 </div>
 
                 <div class="db__module-value">{{ reportData().revenue | currency:'COP':'$':'1.0-0' }}</div>
-                <p class="db__module-copy">Ingresos del mes con {{ reportData().invoicesThisMonth }} facturas emitidas.</p>
+                <p class="db__module-copy">
+                  Ingresos del mes con {{ reportData().invoicesThisMonth }} facturas emitidas.
+                  @if (reportData().rejectedDian > 0) {
+                    <span> {{ reportData().rejectedDian }} rechazadas por DIAN requieren atención.</span>
+                  }
+                </p>
 
                 <div class="db__module-pairs">
                   <div>
@@ -144,8 +149,8 @@ import { environment } from '../../../environments/environment';
                     <strong>{{ reportData().invoicesThisMonth }}</strong>
                   </div>
                   <div>
-                    <small>Clientes activos</small>
-                    <strong>{{ reportData().activeCustomers }}</strong>
+                    <small>Recaudo</small>
+                    <strong>{{ reportData().collectionRate }}%</strong>
                   </div>
                 </div>
 
@@ -1358,7 +1363,16 @@ export class DashboardComponent implements OnInit {
   currentPeriod = new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
 
   usageData = signal({ docsUsed: 0, productsUsed: 0 });
-  reportData = signal({ invoicesThisMonth: 0, activeCustomers: 0, activeCatalog: 0, lowStock: 0, revenue: 0 });
+  reportData = signal({
+    invoicesThisMonth: 0,
+    activeCustomers: 0,
+    activeCatalog: 0,
+    lowStock: 0,
+    revenue: 0,
+    rejectedDian: 0,
+    pendingDian: 0,
+    collectionRate: 0,
+  });
   carteraData = signal({ totalCartera: 0, totalOverdue: 0 });
   posData = signal({ totalSales: 0, totalTransactions: 0 });
   payrollData = signal({ totalNet: 0, employeeCount: 0 });
@@ -1712,6 +1726,7 @@ export class DashboardComponent implements OnInit {
   ngOnInit() {
     this.loadUsage();
     this.loadReports();
+    if (this.hasInvoices()) this.loadInvoiceAnalytics();
     if (this.hasQuotes()) this.loadQuotes();
     if (this.hasCartera()) this.loadCartera();
     if (this.hasPurchasing()) this.loadPurchasing();
@@ -1740,7 +1755,31 @@ export class DashboardComponent implements OnInit {
           activeCatalog: d?.activeCatalog ?? 0,
           lowStock: d?.productCount ?? 0,
           revenue: d?.revenue?.current ?? 0,
+          rejectedDian: this.reportData().rejectedDian,
+          pendingDian: this.reportData().pendingDian,
+          collectionRate: this.reportData().collectionRate,
         });
+      },
+      error: () => {},
+    });
+  }
+
+  private loadInvoiceAnalytics() {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const to = now.toISOString().split('T')[0];
+    this.http.get<any>(`${environment.apiUrl}/invoices/analytics/summary`, { params: { dateFrom: from, dateTo: to } }).subscribe({
+      next: (res) => {
+        const d = res?.data ?? res;
+        const k = d?.kpis ?? {};
+        this.reportData.update((state) => ({
+          ...state,
+          invoicesThisMonth: k?.issuedCount ?? state.invoicesThisMonth,
+          revenue: k?.emittedAmount ?? state.revenue,
+          rejectedDian: k?.rejectedCount ?? 0,
+          pendingDian: k?.pendingDianCount ?? 0,
+          collectionRate: k?.collectionRate ?? 0,
+        }));
       },
       error: () => {},
     });

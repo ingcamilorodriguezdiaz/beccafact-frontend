@@ -15,6 +15,27 @@ interface Invoice {
   id: string; invoiceNumber: string; prefix: string; type: string; status: string;
   issueDate: string; dueDate?: string; subtotal: number; taxAmount: number;
   discountAmount?: number; total: number; notes?: string; currency?: string;
+  withholdingAmount?: number;
+  icaAmount?: number;
+  fiscalValidationStatus?: string | null;
+  fiscalValidationNotes?: string | null;
+  sourceChannel?: string; sourceTerminalId?: string | null;
+  salesOrderId?: string | null;
+  deliveryNoteId?: string | null;
+  sourceQuoteId?: string | null;
+  sourcePosSaleId?: string | null;
+  billingMode?: string | null;
+  inventoryStatus?: string | null;
+  inventoryAppliedAt?: string | null;
+  inventoryReversedAt?: string | null;
+  deliveryStatus?: string | null;
+  documentConfigId?: string | null;
+  resolutionNumber?: string | null;
+  resolutionLabel?: string | null;
+  numberingRangeFrom?: number | null;
+  numberingRangeTo?: number | null;
+  resolutionValidFrom?: string | null;
+  resolutionValidTo?: string | null;
   dianCufe?: string; dianStatus?: string; dianQrCode?: string;
   dianStatusCode?: string; dianStatusMsg?: string;
   dianErrors?: string;        // JSON array string: DIAN ErrorMessageList
@@ -39,6 +60,7 @@ interface Invoice {
     originalTotal: number; totalCredits: number; totalDebits: number;
     remainingBalance: number; creditCount: number; debitCount: number; fullyOffset: boolean;
   };
+  documentConfig?: InvoiceDocumentConfig | null;
 }
 
 interface Customer { id: string; name: string; documentNumber: string; documentType: string; }
@@ -51,6 +73,405 @@ interface InvoiceLine {
   unitPrice: number;
   taxRate: number;
   discount: number;
+}
+
+interface InvoiceDocumentConfig {
+  id: string;
+  name: string;
+  branchId?: string | null;
+  posTerminalId?: string | null;
+  channel: string;
+  type: string;
+  prefix: string;
+  resolutionNumber?: string | null;
+  resolutionLabel?: string | null;
+  rangeFrom?: number | null;
+  rangeTo?: number | null;
+  validFrom?: string | null;
+  validTo?: string | null;
+  technicalKey?: string | null;
+  isActive: boolean;
+  isDefault: boolean;
+  branch?: { id: string; name: string } | null;
+  posTerminal?: { id: string; code: string; name: string; branchId?: string | null } | null;
+}
+
+interface SalesOrderSummary {
+  id: string;
+  number: string;
+  status: string;
+  issueDate: string;
+  requestedDate?: string | null;
+  total: number;
+  currency: string;
+  customerName: string;
+  quoteId?: string | null;
+  posSaleId?: string | null;
+  itemsCount: number;
+}
+
+interface DeliveryNoteSummary {
+  id: string;
+  number: string;
+  status: string;
+  inventoryStatus?: string | null;
+  issueDate: string;
+  salesOrderId?: string | null;
+  posSaleId?: string | null;
+  customerName: string;
+  itemsCount: number;
+  total: number;
+}
+
+interface InvoiceStatement {
+  invoice: {
+    id: string;
+    invoiceNumber: string;
+    status: string;
+    issueDate: string;
+    dueDate?: string | null;
+    total: number;
+    customer: { id: string; name: string; documentNumber: string; email?: string; phone?: string };
+  };
+  summary: {
+    total: number;
+    paidAmount: number;
+    adjustmentNet: number;
+    balance: number;
+    receiptsApplied: number;
+    nextPromise?: {
+      id: string;
+      amount: number;
+      promisedDate: string;
+      status: string;
+      notes?: string | null;
+    } | null;
+  };
+  reconciliation: {
+    appliedAmount: number;
+    reconciledAmount: number;
+    pendingReconciliation: number;
+    receipts: Array<{
+      receiptId: string;
+      receiptNumber: string;
+      receiptStatus: string;
+      paymentMethod: string;
+      reference?: string | null;
+      paymentDate: string;
+      appliedAmount: number;
+      bankMovementId?: string | null;
+      bankMovementStatus?: string | null;
+      bankMovementReference?: string | null;
+    }>;
+  };
+  payments: Array<{
+    id: string;
+    amount: number;
+    paymentDate: string;
+    paymentMethod: string;
+    reference?: string | null;
+    notes?: string | null;
+    user?: { firstName?: string; lastName?: string };
+  }>;
+  agreements: Array<{
+    id: string;
+    amount: number;
+    promisedDate: string;
+    status: string;
+    notes?: string | null;
+  }>;
+  movements: Array<{
+    id: string;
+    date: string;
+    type: string;
+    description: string;
+    debit: number;
+    credit: number;
+    runningBalance: number;
+  }>;
+}
+
+interface InvoiceApproval {
+  id: string;
+  actionType: 'ISSUE' | 'CANCEL';
+  status: string;
+  reason?: string | null;
+  requestedAt: string;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectedReason?: string | null;
+  consumedAt?: string | null;
+  requestedByName?: string | null;
+  approvedByName?: string | null;
+}
+
+interface InvoiceAttachment {
+  id: string;
+  invoiceId: string;
+  fileName: string;
+  fileUrl: string;
+  mimeType?: string | null;
+  category?: string | null;
+  notes?: string | null;
+  sizeBytes?: number | null;
+  createdAt: string;
+  uploadedByName?: string | null;
+}
+
+interface InvoiceAuditEntry {
+  id: string;
+  action: string;
+  resource: string;
+  resourceId: string;
+  createdAt: string;
+  userName?: string | null;
+  before?: any;
+  after?: any;
+}
+
+interface InvoiceNoteContext {
+  invoice: {
+    id: string;
+    invoiceNumber: string;
+    issueDate: string;
+    dueDate?: string | null;
+    total: number;
+    customer: { id: string; name: string; documentNumber: string };
+    sourceChannel?: string | null;
+    inventoryStatus?: string | null;
+    deliveryStatus?: string | null;
+  };
+  documentBalance: {
+    originalTotal: number;
+    totalCredits: number;
+    totalDebits: number;
+    remainingBalance: number;
+    creditCount: number;
+    debitCount: number;
+    fullyOffset: boolean;
+  };
+  cartera: {
+    totalInvoiced: number;
+    totalPaid: number;
+    outstandingBalance: number;
+    balance: number;
+  };
+  notes: Invoice[];
+  lines: Array<{
+    id: string;
+    productId?: string | null;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    taxRate: number;
+    discount: number;
+    total: number;
+    product?: { id: string; name: string; sku: string } | null;
+    creditedQty: number;
+    debitedQty: number;
+    remainingCreditQty: number;
+    remainingCreditAmount: number;
+  }>;
+  reasonCatalog: {
+    credit: Array<{ code: string; label: string }>;
+    debit: Array<{ code: string; label: string }>;
+  };
+  guidedActions: {
+    canFullCreditReverse: boolean;
+    canPartialByLine: boolean;
+    inventoryReturnEligible?: boolean;
+  };
+}
+
+interface InvoiceFiscalSummaryReport {
+  summary: {
+    count: number;
+    taxableBase: number;
+    iva: number;
+    retefuente: number;
+    ica: number;
+    total: number;
+  };
+  byType: Array<{
+    type: string;
+    count: number;
+    taxableBase: number;
+    iva: number;
+    retefuente: number;
+    ica: number;
+    total: number;
+  }>;
+  byValidation: Array<{ status: string; count: number }>;
+}
+
+interface InvoiceVatSalesBookRow {
+  id: string;
+  invoiceNumber: string;
+  prefix: string;
+  issueDate: string;
+  type: string;
+  sourceChannel?: string | null;
+  customerName: string;
+  customerDocument: string;
+  customerDocumentType?: string | null;
+  taxableBase: number;
+  iva: number;
+  total: number;
+}
+
+interface InvoiceWithholdingsBookRow {
+  id: string;
+  invoiceNumber: string;
+  prefix: string;
+  issueDate: string;
+  type: string;
+  customerName: string;
+  customerDocument: string;
+  taxableBase: number;
+  retefuente: number;
+  ica: number;
+  total: number;
+}
+
+interface InvoiceDianValidationRow {
+  id: string;
+  invoiceNumber: string;
+  prefix: string;
+  issueDate: string;
+  type: string;
+  status: string;
+  sourceChannel?: string | null;
+  dianStatus?: string | null;
+  dianStatusCode?: string | null;
+  fiscalValidationStatus: string;
+  fiscalValidationNotes?: string | null;
+  customerName: string;
+  customerDocument: string;
+}
+
+interface InvoiceAnalyticsSummary {
+  kpis: {
+    issuedCount: number;
+    acceptedCount: number;
+    rejectedCount: number;
+    pendingDianCount: number;
+    emittedAmount: number;
+    collectedAmount: number;
+    rejectionRate: number;
+    collectionRate: number;
+    avgResponseMinutes: number;
+  };
+  documentControl: {
+    attachmentsCount: number;
+    pendingApprovals: number;
+    attachmentCoverage: number;
+  };
+  dian: {
+    topStatusCodes: Array<{ code: string; count: number }>;
+  };
+  byBranch: Array<{
+    key: string;
+    count: number;
+    emittedAmount: number;
+    collectedAmount: number;
+    rejectedCount: number;
+    rejectionRate: number;
+    collectionRate: number;
+  }>;
+  byChannel: Array<{
+    key: string;
+    count: number;
+    emittedAmount: number;
+    collectedAmount: number;
+    rejectedCount: number;
+    rejectionRate: number;
+    collectionRate: number;
+  }>;
+  bySeller: Array<{
+    key: string;
+    count: number;
+    emittedAmount: number;
+    collectedAmount: number;
+    rejectedCount: number;
+    rejectionRate: number;
+    collectionRate: number;
+  }>;
+  latestDocuments: Array<{
+    id: string;
+    invoiceNumber: string;
+    issueDate: string;
+    total: number;
+    status: string;
+    dianStatus?: string | null;
+    dianStatusCode?: string | null;
+    branchName: string;
+    channel: string;
+    seller: string;
+    collected: number;
+    responseMinutes?: number | null;
+  }>;
+}
+
+interface InvoiceOperationalMonitor {
+  queue: {
+    pending: number;
+    failed: number;
+    success: number;
+    recent: InvoiceDianJob[];
+  };
+  externalIntakes: {
+    pending: number;
+    processed: number;
+    recent: InvoiceExternalIntake[];
+  };
+  accounting: {
+    recent: Array<{
+      id: string;
+      status: string;
+      action: string;
+      createdAt: string;
+      resourceId?: string | null;
+    }>;
+  };
+}
+
+interface InvoiceDianJob {
+  id: string;
+  actionType: string;
+  status: string;
+  sourceChannel?: string | null;
+  attempts: number;
+  responseCode?: string | null;
+  responseMessage?: string | null;
+  createdAt: string;
+  processedAt?: string | null;
+  invoice?: {
+    id: string;
+    invoiceNumber: string;
+    status: string;
+    dianStatus?: string | null;
+    dianStatusCode?: string | null;
+    sourceChannel?: string | null;
+    branchId?: string | null;
+  } | null;
+  branch?: { id: string; name: string } | null;
+}
+
+interface InvoiceExternalIntake {
+  id: string;
+  channel: string;
+  externalRef: string;
+  status: string;
+  notes?: string | null;
+  processedAt?: string | null;
+  createdAt: string;
+  linkedInvoice?: {
+    id: string;
+    invoiceNumber: string;
+    status: string;
+    dianStatus?: string | null;
+  } | null;
+  branch?: { id: string; name: string } | null;
 }
 
 @Component({
@@ -69,26 +490,7 @@ interface InvoiceLine {
             <p class="page-subtitle">Controla ventas, estados DIAN y seguimiento de cartera desde una vista mas clara y ejecutiva.</p>
           </div>
 
-          <div class="hero-actions">
-            <div class="view-toggle">
-              <button class="view-btn" [class.view-btn-active]="viewMode()==='table'" title="Vista tabla" (click)="viewMode.set('table')">
-                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg>
-                Lista
-              </button>
-              <button class="view-btn" [class.view-btn-active]="viewMode()==='grid'" title="Vista cuadrícula" (click)="viewMode.set('grid')">
-                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-                Tarjetas
-              </button>
-            </div>
-            <button class="btn btn-outline btn-sm" (click)="load()">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/></svg>
-              Actualizar
-            </button>
-            <button class="btn btn-primary btn-sm" id="tour-new-invoice" (click)="openNewInvoice()">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
-              Nueva factura
-            </button>
-          </div>
+          <div class="hero-actions"></div>
         </div>
 
         <div class="hero-aside">
@@ -114,6 +516,108 @@ interface InvoiceLine {
         </div>
       </section>
 
+      <section class="tabs-shell">
+        <div class="tabs-shell__head">
+          <div>
+            <span class="tabs-shell__eyebrow">Navegación del módulo</span>
+            <h3>Áreas de Facturación</h3>
+          </div>
+          <p>Organiza la operación entre emisión diaria, gobierno documental, cumplimiento DIAN y seguimiento comercial.</p>
+        </div>
+
+        <div class="tabs-groups">
+          <section class="tab-group">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Operación diaria</span>
+              <small>Acciones de trabajo frecuentes para el equipo comercial y documental.</small>
+            </div>
+            <div class="tab-grid">
+              <button class="tab-btn" [class.tab-btn--active]="focusedInvoiceAction() === 'refresh'" (click)="triggerInvoiceAction('refresh')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Actualizar</span>
+                  <span class="tab-btn__meta">Recarga facturas, KPIs y estados visibles del módulo.</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="focusedInvoiceAction() === 'new'" (click)="triggerInvoiceAction('new')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Nueva factura</span>
+                  <span class="tab-btn__meta">Emite un documento directo usando cliente, líneas y DIAN.</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section class="tab-group">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Gobierno y cumplimiento</span>
+              <small>Configuración fiscal, monitoreo DIAN y control documental del proceso.</small>
+            </div>
+            <div class="tab-grid">
+              <button class="tab-btn" [class.tab-btn--active]="focusedInvoiceAction() === 'config'" (click)="triggerInvoiceAction('config')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M11.49 3.17a1 1 0 00-1.98 0l-.114.764a1 1 0 01-.79.82l-.775.154a1 1 0 00-.543 1.67l.53.53a1 1 0 010 1.414l-.53.53a1 1 0 00.543 1.67l.775.154a1 1 0 01.79.82l.114.764a1 1 0 001.98 0l.114-.764a1 1 0 01.79-.82l.775-.154a1 1 0 00.543-1.67l-.53-.53a1 1 0 010-1.414l.53-.53a1 1 0 00-.543-1.67l-.775-.154a1 1 0 01-.79-.82l-.114-.764zM10.5 8a2 2 0 100 4 2 2 0 000-4z" clip-rule="evenodd"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Configuración documental</span>
+                  <span class="tab-btn__meta">Prefijos, resoluciones, canales y ámbito por sede o caja.</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="focusedInvoiceAction() === 'fiscal'" (click)="triggerInvoiceAction('fiscal')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.055a7.002 7.002 0 015.945 5.945H18a1 1 0 110 2h-1.055a7.002 7.002 0 01-5.945 5.945V19a1 1 0 11-2 0v-1.055a7.002 7.002 0 01-5.945-5.945H2a1 1 0 110-2h1.055a7.002 7.002 0 015.945-5.945V3a1 1 0 011-1zm0 4a5 5 0 100 10 5 5 0 000-10zm-1 2a1 1 0 012 0v2h2a1 1 0 110 2h-3a1 1 0 01-1-1V8z" clip-rule="evenodd"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Fiscalidad</span>
+                  <span class="tab-btn__meta">Libros fiscales, validación previa y control tributario Colombia.</span>
+                </span>
+              </button>
+              <button class="tab-btn tab-btn--utility" [class.tab-btn--active]="focusedInvoiceAction() === 'operations'" (click)="triggerInvoiceAction('operations')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.09A6.002 6.002 0 0115.91 9H17a1 1 0 110 2h-1.09A6.002 6.002 0 0111 15.91V17a1 1 0 11-2 0v-1.09A6.002 6.002 0 014.09 11H3a1 1 0 110-2h1.09A6.002 6.002 0 019 4.09V3a1 1 0 011-1zm0 4a4 4 0 100 8 4 4 0 000-8zm0 2a1 1 0 011 1v1h1a1 1 0 110 2h-2a1 1 0 01-1-1V9a1 1 0 011-1z" clip-rule="evenodd"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Operación DIAN</span>
+                  <span class="tab-btn__meta">Cola técnica, intake externo y reprocesos del canal documental.</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section class="tab-group">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Gestión comercial</span>
+              <small>Seguimiento a orígenes, trazabilidad y lectura ejecutiva del desempeño.</small>
+            </div>
+            <div class="tab-grid tab-grid--compact">
+              <button class="tab-btn" [class.tab-btn--active]="focusedInvoiceAction() === 'flow'" (click)="triggerInvoiceAction('flow')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h4.586A2 2 0 0111 3.586L12.414 5H15a2 2 0 012 2v1a1 1 0 11-2 0V7H5v8h4a1 1 0 110 2H5a2 2 0 01-2-2V5zm11.293 4.293a1 1 0 011.414 0L19 12.586l-3.293 3.293a1 1 0 01-1.414-1.414L15.586 13H11a1 1 0 110-2h4.586l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Flujo comercial</span>
+                  <span class="tab-btn__meta">Pedidos, remisiones y facturación desde origen comercial.</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="focusedInvoiceAction() === 'analytics'" (click)="triggerInvoiceAction('analytics')">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4 3a1 1 0 011 1v11h11a1 1 0 110 2H4a1 1 0 01-1-1V4a1 1 0 011-1zm3 8a1 1 0 011-1h1a1 1 0 011 1v2a1 1 0 11-2 0v-1H8v1a1 1 0 11-2 0v-2zm4-4a1 1 0 011-1h1a1 1 0 011 1v6a1 1 0 11-2 0V8h-1v5a1 1 0 11-2 0V7zm4-2a1 1 0 011-1h1a1 1 0 011 1v8a1 1 0 11-2 0V6h-1v7a1 1 0 11-2 0V5z" clip-rule="evenodd"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Analítica</span>
+                  <span class="tab-btn__meta">KPIs de emisión, recaudo, rechazo DIAN y gestión documental.</span>
+                </span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
+
       <!-- KPI strip -->
       <section class="kpi-strip">
         @for (k of kpis; track k.label) {
@@ -136,7 +640,23 @@ interface InvoiceLine {
             <p class="filters-kicker">Exploracion</p>
             <h3>Busca y segmenta tus comprobantes</h3>
           </div>
-          <div class="results-pill">{{ total() }} resultados</div>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div class="view-toggle view-toggle--surface">
+              <button class="view-btn view-btn--surface" [class.view-btn-active]="viewMode()==='table'" title="Vista tabla" (click)="viewMode.set('table')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                Lista
+              </button>
+              <button class="view-btn view-btn--surface" [class.view-btn-active]="viewMode()==='grid'" title="Vista cuadrícula" (click)="viewMode.set('grid')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a1 2 0 01-2-2v-2z"/></svg>
+                Tarjetas
+              </button>
+            </div>
+            <div class="results-pill">{{ total() }} resultados</div>
+            <button class="btn btn-primary btn-sm" id="tour-new-invoice" (click)="triggerInvoiceAction('new')">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+              Nueva factura
+            </button>
+          </div>
         </div>
         <div class="filters-bar">
           <div class="search-wrap search-wrap-wide">
@@ -314,6 +834,17 @@ interface InvoiceLine {
             </div>
           </div>
         } @else {
+          <section class="table-shell">
+            <div class="table-shell-head">
+              <div>
+                <p class="table-kicker">Vista ejecutiva</p>
+                <h3>Resumen en tarjetas</h3>
+              </div>
+              <div class="table-shell-meta">
+                <span class="meta-chip">{{ total() }} visibles</span>
+              </div>
+            </div>
+          </section>
           <div class="inv-grid">
             @for (inv of invoices(); track inv.id) {
               <div class="inv-card" (click)="viewDetail(inv)">
@@ -451,6 +982,58 @@ interface InvoiceLine {
               </div>
             </div>
 
+            @if (detailInvoice()?.documentConfig || detailInvoice()?.resolutionNumber || detailInvoice()?.sourceChannel) {
+              <div class="dw-section">
+                <div class="dw-section-title">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h3l2 2 2-2h5a2 2 0 002-2V5a2 2 0 00-2-2H4z"/></svg>
+                  Configuración documental
+                </div>
+                <div class="dw-card dw-fiscal-card">
+                  <div class="dw-fiscal-row"><span>Canal</span><strong>{{ channelLabel(detailInvoice()?.sourceChannel) }}</strong></div>
+                  <div class="dw-fiscal-row"><span>Configuración</span><strong>{{ detailInvoice()?.documentConfig?.name || 'Legado / empresa' }}</strong></div>
+                  <div class="dw-fiscal-row"><span>Prefijo</span><strong>{{ detailInvoice()?.documentConfig?.prefix || detailInvoice()?.prefix || '—' }}</strong></div>
+                  <div class="dw-fiscal-row"><span>Resolución</span><strong>{{ detailInvoice()?.resolutionNumber || detailInvoice()?.documentConfig?.resolutionNumber || '—' }}</strong></div>
+                  <div class="dw-fiscal-row"><span>Rango</span><strong>{{ formatRange(detailInvoice()?.numberingRangeFrom || detailInvoice()?.documentConfig?.rangeFrom, detailInvoice()?.numberingRangeTo || detailInvoice()?.documentConfig?.rangeTo) }}</strong></div>
+                </div>
+              </div>
+            }
+
+            <div class="dw-section">
+              <div class="dw-section-title">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v2a2 2 0 012 2v1a1 1 0 11-2 0V8H4v8h5a1 1 0 110 2H6a2 2 0 01-2-2V4zm9.293 7.293a1 1 0 011.414 0L18 14.586l-3.293 3.293a1 1 0 01-1.414-1.414L14.586 15H11a1 1 0 110-2h3.586l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                Fiscalidad Colombia
+              </div>
+              <div class="dw-card dw-fiscal-card">
+                <div class="dw-fiscal-row"><span>Base gravable</span><strong>{{ fmtCOP(detailInvoice()!.subtotal) }}</strong></div>
+                <div class="dw-fiscal-row"><span>IVA ventas</span><strong>{{ fmtCOP(detailInvoice()!.taxAmount) }}</strong></div>
+                <div class="dw-fiscal-row"><span>ReteFuente</span><strong>{{ fmtCOP(detailInvoice()!.withholdingAmount ?? 0) }}</strong></div>
+                <div class="dw-fiscal-row"><span>ICA</span><strong>{{ fmtCOP(detailInvoice()!.icaAmount ?? 0) }}</strong></div>
+                <div class="dw-fiscal-row"><span>Validación fiscal</span><strong>{{ fiscalValidationLabel(detailInvoice()!.fiscalValidationStatus) }}</strong></div>
+                @if (detailInvoice()?.fiscalValidationNotes) {
+                  <div class="dw-fiscal-row"><span>Notas</span><strong>{{ detailInvoice()!.fiscalValidationNotes }}</strong></div>
+                }
+              </div>
+            </div>
+
+            <div class="dw-section">
+              <div class="dw-section-title">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M10 2a1 1 0 01.894.553l1.382 2.764 3.049.443a1 1 0 01.554 1.706l-2.206 2.15.52 3.037a1 1 0 01-1.451 1.054L10 12.347l-2.742 1.44a1 1 0 01-1.45-1.054l.52-3.037-2.206-2.15a1 1 0 01.554-1.706l3.048-.443L9.106 2.553A1 1 0 0110 2zm-4 13a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                Operación e inventario
+              </div>
+              <div class="dw-card dw-fiscal-card">
+                <div class="dw-fiscal-row"><span>Flujo comercial</span><strong>{{ invoiceFlowLabel(detailInvoice()!) }}</strong></div>
+                <div class="dw-fiscal-row"><span>Canal origen</span><strong>{{ channelLabel(detailInvoice()?.sourceChannel) }}</strong></div>
+                <div class="dw-fiscal-row"><span>Inventario</span><strong>{{ inventoryStatusLabel(detailInvoice()?.inventoryStatus) }}</strong></div>
+                <div class="dw-fiscal-row"><span>Entrega</span><strong>{{ deliveryStatusLabel(detailInvoice()?.deliveryStatus) }}</strong></div>
+                @if (detailInvoice()?.inventoryAppliedAt) {
+                  <div class="dw-fiscal-row"><span>Aplicado</span><strong>{{ detailInvoice()!.inventoryAppliedAt! | date:'dd/MM/yyyy HH:mm' }}</strong></div>
+                }
+                @if (detailInvoice()?.inventoryReversedAt) {
+                  <div class="dw-fiscal-row"><span>Reversado</span><strong>{{ detailInvoice()!.inventoryReversedAt! | date:'dd/MM/yyyy HH:mm' }}</strong></div>
+                }
+              </div>
+            </div>
+
             <!-- Balance strip (VENTA + ACCEPTED_DIAN) -->
             @if (detailInvoice()!.type === 'VENTA' && detailInvoice()!.status === 'ACCEPTED_DIAN') {
               <div class="dw-section" style="padding-top:12px;padding-bottom:12px">
@@ -516,6 +1099,134 @@ interface InvoiceLine {
                   <div class="dw-total-row dw-total-disc"><span>Descuento</span><span>-{{ fmtCOP(detailInvoice()!.discountAmount!) }}</span></div>
                 }
                 <div class="dw-total-row dw-total-grand"><span>Total</span><span>{{ fmtCOP(detailInvoice()!.total) }}</span></div>
+              </div>
+            </div>
+
+            <div class="dw-section">
+              <div class="dw-section-title">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h7a2 2 0 012 2v1h1a2 2 0 012 2v7a2 2 0 01-2 2h-1v1a2 2 0 01-2 2H6a2 2 0 01-2-2v-1H3a1 1 0 110-2h1V8a2 2 0 012-2h7V4H6v1a1 1 0 11-2 0V4zm2 4v8h7V8H6zm9 0v8h1V8h-1z" clip-rule="evenodd"/></svg>
+                Recaudo y cartera
+              </div>
+              <div class="dw-card">
+                @if (loadingStatement()) {
+                  <div class="dw-items-empty">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 102 0V6zm-1 8a1.25 1.25 0 100-2.5 1.25 1.25 0 000 2.5z" clip-rule="evenodd"/></svg>
+                    Cargando estado de cuenta...
+                  </div>
+                } @else if (invoiceStatement()) {
+                  <div class="invoice-collection-grid">
+                    <div class="invoice-collection-kpi">
+                      <span>Pagado</span>
+                      <strong>{{ fmtCOP(invoiceStatement()!.summary.paidAmount) }}</strong>
+                    </div>
+                    <div class="invoice-collection-kpi">
+                      <span>Saldo</span>
+                      <strong>{{ fmtCOP(invoiceStatement()!.summary.balance) }}</strong>
+                    </div>
+                    <div class="invoice-collection-kpi">
+                      <span>Conciliado</span>
+                      <strong>{{ fmtCOP(invoiceStatement()!.reconciliation.reconciledAmount) }}</strong>
+                    </div>
+                    <div class="invoice-collection-kpi">
+                      <span>Pend. conciliar</span>
+                      <strong>{{ fmtCOP(invoiceStatement()!.reconciliation.pendingReconciliation) }}</strong>
+                    </div>
+                  </div>
+                  @if (invoiceStatement()!.summary.nextPromise) {
+                    <div class="invoice-inline-banner">
+                      Próximo acuerdo: {{ invoiceStatement()!.summary.nextPromise!.promisedDate | date:'dd/MM/yyyy' }}
+                      por {{ fmtCOP(invoiceStatement()!.summary.nextPromise!.amount) }}
+                    </div>
+                  }
+                  <div class="dw-fiscal-card">
+                    <div class="dw-fiscal-row"><span>Recaudos aplicados</span><strong>{{ invoiceStatement()!.summary.receiptsApplied }}</strong></div>
+                    <div class="dw-fiscal-row"><span>Aplicado a factura</span><strong>{{ fmtCOP(invoiceStatement()!.reconciliation.appliedAmount) }}</strong></div>
+                    <div class="dw-fiscal-row"><span>Ajustes netos</span><strong>{{ fmtCOP(invoiceStatement()!.summary.adjustmentNet) }}</strong></div>
+                  </div>
+                  @if (invoiceStatement()!.payments.length > 0) {
+                    <div class="invoice-mini-list">
+                      @for (payment of invoiceStatement()!.payments.slice(0, 4); track payment.id) {
+                        <div class="invoice-mini-row">
+                          <span>{{ payment.paymentDate | date:'dd/MM/yyyy' }} · {{ payment.paymentMethod }}</span>
+                          <strong>{{ fmtCOP(payment.amount) }}</strong>
+                        </div>
+                      }
+                    </div>
+                  }
+                } @else {
+                  <div class="dw-items-empty">
+                    No hay estado de cuenta disponible para esta factura.
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="dw-section">
+              <div class="dw-section-title">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13"><path fill-rule="evenodd" d="M10 2a1 1 0 01.894.553l2.04 4.08 4.505.654a1 1 0 01.554 1.706l-3.259 3.177.769 4.487a1 1 0 01-1.451 1.054L10 15.347l-4.052 2.13a1 1 0 01-1.451-1.054l.769-4.487-3.259-3.177a1 1 0 01.554-1.706l4.505-.654 2.04-4.08A1 1 0 0110 2z" clip-rule="evenodd"/></svg>
+                Gobierno documental y auditoría
+              </div>
+              <div class="dw-card">
+                @if (loadingGovernance()) {
+                  <div class="dw-items-empty">Cargando flujo de aprobación, soportes y bitácora...</div>
+                } @else {
+                  <div class="invoice-collection-grid">
+                    <div class="invoice-collection-kpi">
+                      <span>Aprobaciones</span>
+                      <strong>{{ approvalFlow().length }}</strong>
+                    </div>
+                    <div class="invoice-collection-kpi">
+                      <span>Soportes</span>
+                      <strong>{{ attachments().length }}</strong>
+                    </div>
+                    <div class="invoice-collection-kpi">
+                      <span>Eventos</span>
+                      <strong>{{ auditTrail().length }}</strong>
+                    </div>
+                    <div class="invoice-collection-kpi">
+                      <span>Pendiente</span>
+                      <strong>{{ pendingApproval() ? approvalActionLabel(pendingApproval()!.actionType) : 'No' }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="dw-fiscal-card">
+                    <div class="dw-fiscal-row"><span>Flujo de aprobación</span><strong>{{ approvalFlow().length ? approvalStatusLabel(approvalFlow()[0].status) : 'Sin solicitudes' }}</strong></div>
+                    <div class="dw-fiscal-row"><span>Última acción</span><strong>{{ approvalFlow().length ? approvalActionLabel(approvalFlow()[0].actionType) : '—' }}</strong></div>
+                  </div>
+
+                  @if (approvalFlow().length > 0) {
+                    <div class="invoice-mini-list">
+                      @for (item of approvalFlow().slice(0, 3); track item.id) {
+                        <div class="invoice-mini-row">
+                          <span>{{ approvalActionLabel(item.actionType) }} · {{ approvalStatusLabel(item.status) }} · {{ item.requestedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                          <strong>{{ item.requestedByName || 'Sistema' }}</strong>
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  @if (attachments().length > 0) {
+                    <div class="invoice-mini-list">
+                      @for (item of attachments().slice(0, 3); track item.id) {
+                        <div class="invoice-mini-row">
+                          <span>{{ item.fileName }} · {{ item.category || 'SOPORTE' }}</span>
+                          <strong><a [href]="item.fileUrl" target="_blank" rel="noopener">Abrir</a></strong>
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  @if (auditTrail().length > 0) {
+                    <div class="invoice-mini-list">
+                      @for (item of auditTrail().slice(0, 4); track item.id) {
+                        <div class="invoice-mini-row">
+                          <span>{{ auditActionLabel(item.action) }} · {{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                          <strong>{{ item.userName || 'Sistema' }}</strong>
+                        </div>
+                      }
+                    </div>
+                  }
+                }
               </div>
             </div>
 
@@ -657,6 +1368,9 @@ interface InvoiceLine {
               </button>
             }
             @if (detailInvoice()!.status === 'DRAFT') {
+              <button class="btn btn-outline btn-sm" (click)="openApprovalRequestModal('ISSUE')">
+                Solicitar aprobación emisión
+              </button>
               <button class="btn btn-secondary btn-sm" (click)="openEditModal(detailInvoice()!)">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
                 Editar
@@ -667,6 +1381,22 @@ interface InvoiceLine {
                 {{ sending()[detailInvoice()!.id] ? 'Enviando...' : 'Enviar a DIAN' }}
               </button>
             }
+            @if (detailInvoice()!.status !== 'CANCELLED' && detailInvoice()!.status !== 'PAID' && detailInvoice()!.status !== 'ACCEPTED_DIAN') {
+              <button class="btn btn-outline btn-sm" (click)="openApprovalRequestModal('CANCEL')">
+                Solicitar aprobación anulación
+              </button>
+            }
+            <button class="btn btn-outline btn-sm" (click)="openAttachmentModal()">
+              Agregar soporte
+            </button>
+            @if (pendingApproval()) {
+              <button class="btn btn-outline btn-sm" (click)="approvePendingApproval()">
+                Aprobar {{ pendingApprovalActionLabel() }}
+              </button>
+              <button class="btn btn-outline btn-sm" (click)="rejectPendingApproval()">
+                Rechazar {{ pendingApprovalActionLabel() }}
+              </button>
+            }
             @if (detailInvoice()!.dianZipKey || detailInvoice()!.dianCufe) {
               <button class="btn btn-outline btn-sm" [disabled]="querying()[detailInvoice()!.id]"
                       (click)="queryDianStatus(detailInvoice()!)">
@@ -675,6 +1405,14 @@ interface InvoiceLine {
               </button>
             }
             @if (detailInvoice()!.status === 'ACCEPTED_DIAN' || detailInvoice()!.status === 'SENT_DIAN' || detailInvoice()!.status === 'ISSUED') {
+              <button class="btn btn-outline btn-sm" (click)="openPaymentModal(detailInvoice()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v3H6a1 1 0 100 2h3v3a1 1 0 102 0v-3h3a1 1 0 100-2h-3V6z" clip-rule="evenodd"/></svg>
+                Registrar pago
+              </button>
+              <button class="btn btn-outline btn-sm" (click)="openAgreementModal(detailInvoice()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v1a1 1 0 11-2 0V5H6v10h8v-1a1 1 0 112 0v1a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm7.293 2.293a1 1 0 011.414 0L16 10.586l-3.293 3.293a1 1 0 11-1.414-1.414L12.586 11H9a1 1 0 110-2h3.586l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                Acuerdo
+              </button>
               <button class="btn btn-success btn-sm" (click)="markPaid(detailInvoice()!)">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
                 Marcar pagada
@@ -831,7 +1569,7 @@ interface InvoiceLine {
             <div class="form-row-3">
               <div class="form-group">
                 <label>Tipo *</label>
-                <select [(ngModel)]="newInvoice.type" class="form-control">
+                <select [(ngModel)]="newInvoice.type" (ngModelChange)="onInvoiceChannelChanged()" class="form-control">
                   <option value="VENTA">Factura de venta</option>
                   <option value="NOTA_CREDITO">Nota crédito</option>
                   <option value="NOTA_DEBITO">Nota débito</option>
@@ -841,6 +1579,34 @@ interface InvoiceLine {
               <div class="form-group"><label>Fecha emisión *</label><input type="date" [(ngModel)]="newInvoice.issueDate" class="form-control"/></div>
               <div class="form-group"><label>Fecha vencimiento</label><input type="date" [(ngModel)]="newInvoice.dueDate" class="form-control"/></div>
             </div>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Canal *</label>
+                <select [(ngModel)]="newInvoice.sourceChannel" (ngModelChange)="onInvoiceChannelChanged()" class="form-control">
+                  <option value="DIRECT">Directo</option>
+                  <option value="POS">POS</option>
+                  <option value="ONLINE">Online</option>
+                  <option value="WHOLESALE">Mayorista</option>
+                </select>
+              </div>
+              <div class="form-group" style="grid-column: span 3;">
+                <label>Configuración documental</label>
+                <select [(ngModel)]="newInvoice.documentConfigId" (ngModelChange)="onDocumentConfigSelected($event)" class="form-control">
+                  <option value="">Usar configuración automática</option>
+                  @for (cfg of availableDocumentConfigs(); track cfg.id) {
+                    <option [value]="cfg.id">{{ cfg.name }} · {{ cfg.prefix }} · {{ channelLabel(cfg.channel) }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            @if (selectedDocumentConfig()) {
+              <div class="document-config-banner">
+                <div><span class="document-config-label">Prefijo</span><strong>{{ selectedDocumentConfig()!.prefix }}</strong></div>
+                <div><span class="document-config-label">Resolución</span><strong>{{ selectedDocumentConfig()!.resolutionNumber || '—' }}</strong></div>
+                <div><span class="document-config-label">Rango</span><strong>{{ formatRange(selectedDocumentConfig()!.rangeFrom, selectedDocumentConfig()!.rangeTo) }}</strong></div>
+                <div><span class="document-config-label">Ámbito</span><strong>{{ documentConfigScope(selectedDocumentConfig()!) }}</strong></div>
+              </div>
+            }
             <div class="form-group">
               <label>Cliente *</label>
               <select [(ngModel)]="newInvoice.customerId" class="form-control">
@@ -904,6 +1670,787 @@ interface InvoiceLine {
       </div>
     }
 
+    @if (showConfigModal()) {
+      <div class="modal-overlay" (click)="closeConfigModal()">
+        <div class="modal modal-xl" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Configuración documental</h3>
+            <button class="modal-close" (click)="closeConfigModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="document-admin-layout">
+              <div class="document-admin-list">
+                @if (documentConfigs().length === 0) {
+                  <div class="empty-state compact-empty">
+                    <p>No hay configuraciones documentales registradas.</p>
+                  </div>
+                } @else {
+                  @for (cfg of documentConfigs(); track cfg.id) {
+                    <button type="button" class="document-admin-item" [class.document-admin-item-active]="editingDocumentConfigId === cfg.id" (click)="editDocumentConfig(cfg)">
+                      <strong>{{ cfg.name }}</strong>
+                      <span>{{ cfg.prefix }} · {{ channelLabel(cfg.channel) }}</span>
+                      <small>{{ documentConfigScope(cfg) }}</small>
+                    </button>
+                  }
+                }
+              </div>
+              <div class="document-admin-form">
+                <div class="form-row-3">
+                  <div class="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" [(ngModel)]="documentConfigForm.name" class="form-control" placeholder="Resolución principal"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Canal *</label>
+                    <select [(ngModel)]="documentConfigForm.channel" class="form-control">
+                      <option value="DIRECT">Directo</option>
+                      <option value="POS">POS</option>
+                      <option value="ONLINE">Online</option>
+                      <option value="WHOLESALE">Mayorista</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Tipo *</label>
+                    <select [(ngModel)]="documentConfigForm.type" class="form-control">
+                      <option value="VENTA">Factura venta</option>
+                      <option value="NOTA_CREDITO">Nota crédito</option>
+                      <option value="NOTA_DEBITO">Nota débito</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Prefijo *</label>
+                    <input type="text" [(ngModel)]="documentConfigForm.prefix" class="form-control" placeholder="FV"/>
+                  </div>
+                </div>
+                <div class="form-row-3">
+                  <div class="form-group">
+                    <label>Resolución</label>
+                    <input type="text" [(ngModel)]="documentConfigForm.resolutionNumber" class="form-control" placeholder="18760000001"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Etiqueta</label>
+                    <input type="text" [(ngModel)]="documentConfigForm.resolutionLabel" class="form-control" placeholder="Resolución principal"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Rango desde</label>
+                    <input type="number" [(ngModel)]="documentConfigForm.rangeFrom" class="form-control" min="1"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Rango hasta</label>
+                    <input type="number" [(ngModel)]="documentConfigForm.rangeTo" class="form-control" min="1"/>
+                  </div>
+                </div>
+                <div class="form-row-3">
+                  <div class="form-group">
+                    <label>Vigencia desde</label>
+                    <input type="date" [(ngModel)]="documentConfigForm.validFrom" class="form-control"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Vigencia hasta</label>
+                    <input type="date" [(ngModel)]="documentConfigForm.validTo" class="form-control"/>
+                  </div>
+                  <div class="form-group">
+                    <label>ID sucursal</label>
+                    <input type="text" [(ngModel)]="documentConfigForm.branchId" class="form-control" placeholder="Opcional"/>
+                  </div>
+                  <div class="form-group">
+                    <label>ID caja / terminal</label>
+                    <input type="text" [(ngModel)]="documentConfigForm.posTerminalId" class="form-control" placeholder="Opcional"/>
+                  </div>
+                </div>
+                <div class="form-row-3">
+                  <label class="document-toggle">
+                    <input type="checkbox" [(ngModel)]="documentConfigForm.isActive"/>
+                    <span>Activa</span>
+                  </label>
+                  <label class="document-toggle">
+                    <input type="checkbox" [(ngModel)]="documentConfigForm.isDefault"/>
+                    <span>Predeterminada</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="resetDocumentConfigForm()">Nueva configuración</button>
+            <button class="btn btn-outline" (click)="closeConfigModal()">Cerrar</button>
+            <button class="btn btn-primary" [disabled]="savingConfig()" (click)="saveDocumentConfig()">
+              {{ savingConfig() ? 'Guardando...' : (editingDocumentConfigId ? 'Actualizar' : 'Crear configuración') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showCommercialFlowModal()) {
+      <div class="modal-overlay" (click)="closeCommercialFlowModal()">
+        <div class="modal modal-xl" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Flujo comercial multipaso</h3>
+            <button class="modal-close" (click)="closeCommercialFlowModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="invoice-collection-grid" style="margin-bottom:16px">
+              @for (kpi of commercialFlowKpis(); track kpi.label) {
+                <div class="invoice-collection-kpi">
+                  <span>{{ kpi.label }}</span>
+                  <strong>{{ kpi.value }}</strong>
+                </div>
+              }
+            </div>
+            <div class="commercial-flow-layout">
+              <div class="commercial-flow-panel">
+                <div class="commercial-flow-title">Centro operativo</div>
+                <div class="form-group">
+                  <label>Operación</label>
+                  <select [(ngModel)]="commercialFlowMode" class="form-control">
+                    <option value="order">Crear pedido</option>
+                    <option value="delivery">Crear remisión</option>
+                    <option value="invoice">Facturar origen</option>
+                  </select>
+                </div>
+                <div class="invoice-inline-banner">
+                  {{ commercialFlowInventoryHint() }}
+                </div>
+                <div class="form-row-3">
+                  <div class="form-group">
+                    <label>ID cotización</label>
+                    <input type="text" [(ngModel)]="commercialFlowForm.quoteId" class="form-control" placeholder="Opcional"/>
+                  </div>
+                  <div class="form-group">
+                    <label>ID venta POS</label>
+                    <input type="text" [(ngModel)]="commercialFlowForm.posSaleId" class="form-control" placeholder="Opcional"/>
+                  </div>
+                  <div class="form-group">
+                    <label>ID pedido</label>
+                    <input type="text" [(ngModel)]="commercialFlowForm.salesOrderId" class="form-control" placeholder="Opcional"/>
+                  </div>
+                  <div class="form-group">
+                    <label>ID remisión</label>
+                    <input type="text" [(ngModel)]="commercialFlowForm.deliveryNoteId" class="form-control" placeholder="Opcional"/>
+                  </div>
+                </div>
+                <div class="form-row-3">
+                  <div class="form-group">
+                    <label>Cliente</label>
+                    <select [(ngModel)]="commercialFlowForm.customerId" class="form-control">
+                      <option value="">Automático desde origen</option>
+                      @for (c of customers(); track c.id) { <option [value]="c.id">{{ c.name }} — {{ c.documentNumber }}</option> }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Fecha emisión</label>
+                    <input type="date" [(ngModel)]="commercialFlowForm.issueDate" class="form-control"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Fecha vencimiento</label>
+                    <input type="date" [(ngModel)]="commercialFlowForm.dueDate" class="form-control"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="document-toggle">
+                      <input type="checkbox" [(ngModel)]="commercialFlowForm.applyAdvance"/>
+                      <span>Aplicar anticipo POS</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Notas</label>
+                  <textarea [(ngModel)]="commercialFlowForm.notes" class="form-control" rows="3" placeholder="Observaciones del flujo comercial..."></textarea>
+                </div>
+              </div>
+              <div class="commercial-flow-panel">
+                <div class="commercial-flow-title">Pedidos recientes</div>
+                @if (salesOrders().length === 0) {
+                  <div class="empty-state compact-empty"><p>No hay pedidos comerciales recientes.</p></div>
+                } @else {
+                  <div class="commercial-order-list">
+                    @for (order of salesOrders(); track order.id) {
+                      <button type="button" class="document-admin-item" (click)="useSalesOrder(order)">
+                        <strong>{{ order.number }}</strong>
+                        <span>{{ order.customerName }}</span>
+                        <small>{{ order.status }} · {{ fmtCOP(order.total) }} · {{ order.itemsCount }} líneas</small>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="commercial-flow-panel">
+                <div class="commercial-flow-title">Remisiones recientes</div>
+                @if (deliveryNotes().length === 0) {
+                  <div class="empty-state compact-empty"><p>No hay remisiones recientes disponibles.</p></div>
+                } @else {
+                  <div class="commercial-order-list">
+                    @for (note of deliveryNotes(); track note.id) {
+                      <button type="button" class="document-admin-item" (click)="useDeliveryNote(note)">
+                        <strong>{{ note.number }}</strong>
+                        <span>{{ note.customerName }}</span>
+                        <small>{{ deliveryStatusLabel(note.status) }} · {{ inventoryStatusLabel(note.inventoryStatus) }} · {{ fmtCOP(note.total) }}</small>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-outline" (click)="closeCommercialFlowModal()">Cerrar</button>
+            <button class="btn btn-primary" [disabled]="savingFlow()" (click)="submitCommercialFlow()">
+              {{ savingFlow() ? 'Procesando...' : commercialFlowActionLabel() }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showFiscalModal()) {
+      <div class="modal-overlay" (click)="closeFiscalModal()">
+        <div class="modal modal-xl" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Fiscalidad empresarial Colombia</h3>
+            <button class="modal-close" (click)="closeFiscalModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Desde</label>
+                <input type="date" [(ngModel)]="fiscalFilters.dateFrom" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>Hasta</label>
+                <input type="date" [(ngModel)]="fiscalFilters.dateTo" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-outline" style="width:100%" [disabled]="loadingFiscalReports()" (click)="loadFiscalReports()">
+                  {{ loadingFiscalReports() ? 'Cargando...' : 'Actualizar reportes' }}
+                </button>
+              </div>
+            </div>
+
+            @if (fiscalSummaryReport()) {
+              <div class="invoice-collection-grid">
+                <div class="invoice-collection-kpi"><span>Base gravable</span><strong>{{ fmtCOP(fiscalSummaryReport()!.summary.taxableBase) }}</strong></div>
+                <div class="invoice-collection-kpi"><span>IVA ventas</span><strong>{{ fmtCOP(fiscalSummaryReport()!.summary.iva) }}</strong></div>
+                <div class="invoice-collection-kpi"><span>ReteFuente</span><strong>{{ fmtCOP(fiscalSummaryReport()!.summary.retefuente) }}</strong></div>
+                <div class="invoice-collection-kpi"><span>ICA</span><strong>{{ fmtCOP(fiscalSummaryReport()!.summary.ica) }}</strong></div>
+              </div>
+            }
+
+            <div class="dw-section" style="padding:0">
+              <div class="dw-section-title">Libro IVA ventas</div>
+              <div class="dw-card">
+                @if (vatSalesBook().length === 0) {
+                  <div class="dw-items-empty">No hay registros para el rango seleccionado.</div>
+                } @else {
+                  <div class="invoice-mini-list">
+                    @for (row of vatSalesBook().slice(0, 8); track row.id) {
+                      <div class="invoice-mini-row">
+                        <span>{{ row.issueDate | date:'dd/MM/yyyy' }} · {{ row.prefix }}{{ row.invoiceNumber }} · {{ row.customerName }}</span>
+                        <strong>{{ fmtCOP(row.iva) }}</strong>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="dw-section" style="padding:0">
+              <div class="dw-section-title">Libro retenciones ventas</div>
+              <div class="dw-card">
+                @if (withholdingsBook().length === 0) {
+                  <div class="dw-items-empty">No hay retenciones registradas para el rango seleccionado.</div>
+                } @else {
+                  <div class="invoice-mini-list">
+                    @for (row of withholdingsBook().slice(0, 8); track row.id) {
+                      <div class="invoice-mini-row">
+                        <span>{{ row.issueDate | date:'dd/MM/yyyy' }} · {{ row.prefix }}{{ row.invoiceNumber }} · {{ row.customerName }}</span>
+                        <strong>{{ fmtCOP(row.retefuente + row.ica) }}</strong>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="dw-section" style="padding:0">
+              <div class="dw-section-title">Control de validación DIAN</div>
+              <div class="dw-card">
+                @if (dianValidationReport().length === 0) {
+                  <div class="dw-items-empty">No hay documentos en el rango seleccionado.</div>
+                } @else {
+                  <div class="invoice-mini-list">
+                    @for (row of dianValidationReport().slice(0, 8); track row.id) {
+                      <div class="invoice-mini-row">
+                        <span>{{ row.prefix }}{{ row.invoiceNumber }} · {{ row.customerName }} · {{ fiscalValidationLabel(row.fiscalValidationStatus) }}</span>
+                        <strong>{{ row.dianStatusCode || row.dianStatus || 'Pendiente' }}</strong>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-outline" (click)="closeFiscalModal()">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showAnalyticsModal()) {
+      <div class="modal-overlay" (click)="closeAnalyticsModal()">
+        <div class="modal modal-xl" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Analítica y gestión documental</h3>
+            <button class="modal-close" (click)="closeAnalyticsModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Desde</label>
+                <input type="date" [(ngModel)]="analyticsFilters.dateFrom" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>Hasta</label>
+                <input type="date" [(ngModel)]="analyticsFilters.dateTo" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-outline" style="width:100%" [disabled]="loadingAnalytics()" (click)="loadAnalytics()">
+                  {{ loadingAnalytics() ? 'Cargando...' : 'Actualizar analítica' }}
+                </button>
+              </div>
+            </div>
+
+            @if (invoiceAnalytics()) {
+              <div class="invoice-collection-grid">
+                <div class="invoice-collection-kpi"><span>Emitidas</span><strong>{{ invoiceAnalytics()!.kpis.issuedCount }}</strong></div>
+                <div class="invoice-collection-kpi"><span>Rechazo DIAN</span><strong>{{ invoiceAnalytics()!.kpis.rejectionRate }}%</strong></div>
+                <div class="invoice-collection-kpi"><span>Resp. promedio</span><strong>{{ invoiceAnalytics()!.kpis.avgResponseMinutes }} min</strong></div>
+                <div class="invoice-collection-kpi"><span>Recaudo vs emitido</span><strong>{{ invoiceAnalytics()!.kpis.collectionRate }}%</strong></div>
+              </div>
+
+              <div class="dw-section" style="padding:0">
+                <div class="dw-section-title">Pulso ejecutivo</div>
+                <div class="dw-card dw-fiscal-card">
+                  <div class="dw-fiscal-row"><span>Total emitido</span><strong>{{ fmtCOP(invoiceAnalytics()!.kpis.emittedAmount) }}</strong></div>
+                  <div class="dw-fiscal-row"><span>Total recaudado</span><strong>{{ fmtCOP(invoiceAnalytics()!.kpis.collectedAmount) }}</strong></div>
+                  <div class="dw-fiscal-row"><span>Pendientes DIAN</span><strong>{{ invoiceAnalytics()!.kpis.pendingDianCount }}</strong></div>
+                  <div class="dw-fiscal-row"><span>Aceptadas</span><strong>{{ invoiceAnalytics()!.kpis.acceptedCount }}</strong></div>
+                  <div class="dw-fiscal-row"><span>Soportes</span><strong>{{ invoiceAnalytics()!.documentControl.attachmentsCount }}</strong></div>
+                  <div class="dw-fiscal-row"><span>Aprobaciones pendientes</span><strong>{{ invoiceAnalytics()!.documentControl.pendingApprovals }}</strong></div>
+                </div>
+              </div>
+
+              <div class="dw-section" style="padding:0">
+                <div class="dw-section-title">Facturación por sede</div>
+                <div class="dw-card">
+                  <div class="invoice-mini-list">
+                    @for (row of invoiceAnalytics()!.byBranch.slice(0, 6); track row.key) {
+                      <div class="invoice-mini-row">
+                        <span>{{ row.key }} · {{ row.count }} docs · recaudo {{ row.collectionRate }}%</span>
+                        <strong>{{ fmtCOP(row.emittedAmount) }}</strong>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div class="dw-section" style="padding:0">
+                <div class="dw-section-title">Facturación por canal</div>
+                <div class="dw-card">
+                  <div class="invoice-mini-list">
+                    @for (row of invoiceAnalytics()!.byChannel.slice(0, 6); track row.key) {
+                      <div class="invoice-mini-row">
+                        <span>{{ channelLabel(row.key) }} · {{ row.count }} docs · rechazo {{ row.rejectionRate }}%</span>
+                        <strong>{{ fmtCOP(row.emittedAmount) }}</strong>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div class="dw-section" style="padding:0">
+                <div class="dw-section-title">Facturación por vendedor</div>
+                <div class="dw-card">
+                  <div class="invoice-mini-list">
+                    @for (row of invoiceAnalytics()!.bySeller.slice(0, 6); track row.key) {
+                      <div class="invoice-mini-row">
+                        <span>{{ row.key }} · {{ row.count }} docs · recaudo {{ row.collectionRate }}%</span>
+                        <strong>{{ fmtCOP(row.emittedAmount) }}</strong>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div class="dw-section" style="padding:0">
+                <div class="dw-section-title">Códigos y respuesta DIAN</div>
+                <div class="dw-card">
+                  <div class="invoice-mini-list">
+                    @for (row of invoiceAnalytics()!.dian.topStatusCodes; track row.code) {
+                      <div class="invoice-mini-row">
+                        <span>{{ row.code }}</span>
+                        <strong>{{ row.count }}</strong>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <div class="dw-items-empty">No hay datos analíticos para el rango seleccionado.</div>
+            }
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-outline" (click)="closeAnalyticsModal()">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showOperationsModal()) {
+      <div class="modal-overlay" (click)="closeOperationsModal()">
+        <div class="modal modal-xl" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Resiliencia operativa e integraciones empresariales</h3>
+            <button class="modal-close" (click)="closeOperationsModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="invoice-inline-banner">
+              Monitorea cola DIAN, intake externo y reintentos masivos desde una sola vista operativa.
+            </div>
+
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Acción masiva</label>
+                <select [(ngModel)]="operationsForm.actionType" class="form-control">
+                  <option value="SEND_DIAN">Enviar a DIAN</option>
+                  <option value="QUERY_DIAN_STATUS">Consultar estado DIAN</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Modo de reproceso</label>
+                <select [(ngModel)]="operationsForm.scope" class="form-control">
+                  <option value="AUTO">Automático según cola</option>
+                  <option value="SELECTED">Facturas visibles seleccionadas</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-outline" style="width:100%" [disabled]="savingOperations()" (click)="queueBulkReprocess()">
+                  {{ savingOperations() ? 'Procesando...' : 'Colar reproceso masivo' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Canal externo</label>
+                <select [(ngModel)]="externalIntakeForm.channel" class="form-control">
+                  <option value="ECOMMERCE">E-commerce</option>
+                  <option value="MARKETPLACE">Marketplace</option>
+                  <option value="POS">POS</option>
+                  <option value="API">API</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Referencia externa</label>
+                <input type="text" [(ngModel)]="externalIntakeForm.externalRef" class="form-control" placeholder="WEB-10024"/>
+              </div>
+              <div class="form-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary" style="width:100%" [disabled]="savingOperations()" (click)="submitExternalIntake()">
+                  Registrar intake externo
+                </button>
+              </div>
+            </div>
+
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Cliente</label>
+                <select [(ngModel)]="externalIntakeForm.customerId" class="form-control">
+                  <option value="">Selecciona un cliente</option>
+                  @for (customer of customers(); track customer.id) {
+                    <option [value]="customer.id">{{ customer.name }} · {{ customer.documentNumber }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Notas</label>
+                <input type="text" [(ngModel)]="externalIntakeForm.notes" class="form-control" placeholder="Pedido integrado desde canal externo"/>
+              </div>
+              <div class="form-group">
+                <label>Auto procesar</label>
+                <select [(ngModel)]="externalIntakeForm.autoProcess" class="form-control">
+                  <option [ngValue]="true">Sí</option>
+                  <option [ngValue]="false">No</option>
+                </select>
+              </div>
+            </div>
+
+            @if (operationsMonitor()) {
+              <div class="invoice-collection-grid">
+                <div class="invoice-collection-kpi"><span>Cola pendiente</span><strong>{{ operationsMonitor()!.queue.pending }}</strong></div>
+                <div class="invoice-collection-kpi"><span>Fallidos</span><strong>{{ operationsMonitor()!.queue.failed }}</strong></div>
+                <div class="invoice-collection-kpi"><span>Procesados</span><strong>{{ operationsMonitor()!.queue.success }}</strong></div>
+                <div class="invoice-collection-kpi"><span>Intakes pendientes</span><strong>{{ operationsMonitor()!.externalIntakes.pending }}</strong></div>
+              </div>
+
+              <div class="dw-section" style="padding:0">
+                <div class="dw-section-title">Cola técnica DIAN</div>
+                <div class="dw-card">
+                  <div class="form-row-3" style="margin-bottom:12px">
+                    <div class="form-group">
+                      <label>&nbsp;</label>
+                      <button class="btn btn-outline" style="width:100%" [disabled]="loadingOperations() || savingOperations()" (click)="loadOperationsMonitor()">
+                        {{ loadingOperations() ? 'Actualizando...' : 'Actualizar monitor' }}
+                      </button>
+                    </div>
+                    <div class="form-group">
+                      <label>&nbsp;</label>
+                      <button class="btn btn-outline" style="width:100%" [disabled]="savingOperations()" (click)="processQueuedOperations()">
+                        Ejecutar cola pendiente
+                      </button>
+                    </div>
+                    <div class="form-group">
+                      <label>&nbsp;</label>
+                      <button class="btn btn-outline" style="width:100%" [disabled]="savingOperations() || !detailInvoice()" (click)="queueSingleReprocess('QUERY_DIAN_STATUS')">
+                        Reprocesar factura abierta
+                      </button>
+                    </div>
+                  </div>
+                  <div class="invoice-mini-list">
+                    @for (job of operationsMonitor()!.queue.recent.slice(0, 8); track job.id) {
+                      <div class="invoice-mini-row">
+                        <span>{{ dianActionLabel(job.actionType) }} · {{ job.invoice?.invoiceNumber || 'Sin factura' }} · {{ channelLabel(job.sourceChannel || job.invoice?.sourceChannel || 'DIRECT') }} · {{ job.branch?.name || 'Todas las sedes' }}</span>
+                        <strong>{{ dianJobStatusLabel(job.status) }}</strong>
+                      </div>
+                    }
+                    @if (operationsMonitor()!.queue.recent.length === 0) {
+                      <div class="dw-items-empty">No hay movimientos recientes en la cola DIAN.</div>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div class="dw-section" style="padding:0">
+                <div class="dw-section-title">Canales externos e intake</div>
+                <div class="dw-card">
+                  <div class="invoice-mini-list">
+                    @for (intake of externalIntakes().slice(0, 8); track intake.id) {
+                      <div class="invoice-mini-row">
+                        <span>{{ intake.channel }} · {{ intake.externalRef }} · {{ intake.branch?.name || 'Empresa' }} · {{ intake.linkedInvoice?.invoiceNumber || 'Pendiente' }}</span>
+                        <strong>{{ intake.status }}</strong>
+                      </div>
+                    }
+                    @if (externalIntakes().length === 0) {
+                      <div class="dw-items-empty">No hay intakes externos registrados.</div>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div class="dw-section" style="padding:0">
+                <div class="dw-section-title">Integración contable reciente</div>
+                <div class="dw-card">
+                  <div class="invoice-mini-list">
+                    @for (integration of operationsMonitor()!.accounting.recent.slice(0, 6); track integration.id) {
+                      <div class="invoice-mini-row">
+                        <span>{{ integration.action }} · {{ integration.resourceId || 'Sin recurso' }}</span>
+                        <strong>{{ integration.status }}</strong>
+                      </div>
+                    }
+                    @if (operationsMonitor()!.accounting.recent.length === 0) {
+                      <div class="dw-items-empty">No hay sincronizaciones contables recientes.</div>
+                    }
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <div class="dw-items-empty">No hay información operativa disponible todavía.</div>
+            }
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-outline" (click)="closeOperationsModal()">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showApprovalRequestModal()) {
+      <div class="modal-overlay" (click)="closeApprovalRequestModal()">
+        <div class="modal modal-box" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Solicitar aprobación</h3>
+            <button class="modal-close" (click)="closeApprovalRequestModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Acción</label>
+              <select [(ngModel)]="approvalRequestForm.actionType" class="form-control">
+                <option value="ISSUE">Emitir</option>
+                <option value="CANCEL">Anular</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Motivo</label>
+              <textarea [(ngModel)]="approvalRequestForm.reason" class="form-control" rows="3" placeholder="Motivo de la solicitud..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeApprovalRequestModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="savingApprovalRequest()" (click)="submitApprovalRequest()">
+              {{ savingApprovalRequest() ? 'Enviando...' : 'Solicitar aprobación' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showAttachmentModal()) {
+      <div class="modal-overlay" (click)="closeAttachmentModal()">
+        <div class="modal modal-box" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Agregar soporte</h3>
+            <button class="modal-close" (click)="closeAttachmentModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Nombre *</label>
+              <input type="text" [(ngModel)]="attachmentForm.fileName" class="form-control" placeholder="Soporte.pdf"/>
+            </div>
+            <div class="form-group">
+              <label>URL *</label>
+              <input type="text" [(ngModel)]="attachmentForm.fileUrl" class="form-control" placeholder="https://..."/>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Categoría</label>
+                <input type="text" [(ngModel)]="attachmentForm.category" class="form-control" placeholder="SOPORTE"/>
+              </div>
+              <div class="form-group">
+                <label>MIME</label>
+                <input type="text" [(ngModel)]="attachmentForm.mimeType" class="form-control" placeholder="application/pdf"/>
+              </div>
+              <div class="form-group">
+                <label>Tamaño bytes</label>
+                <input type="number" [(ngModel)]="attachmentForm.sizeBytes" class="form-control" min="0"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notas</label>
+              <textarea [(ngModel)]="attachmentForm.notes" class="form-control" rows="2" placeholder="Descripción breve..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeAttachmentModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="savingAttachment()" (click)="submitAttachment()">
+              {{ savingAttachment() ? 'Guardando...' : 'Agregar soporte' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showPaymentModal()) {
+      <div class="modal-overlay" (click)="closePaymentModal()">
+        <div class="modal modal-box" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Registrar pago parcial</h3>
+            <button class="modal-close" (click)="closePaymentModal()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="balance-info">
+              <span>Saldo actual: <strong>{{ fmtCOP(invoiceStatement()?.summary?.balance ?? detailInvoice()?.total ?? 0) }}</strong></span>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Monto *</label>
+                <input type="number" [(ngModel)]="paymentForm.amount" class="form-control" min="0.01" step="0.01"/>
+              </div>
+              <div class="form-group">
+                <label>Fecha *</label>
+                <input type="date" [(ngModel)]="paymentForm.paymentDate" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>Medio *</label>
+                <select [(ngModel)]="paymentForm.paymentMethod" class="form-control">
+                  <option value="EFECTIVO">Efectivo</option>
+                  <option value="TRANSFERENCIA">Transferencia</option>
+                  <option value="CHEQUE">Cheque</option>
+                  <option value="TARJETA">Tarjeta</option>
+                  <option value="CONSIGNACION">Consignación</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Referencia</label>
+                <input type="text" [(ngModel)]="paymentForm.reference" class="form-control" placeholder="Transacción / recibo"/>
+              </div>
+              <div class="form-group" style="grid-column: span 2;">
+                <label>Notas</label>
+                <textarea [(ngModel)]="paymentForm.notes" class="form-control" rows="2" placeholder="Observaciones del recaudo..."></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closePaymentModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="savingPayment()" (click)="submitPayment()">
+              {{ savingPayment() ? 'Aplicando...' : 'Registrar pago' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showAgreementModal()) {
+      <div class="modal-overlay" (click)="closeAgreementModal()">
+        <div class="modal modal-box" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>Crear acuerdo de pago</h3>
+            <button class="modal-close" (click)="closeAgreementModal()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Monto *</label>
+                <input type="number" [(ngModel)]="agreementForm.amount" class="form-control" min="0.01" step="0.01"/>
+              </div>
+              <div class="form-group">
+                <label>Fecha prometida *</label>
+                <input type="date" [(ngModel)]="agreementForm.promisedDate" class="form-control"/>
+              </div>
+              <div class="form-group">
+                <label>Notas</label>
+                <textarea [(ngModel)]="agreementForm.notes" class="form-control" rows="2" placeholder="Detalle del acuerdo..."></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeAgreementModal()">Cancelar</button>
+            <button class="btn btn-primary" [disabled]="savingAgreement()" (click)="submitAgreement()">
+              {{ savingAgreement() ? 'Guardando...' : 'Crear acuerdo' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- ── Modal Nota Crédito / Débito ─────────────────────────────── -->
     @if (noteModal() !== 'none') {
       <div class="modal-overlay" (click)="closeNoteModal()">
@@ -931,6 +2478,14 @@ interface InvoiceLine {
             </div>
           }
 
+          @if (noteContext()) {
+            <div class="balance-info">
+              <span>Líneas pendientes: <strong>{{ notePendingLinesCount() }}</strong></span>
+              <span>Notas emitidas: <strong>{{ noteContext()!.notes.length }}</strong></span>
+              <span>Cartera pendiente: <strong>{{ fmtCOP(noteContext()!.cartera.outstandingBalance) }}</strong></span>
+            </div>
+          }
+
           <div class="modal-body">
 
             <!-- Motivo -->
@@ -938,18 +2493,8 @@ interface InvoiceLine {
               <div class="form-group">
                 <label class="form-label">Código de motivo DIAN *</label>
                 <select [(ngModel)]="noteForm.discrepancyReasonCode" class="form-control">
-                  @if (noteModal() === 'credit') {
-                    <option value="1">1 – Devolución parcial de bienes</option>
-                    <option value="2">2 – Anulación de factura electrónica</option>
-                    <option value="3">3 – Rebaja total aplicada</option>
-                    <option value="4">4 – Descuento total aplicado</option>
-                    <option value="5">5 – Rescisión: nulidad por falta de requisitos</option>
-                    <option value="6">6 – Otros</option>
-                  } @else {
-                    <option value="1">1 – Intereses</option>
-                    <option value="2">2 – Gastos por cobrar</option>
-                    <option value="3">3 – Cambio en el valor</option>
-                    <option value="4">4 – Otros</option>
+                  @for (reason of noteReasonOptions(); track reason.code) {
+                    <option [value]="reason.code">{{ reason.code }} – {{ reason.label }}</option>
                   }
                 </select>
               </div>
@@ -972,6 +2517,35 @@ interface InvoiceLine {
               <input type="text" [(ngModel)]="noteForm.discrepancyReason" class="form-control"
                      placeholder="Ej: Devolución de mercancía en mal estado"/>
             </div>
+
+            @if (noteContext() && noteModal() === 'credit') {
+              <div class="dw-section" style="padding:0;margin-bottom:12px">
+                <div class="note-lines-header">
+                  <span class="form-label" style="margin:0">Reverso guiado desde la factura original</span>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap">
+                    <button type="button" class="btn btn-sm btn-outline" (click)="loadPendingOriginalLines()">
+                      Cargar líneas pendientes
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline" [disabled]="!noteContext()!.guidedActions.canFullCreditReverse" (click)="loadFullReverseNote()">
+                      Reverso total guiado
+                    </button>
+                  </div>
+                </div>
+                <div class="document-admin-list" style="max-height:180px">
+                  @for (line of noteContext()!.lines; track line.id) {
+                    <button type="button" class="document-admin-item" (click)="addOriginalLineToNote(line)" [disabled]="line.remainingCreditQty <= 0.0001">
+                      <strong>{{ line.description }}</strong>
+                      <span>
+                        Orig: {{ line.quantity }} · Pend.: {{ line.remainingCreditQty }} · {{ fmtCOP(line.remainingCreditAmount) }}
+                      </span>
+                      @if (line.product?.sku) {
+                        <small>{{ line.product?.sku }}</small>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+            }
 
             <!-- Líneas -->
             <div class="note-lines-header">
@@ -1164,6 +2738,160 @@ interface InvoiceLine {
     .dot-warn { background:#fbbf24; box-shadow:0 0 0 4px rgba(251,191,36,.14); }
     .dot-danger { background:#fb7185; box-shadow:0 0 0 4px rgba(251,113,133,.14); }
 
+    .tabs-shell {
+      margin-bottom:18px;
+      border-radius:28px;
+      padding:20px;
+      background:linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(247,251,255,.96) 100%);
+      border:1px solid #dce6f0;
+      box-shadow:0 20px 36px rgba(12,28,53,.06);
+    }
+    .tabs-shell__head {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:18px;
+      margin-bottom:18px;
+    }
+    .tabs-shell__eyebrow {
+      display:block;
+      margin-bottom:6px;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#00a084;
+    }
+    .tabs-shell__head h3 {
+      margin:0;
+      font-family:'Sora',sans-serif;
+      font-size:22px;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+    }
+    .tabs-shell__head p {
+      margin:0;
+      max-width:56ch;
+      font-size:13px;
+      line-height:1.6;
+      color:#6b7f96;
+      text-align:right;
+    }
+    .tabs-groups {
+      display:grid;
+      gap:16px;
+    }
+    .tab-group {
+      padding:16px;
+      border-radius:22px;
+      border:1px solid #e3ecf5;
+      background:linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(246,250,255,.95) 100%);
+    }
+    .tab-group--utility {
+      background:linear-gradient(180deg, #f7fffc 0%, #effbf7 100%);
+      border-color:#cfeee3;
+    }
+    .tab-group__header {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .tab-group__label {
+      display:block;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:#1a407e;
+      margin-bottom:4px;
+    }
+    .tab-group__header small {
+      color:#7a8ea7;
+      font-size:12px;
+      line-height:1.5;
+      text-align:right;
+    }
+    .tab-grid {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:12px;
+    }
+    .tab-grid--compact {
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+    .tab-btn {
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      min-height:78px;
+      width:100%;
+      padding:16px;
+      border-radius:18px;
+      border:1px solid #dbe5ef;
+      background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      color:#0c1c35;
+      cursor:pointer;
+      text-align:left;
+      transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+      box-shadow:0 12px 22px rgba(12,28,53,.05);
+    }
+    .tab-btn svg {
+      width:20px;
+      height:20px;
+      flex-shrink:0;
+      color:#1a407e;
+      margin-top:2px;
+      transition:color .18s ease, transform .18s ease;
+    }
+    .tab-btn__content {
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:0;
+    }
+    .tab-btn__title {
+      font-size:14px;
+      font-weight:800;
+      color:#0c1c35;
+      letter-spacing:-.02em;
+    }
+    .tab-btn__meta {
+      font-size:12px;
+      line-height:1.5;
+      color:#6f8399;
+    }
+    .tab-btn:hover {
+      transform:translateY(-2px);
+      border-color:#93c5fd;
+      box-shadow:0 18px 30px rgba(26,64,126,.1);
+      background:linear-gradient(180deg, #ffffff 0%, #eef6ff 100%);
+    }
+    .tab-btn:hover svg {
+      color:#123f7b;
+      transform:scale(1.05);
+    }
+    .tab-btn--active {
+      border-color:#0f274b;
+      background:linear-gradient(135deg, #102a4f 0%, #163d73 58%, #00a084 100%);
+      box-shadow:0 24px 36px rgba(15,39,75,.24);
+    }
+    .tab-btn--active .tab-btn__title,
+    .tab-btn--active .tab-btn__meta {
+      color:#f8fbff;
+    }
+    .tab-btn--active svg { color:#dffef5; }
+    .tab-btn--active .tab-btn__meta { color:rgba(236,244,255,.82); }
+    .tab-btn--active:hover {
+      border-color:#0f274b;
+      background:linear-gradient(135deg, #102a4f 0%, #163d73 58%, #00a084 100%);
+      box-shadow:0 28px 40px rgba(15,39,75,.28);
+    }
+    .tab-btn--utility {
+      background:linear-gradient(180deg, #f7fffc 0%, #eefbf6 100%);
+    }
+
     /* KPI strip */
     .kpi-strip {
       display:grid;
@@ -1353,6 +3081,19 @@ interface InvoiceLine {
     .view-btn { background:transparent; border:none; padding:9px 12px; cursor:pointer; color:rgba(236,244,255,.74); transition:all .15s; display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:700; }
     .view-btn:hover { background:rgba(255,255,255,.1); color:#fff; }
     .view-btn-active { background:#fff; color:#123f7b !important; }
+    .view-toggle--surface {
+      border-color:#dce6f0;
+      background:#f8fbff;
+      backdrop-filter:none;
+      box-shadow:0 8px 18px rgba(12,28,53,.04);
+    }
+    .view-btn--surface {
+      color:#5b7088;
+    }
+    .view-btn--surface:hover {
+      background:#eef6ff;
+      color:#123f7b;
+    }
     /* Grid view */
     .inv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; padding:0; }
     .inv-card { background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); border:1px solid #dce6f0; border-radius:20px; padding:18px; cursor:pointer; transition:box-shadow .16s,border-color .16s, transform .16s; display:flex; flex-direction:column; gap:10px; box-shadow:0 12px 26px rgba(12,28,53,.04); }
@@ -1411,6 +3152,9 @@ interface InvoiceLine {
     .dw-date-chip-overdue .dw-date-val { color:#dc2626 !important; }
     .dw-date-lbl { display:block; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; margin-bottom:3px; }
     .dw-date-val { display:block; font-size:12.5px; font-weight:700; color:#1e293b; }
+    .dw-fiscal-card { display:grid; gap:8px; }
+    .dw-fiscal-row { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:12.5px; color:#475569; }
+    .dw-fiscal-row strong { color:#0c1c35; text-align:right; }
     .dw-items-table { border:1px solid #f0f4f8; border-radius:10px; overflow:hidden; }
     .dw-items-head { display:grid; grid-template-columns:1fr 52px 90px 48px 80px; align-items:center; padding:7px 12px; background:#f8fafc; border-bottom:1px solid #f0f4f8; }
     .dw-items-head span { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; }
@@ -1489,6 +3233,99 @@ interface InvoiceLine {
     .totals-total { border-top:1px solid #e5e7eb; margin-top:6px; padding-top:10px; font-size:15px; }
     .totals-total span, .totals-total strong { color:#0c1c35; font-weight:700; font-size:15px; }
     textarea.form-control { resize:vertical; }
+    .document-config-banner {
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:10px;
+      margin:0 0 14px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:#f6fbff;
+      border:1px solid #d7e7f8;
+    }
+    .document-config-banner > div {
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+    }
+    .document-config-label {
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#7a8ea7;
+    }
+    .document-config-banner strong {
+      color:#123f7b;
+      font-size:13px;
+    }
+    .document-admin-layout {
+      display:grid;
+      grid-template-columns:280px 1fr;
+      gap:18px;
+    }
+    .commercial-flow-layout {
+      display:grid;
+      grid-template-columns:1.15fr .85fr .85fr;
+      gap:18px;
+    }
+    .commercial-flow-panel {
+      border:1px solid #dce6f0;
+      border-radius:18px;
+      background:#fbfdff;
+      padding:16px;
+    }
+    .commercial-flow-title {
+      font-family:'Sora',sans-serif;
+      font-size:15px;
+      font-weight:700;
+      color:#0c1c35;
+      margin-bottom:12px;
+    }
+    .commercial-order-list {
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      max-height:420px;
+      overflow:auto;
+      padding-right:4px;
+    }
+    .document-admin-list {
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .document-admin-item {
+      text-align:left;
+      border:1px solid #dce6f0;
+      background:#fff;
+      border-radius:14px;
+      padding:12px 14px;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      cursor:pointer;
+      transition:all .15s;
+    }
+    .document-admin-item:hover,
+    .document-admin-item-active {
+      border-color:#93c5fd;
+      background:#f8fbff;
+      box-shadow:0 10px 22px rgba(26,64,126,.08);
+    }
+    .document-admin-item strong { color:#0c1c35; font-size:13px; }
+    .document-admin-item span { color:#1a407e; font-size:12px; font-weight:700; }
+    .document-admin-item small { color:#7a8ea7; font-size:11px; }
+    .document-toggle {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding-top:8px;
+      font-size:13px;
+      font-weight:600;
+      color:#374151;
+    }
+    .compact-empty { padding:24px 16px; border:1px dashed #dce6f0; border-radius:14px; background:#fbfdff; }
 
     /* PDF modal */
     .modal-pdf { max-width:900px; height:90vh; }
@@ -1540,6 +3377,16 @@ interface InvoiceLine {
       .hero-summary-list {
         grid-template-columns:repeat(3, minmax(0, 1fr));
       }
+      .tabs-shell__head {
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .tabs-shell__head p {
+        text-align:left;
+      }
+      .tab-grid {
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
       .kpi-strip {
         grid-template-columns:repeat(2, minmax(0, 1fr));
       }
@@ -1551,6 +3398,10 @@ interface InvoiceLine {
       }
       .page-title {
         font-size:26px;
+      }
+      .tabs-shell {
+        padding:18px;
+        border-radius:24px;
       }
       .filters-card,
       .table-shell-head {
@@ -1567,9 +3418,20 @@ interface InvoiceLine {
         align-self:flex-start;
       }
       .kpi-strip { grid-template-columns:1fr 1fr; }
+      .tab-group {
+        padding:14px;
+        border-radius:18px;
+      }
+      .tab-grid,
+      .tab-grid--compact {
+        grid-template-columns:1fr;
+      }
       .modal-invoice { max-width:100% !important; }
       .modal-body { padding:16px 18px; } .modal-header { padding:14px 18px; } .modal-footer { padding:12px 18px; gap:8px; }
       .form-row-3 { grid-template-columns:1fr 1fr !important; gap:10px; }
+      .document-config-banner,
+      .document-admin-layout,
+      .commercial-flow-layout { grid-template-columns:1fr; }
     }
     @media (max-width:600px) {
       .hero-shell {
@@ -1582,6 +3444,9 @@ interface InvoiceLine {
       .hero-actions .btn,
       .hero-actions .view-toggle {
         width:100%;
+      }
+      .tabs-shell {
+        padding:16px;
       }
       .view-toggle {
         justify-content:stretch;
@@ -1631,6 +3496,14 @@ interface InvoiceLine {
     .ref-badge { font-size:12px; font-weight:500; color:#6b7280; background:#f3f4f6; padding:2px 8px; border-radius:6px; margin-left:8px; }
     .balance-info { display:flex; flex-wrap:wrap; gap:16px; padding:10px 16px; background:#f0fdf4; border-radius:8px; margin:0 0 16px; font-size:13px; color:#374151; }
     .balance-loading { color:#9ca3af; font-size:13px; }
+    .invoice-collection-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:12px; }
+    .invoice-collection-kpi { border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; background:#f8fafc; display:flex; flex-direction:column; gap:4px; }
+    .invoice-collection-kpi span { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#64748b; }
+    .invoice-collection-kpi strong { font-size:15px; color:#0f172a; }
+    .invoice-inline-banner { margin-bottom:12px; padding:10px 12px; border-radius:10px; background:#eff6ff; color:#1d4ed8; font-size:12.5px; font-weight:600; }
+    .invoice-mini-list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+    .invoice-mini-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 10px; border-radius:8px; background:#f8fafc; font-size:12.5px; color:#475569; }
+    .note-guided-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; background:#eff6ff; color:#1d4ed8; font-size:11px; font-weight:700; }
     .note-lines-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
     .note-line { display:grid; grid-template-columns:1fr 80px 110px 70px 70px 100px 28px; gap:6px; align-items:center; margin-bottom:6px; }
     .note-line-head { margin-bottom:2px; }
@@ -1657,6 +3530,31 @@ export class InvoicesListComponent implements OnInit {
   private readonly CUST_API = `${environment.apiUrl}/customers`;
   private readonly PROD_API = `${environment.apiUrl}/invoices/products`;
   private readonly COMP_API = `${environment.apiUrl}/companies/me`;
+  private readonly DOC_CFG_API = `${environment.apiUrl}/invoices/document-configs`;
+  private readonly ORDER_API = `${environment.apiUrl}/invoices/sales-orders`;
+  private readonly DELIVERY_API = `${environment.apiUrl}/invoices/delivery-notes`;
+  private readonly DELIVERY_LIST_API = `${environment.apiUrl}/invoices/delivery-notes`;
+  private readonly SOURCE_INVOICE_API = `${environment.apiUrl}/invoices/from-source`;
+  private readonly PAYMENT_API = (invoiceId: string) => `${this.API}/${invoiceId}/payments`;
+  private readonly AGREEMENT_API = (invoiceId: string) => `${this.API}/${invoiceId}/payment-agreements`;
+  private readonly STATEMENT_API = (invoiceId: string) => `${this.API}/${invoiceId}/statement`;
+  private readonly NOTE_CONTEXT_API = (invoiceId: string) => `${this.API}/${invoiceId}/note-context`;
+  private readonly APPROVAL_FLOW_API = (invoiceId: string) => `${this.API}/${invoiceId}/approval-flow`;
+  private readonly REQUEST_APPROVAL_API = (invoiceId: string) => `${this.API}/${invoiceId}/request-approval`;
+  private readonly APPROVE_APPROVAL_API = (invoiceId: string) => `${this.API}/${invoiceId}/approve-approval`;
+  private readonly REJECT_APPROVAL_API = (invoiceId: string) => `${this.API}/${invoiceId}/reject-approval`;
+  private readonly ATTACHMENTS_API = (invoiceId: string) => `${this.API}/${invoiceId}/attachments`;
+  private readonly AUDIT_API = (invoiceId: string) => `${this.API}/${invoiceId}/audit-trail`;
+  private readonly FISCAL_SUMMARY_API = `${this.API}/reports/fiscal-summary`;
+  private readonly VAT_SALES_BOOK_API = `${this.API}/reports/vat-sales-book`;
+  private readonly WITHHOLDINGS_BOOK_API = `${this.API}/reports/withholdings-book`;
+  private readonly DIAN_VALIDATION_REPORT_API = `${this.API}/reports/dian-validation`;
+  private readonly ANALYTICS_SUMMARY_API = `${this.API}/analytics/summary`;
+  private readonly OPERATIONS_MONITOR_API = `${this.API}/operations/monitor`;
+  private readonly PROCESS_QUEUE_API = `${this.API}/operations/process-queue`;
+  private readonly BULK_REPROCESS_API = `${this.API}/operations/reprocess`;
+  private readonly EXTERNAL_INTAKES_API = `${this.API}/external-intakes`;
+  private readonly QUEUE_REPROCESS_API = (invoiceId: string) => `${this.API}/${invoiceId}/queue-reprocess`;
 
   companyPrefix = signal('FV');
 
@@ -1665,13 +3563,25 @@ export class InvoicesListComponent implements OnInit {
   lineProducts = signal<Product[]>([]);
   loading      = signal(true);
   saving       = signal(false);
+  savingConfig = signal(false);
+  savingFlow   = signal(false);
   savingEdit   = signal(false);
+  savingPayment = signal(false);
+  savingAgreement = signal(false);
   total        = signal(0);
   page         = signal(1);
   totalPages   = signal(1);
 
   detailInvoice = signal<Invoice | null>(null);
   showModal     = signal(false);
+  showConfigModal = signal(false);
+  showCommercialFlowModal = signal(false);
+  showPaymentModal = signal(false);
+  showAgreementModal = signal(false);
+  showFiscalModal = signal(false);
+  showAnalyticsModal = signal(false);
+  showOperationsModal = signal(false);
+  focusedInvoiceAction = signal<'refresh' | 'config' | 'flow' | 'fiscal' | 'analytics' | 'operations' | 'new'>('refresh');
   viewMode      = signal<'table' | 'grid'>('table');
   showPdfModal  = signal(false);
   showEditModal = signal(false);
@@ -1684,6 +3594,31 @@ export class InvoicesListComponent implements OnInit {
   // DIAN async state tracking
   sending  = signal<Record<string, boolean>>({});
   querying = signal<Record<string, boolean>>({});
+  documentConfigs = signal<InvoiceDocumentConfig[]>([]);
+  salesOrders = signal<SalesOrderSummary[]>([]);
+  deliveryNotes = signal<DeliveryNoteSummary[]>([]);
+  invoiceStatement = signal<InvoiceStatement | null>(null);
+  loadingStatement = signal(false);
+  noteContext = signal<InvoiceNoteContext | null>(null);
+  approvalFlow = signal<InvoiceApproval[]>([]);
+  attachments = signal<InvoiceAttachment[]>([]);
+  auditTrail = signal<InvoiceAuditEntry[]>([]);
+  loadingGovernance = signal(false);
+  showApprovalRequestModal = signal(false);
+  showAttachmentModal = signal(false);
+  savingApprovalRequest = signal(false);
+  savingAttachment = signal(false);
+  loadingFiscalReports = signal(false);
+  loadingAnalytics = signal(false);
+  loadingOperations = signal(false);
+  savingOperations = signal(false);
+  fiscalSummaryReport = signal<InvoiceFiscalSummaryReport | null>(null);
+  vatSalesBook = signal<InvoiceVatSalesBookRow[]>([]);
+  withholdingsBook = signal<InvoiceWithholdingsBookRow[]>([]);
+  dianValidationReport = signal<InvoiceDianValidationRow[]>([]);
+  invoiceAnalytics = signal<InvoiceAnalyticsSummary | null>(null);
+  operationsMonitor = signal<InvoiceOperationalMonitor | null>(null);
+  externalIntakes = signal<InvoiceExternalIntake[]>([]);
 
   // Credit / Debit note modal state
   noteModal      = signal<'none'|'credit'|'debit'>('none');
@@ -1704,8 +3639,20 @@ export class InvoicesListComponent implements OnInit {
   editLines: InvoiceLine[] = [];
 
   lines: InvoiceLine[] = [this.newLine()];
-  newInvoice = { type:'VENTA', prefix:'FV', issueDate:new Date().toISOString().slice(0,10), dueDate:'', customerId:'', notes:'' };
+  newInvoice = { type:'VENTA', prefix:'FV', issueDate:new Date().toISOString().slice(0,10), dueDate:'', customerId:'', notes:'', documentConfigId:'', sourceChannel:'DIRECT' };
   // prefix se sobreescribe en openNewInvoice() con el valor real de la empresa
+  editingDocumentConfigId: string | null = null;
+  documentConfigForm = this.emptyDocumentConfigForm();
+  commercialFlowMode: 'order' | 'delivery' | 'invoice' = 'order';
+  commercialFlowForm = this.emptyCommercialFlowForm();
+  paymentForm = this.emptyPaymentForm();
+  agreementForm = this.emptyAgreementForm();
+  approvalRequestForm = this.emptyApprovalRequestForm();
+  attachmentForm = this.emptyAttachmentForm();
+  fiscalFilters = this.emptyFiscalFilters();
+  analyticsFilters = this.emptyFiscalFilters();
+  operationsForm = this.emptyOperationsForm();
+  externalIntakeForm = this.emptyExternalIntakeForm();
 
   search = ''; filterStatus = ''; filterType = ''; filterFrom = ''; filterTo = '';
   private searchTimer: any;
@@ -1723,13 +3670,18 @@ export class InvoicesListComponent implements OnInit {
     private sanitizer: DomSanitizer
   ) {}
 
-  ngOnInit() { this.load(); this.loadCustomers(); this.loadProducts(); this.loadCompanyPrefix(); }
+  ngOnInit() { this.load(); this.loadCustomers(); this.loadProducts(); this.loadCompanyPrefix(); this.loadDocumentConfigs(); }
 
   loadCompanyPrefix() {
     this.http.get<any>(this.COMP_API).subscribe({
       next: r => {
         const prefix = (r?.data ?? r)?.dianPrefijo;
-        if (prefix) this.companyPrefix.set(prefix);
+        if (prefix) {
+          this.companyPrefix.set(prefix);
+          if (!this.documentConfigForm.prefix) {
+            this.documentConfigForm = { ...this.documentConfigForm, prefix };
+          }
+        }
       },
       error: () => {},
     });
@@ -1779,9 +3731,49 @@ export class InvoicesListComponent implements OnInit {
 
   openNewInvoice() {
     this.lines = [this.newLine()];
-    this.newInvoice = { type:'VENTA', prefix: this.companyPrefix(), issueDate:new Date().toISOString().slice(0,10), dueDate:'', customerId:'', notes:'' };
+    const defaultConfig = this.defaultDocumentConfig('DIRECT', 'VENTA');
+    this.newInvoice = {
+      type:'VENTA',
+      prefix: defaultConfig?.prefix || this.companyPrefix(),
+      issueDate:new Date().toISOString().slice(0,10),
+      dueDate:'',
+      customerId:'',
+      notes:'',
+      documentConfigId: defaultConfig?.id || '',
+      sourceChannel:'DIRECT',
+    };
     this.showModal.set(true);
   }
+
+  triggerInvoiceAction(action: 'refresh' | 'config' | 'flow' | 'fiscal' | 'analytics' | 'operations' | 'new') {
+    this.focusedInvoiceAction.set(action);
+    if (action === 'refresh') {
+      this.load();
+      return;
+    }
+    if (action === 'config') {
+      this.openConfigModal();
+      return;
+    }
+    if (action === 'flow') {
+      this.openCommercialFlowModal();
+      return;
+    }
+    if (action === 'fiscal') {
+      this.openFiscalModal();
+      return;
+    }
+    if (action === 'analytics') {
+      this.openAnalyticsModal();
+      return;
+    }
+    if (action === 'operations') {
+      this.openOperationsModal();
+      return;
+    }
+    this.openNewInvoice();
+  }
+
   @HostListener('document:keydown.escape')
   onEscapeKey() {
     // Escape no cierra los modales — solo el botón X
@@ -1806,7 +3798,12 @@ export class InvoicesListComponent implements OnInit {
     if (!this.newInvoice.customerId) { this.notify.warning('Selecciona un cliente'); return; }
     if (this.lines.some(l=>!l.description&&!l.productId)) { this.notify.warning('Todas las líneas necesitan descripción'); return; }
     this.saving.set(true);
-    const body = { ...this.newInvoice, dueDate:this.newInvoice.dueDate||undefined, sendToDian:sendDian,
+    const body = {
+      ...this.newInvoice,
+      documentConfigId: this.newInvoice.documentConfigId || undefined,
+      sourceChannel: this.newInvoice.sourceChannel || 'DIRECT',
+      dueDate:this.newInvoice.dueDate||undefined,
+      sendToDian:sendDian,
       items:this.lines.map((l,i)=>({ productId:l.productId||undefined, description:l.description, quantity:l.quantity, unitPrice:l.unitPrice, taxRate:l.taxRate, discount:l.discount, position:i+1 })) };
     this.http.post(this.API, body).subscribe({
       next: () => { this.notify.success(sendDian?'Factura creada y enviada a DIAN':'Factura guardada como borrador'); this.saving.set(false); this.closeModal(); this.load(); },
@@ -1815,9 +3812,33 @@ export class InvoicesListComponent implements OnInit {
   }
 
   viewDetail(inv: Invoice) {
+    this.loadInvoiceStatement(inv.id);
+    this.loadGovernance(inv.id);
     this.http.get<any>(`${this.API}/${inv.id}`).subscribe({
       next: r  => this.detailInvoice.set(r.data ?? r),
       error: () => this.detailInvoice.set(inv),
+    });
+  }
+
+  loadGovernance(invoiceId: string) {
+    this.loadingGovernance.set(true);
+    this.http.get<InvoiceApproval[]>(this.APPROVAL_FLOW_API(invoiceId)).subscribe({
+      next: response => this.approvalFlow.set(response ?? []),
+      error: () => this.approvalFlow.set([]),
+    });
+    this.http.get<InvoiceAttachment[]>(this.ATTACHMENTS_API(invoiceId)).subscribe({
+      next: response => this.attachments.set(response ?? []),
+      error: () => this.attachments.set([]),
+    });
+    this.http.get<InvoiceAuditEntry[]>(this.AUDIT_API(invoiceId)).subscribe({
+      next: response => {
+        this.auditTrail.set(response ?? []);
+        this.loadingGovernance.set(false);
+      },
+      error: () => {
+        this.auditTrail.set([]);
+        this.loadingGovernance.set(false);
+      },
     });
   }
 
@@ -1952,6 +3973,250 @@ export class InvoicesListComponent implements OnInit {
     });
   }
 
+  private emptyPaymentForm() {
+    return {
+      amount: null as number | null,
+      paymentDate: new Date().toISOString().slice(0, 10),
+      paymentMethod: 'TRANSFERENCIA',
+      reference: '',
+      notes: '',
+    };
+  }
+
+  private emptyAgreementForm() {
+    return {
+      amount: null as number | null,
+      promisedDate: new Date().toISOString().slice(0, 10),
+      notes: '',
+    };
+  }
+
+  private emptyApprovalRequestForm() {
+    return {
+      actionType: 'ISSUE' as 'ISSUE' | 'CANCEL',
+      reason: '',
+    };
+  }
+
+  private emptyAttachmentForm() {
+    return {
+      fileName: '',
+      fileUrl: '',
+      mimeType: '',
+      category: 'SOPORTE',
+      notes: '',
+      sizeBytes: null as number | null,
+    };
+  }
+
+  private emptyFiscalFilters() {
+    const to = new Date();
+    const from = new Date(to.getFullYear(), to.getMonth(), 1);
+    return {
+      dateFrom: from.toISOString().slice(0, 10),
+      dateTo: to.toISOString().slice(0, 10),
+    };
+  }
+
+  private emptyOperationsForm() {
+    return {
+      actionType: 'SEND_DIAN' as 'SEND_DIAN' | 'QUERY_DIAN_STATUS',
+      scope: 'AUTO' as 'AUTO' | 'SELECTED',
+    };
+  }
+
+  private emptyExternalIntakeForm() {
+    return {
+      channel: 'ECOMMERCE',
+      externalRef: '',
+      customerId: '',
+      notes: '',
+      autoProcess: true,
+    };
+  }
+
+  loadInvoiceStatement(invoiceId: string) {
+    this.loadingStatement.set(true);
+    this.http.get<InvoiceStatement>(this.STATEMENT_API(invoiceId)).subscribe({
+      next: response => {
+        this.invoiceStatement.set(response);
+        this.loadingStatement.set(false);
+      },
+      error: () => {
+        this.invoiceStatement.set(null);
+        this.loadingStatement.set(false);
+      },
+    });
+  }
+
+  openPaymentModal(inv: Invoice) {
+    this.paymentForm = this.emptyPaymentForm();
+    const balance = this.invoiceStatement()?.summary.balance;
+    if (balance && balance > 0) {
+      this.paymentForm.amount = Number(balance.toFixed(2));
+    }
+    this.showPaymentModal.set(true);
+  }
+
+  closePaymentModal() {
+    this.showPaymentModal.set(false);
+  }
+
+  submitPayment() {
+    const invoice = this.detailInvoice();
+    if (!invoice) return;
+    if (!this.paymentForm.amount || this.paymentForm.amount <= 0) {
+      this.notify.warning('Ingresa un monto válido');
+      return;
+    }
+    this.savingPayment.set(true);
+    this.http.post<any>(this.PAYMENT_API(invoice.id), this.paymentForm).subscribe({
+      next: () => {
+        this.savingPayment.set(false);
+        this.showPaymentModal.set(false);
+        this.notify.success('Pago registrado correctamente');
+        this.loadInvoiceStatement(invoice.id);
+        this.viewDetail(invoice);
+        this.load();
+      },
+      error: error => {
+        this.savingPayment.set(false);
+        this.notify.error(error?.error?.message ?? 'No fue posible registrar el pago');
+      },
+    });
+  }
+
+  openAgreementModal(inv: Invoice) {
+    this.agreementForm = this.emptyAgreementForm();
+    const balance = this.invoiceStatement()?.summary.balance;
+    if (balance && balance > 0) {
+      this.agreementForm.amount = Number(balance.toFixed(2));
+    }
+    this.showAgreementModal.set(true);
+  }
+
+  closeAgreementModal() {
+    this.showAgreementModal.set(false);
+  }
+
+  submitAgreement() {
+    const invoice = this.detailInvoice();
+    if (!invoice) return;
+    if (!this.agreementForm.amount || this.agreementForm.amount <= 0) {
+      this.notify.warning('Ingresa un monto válido para el acuerdo');
+      return;
+    }
+    this.savingAgreement.set(true);
+    this.http.post<any>(this.AGREEMENT_API(invoice.id), this.agreementForm).subscribe({
+      next: () => {
+        this.savingAgreement.set(false);
+        this.showAgreementModal.set(false);
+        this.notify.success('Acuerdo de pago creado');
+        this.loadInvoiceStatement(invoice.id);
+      },
+      error: error => {
+        this.savingAgreement.set(false);
+        this.notify.error(error?.error?.message ?? 'No fue posible crear el acuerdo');
+      },
+    });
+  }
+
+  openApprovalRequestModal(actionType: 'ISSUE' | 'CANCEL') {
+    this.approvalRequestForm = {
+      actionType,
+      reason: '',
+    };
+    this.showApprovalRequestModal.set(true);
+  }
+
+  closeApprovalRequestModal() {
+    this.showApprovalRequestModal.set(false);
+  }
+
+  submitApprovalRequest() {
+    const invoice = this.detailInvoice();
+    if (!invoice) return;
+    this.savingApprovalRequest.set(true);
+    this.http.post<InvoiceApproval[]>(this.REQUEST_APPROVAL_API(invoice.id), this.approvalRequestForm).subscribe({
+      next: response => {
+        this.approvalFlow.set(response ?? []);
+        this.savingApprovalRequest.set(false);
+        this.showApprovalRequestModal.set(false);
+        this.notify.success('Solicitud de aprobación registrada');
+      },
+      error: error => {
+        this.savingApprovalRequest.set(false);
+        this.notify.error(error?.error?.message ?? 'No fue posible solicitar la aprobación');
+      },
+    });
+  }
+
+  approvePendingApproval() {
+    const invoice = this.detailInvoice();
+    if (!invoice) return;
+    this.http.patch<InvoiceApproval[]>(this.APPROVE_APPROVAL_API(invoice.id), {}).subscribe({
+      next: response => {
+        this.approvalFlow.set(response ?? []);
+        this.notify.success('Solicitud aprobada');
+      },
+      error: error => this.notify.error(error?.error?.message ?? 'No fue posible aprobar la solicitud'),
+    });
+  }
+
+  rejectPendingApproval() {
+    const invoice = this.detailInvoice();
+    if (!invoice) return;
+    const reason = this.pendingApprovalActionLabel() === 'emitir'
+      ? 'Solicitud rechazada para emitir'
+      : 'Solicitud rechazada para anular';
+    this.http.patch<InvoiceApproval[]>(this.REJECT_APPROVAL_API(invoice.id), { reason }).subscribe({
+      next: response => {
+        this.approvalFlow.set(response ?? []);
+        this.notify.success('Solicitud rechazada');
+      },
+      error: error => this.notify.error(error?.error?.message ?? 'No fue posible rechazar la solicitud'),
+    });
+  }
+
+  openAttachmentModal() {
+    this.attachmentForm = this.emptyAttachmentForm();
+    this.showAttachmentModal.set(true);
+  }
+
+  closeAttachmentModal() {
+    this.showAttachmentModal.set(false);
+  }
+
+  submitAttachment() {
+    const invoice = this.detailInvoice();
+    if (!invoice) return;
+    if (!this.attachmentForm.fileName.trim() || !this.attachmentForm.fileUrl.trim()) {
+      this.notify.warning('Define nombre y URL del soporte');
+      return;
+    }
+    this.savingAttachment.set(true);
+    this.http.post<InvoiceAttachment[]>(this.ATTACHMENTS_API(invoice.id), {
+      ...this.attachmentForm,
+      fileName: this.attachmentForm.fileName.trim(),
+      fileUrl: this.attachmentForm.fileUrl.trim(),
+      mimeType: this.attachmentForm.mimeType.trim() || undefined,
+      category: this.attachmentForm.category.trim() || undefined,
+      notes: this.attachmentForm.notes.trim() || undefined,
+      sizeBytes: this.attachmentForm.sizeBytes ?? undefined,
+    }).subscribe({
+      next: response => {
+        this.attachments.set(response ?? []);
+        this.savingAttachment.set(false);
+        this.showAttachmentModal.set(false);
+        this.notify.success('Soporte agregado');
+      },
+      error: error => {
+        this.savingAttachment.set(false);
+        this.notify.error(error?.error?.message ?? 'No fue posible agregar el soporte');
+      },
+    });
+  }
+
   copyText(text: string) { navigator.clipboard.writeText(text).then(()=>this.notify.success('Copiado al portapapeles')); }
 
   isOverdue(inv: Invoice): boolean { return inv.dueDate ? new Date(inv.dueDate) < new Date() && inv.status!=='PAID' && inv.status!=='CANCELLED' : false; }
@@ -1967,6 +4232,12 @@ export class InvoicesListComponent implements OnInit {
   dianErrorSeverity(msg: string): 'rechazo' | 'notificacion' {
     return /Notificaci/i.test(msg) ? 'notificacion' : 'rechazo';
   }
+  dianActionLabel(action?: string | null) {
+    return ({ SEND_DIAN: 'Enviar DIAN', QUERY_DIAN_STATUS: 'Consultar DIAN' } as any)[action ?? ''] ?? (action || 'Operación');
+  }
+  dianJobStatusLabel(status?: string | null) {
+    return ({ PENDING: 'Pendiente', PROCESSING: 'Procesando', SUCCESS: 'Correcto', FAILED: 'Fallido', SKIPPED: 'Omitido' } as any)[status ?? ''] ?? (status || 'Pendiente');
+  }
   fmtCOP(v: number) { return new Intl.NumberFormat('es-CO',{ style:'currency', currency:'COP', minimumFractionDigits:0 }).format(v); }
   min(a: number, b: number) { return Math.min(a, b); }
   private triggerDownload(blob: Blob, filename: string) {
@@ -1976,6 +4247,564 @@ export class InvoicesListComponent implements OnInit {
     URL.revokeObjectURL(url);
   }
   private newLine(): InvoiceLine { return { productId:'', description:'', quantity:1, unitPrice:0, taxRate:19, discount:0 }; }
+  private emptyDocumentConfigForm() {
+    return {
+      name: '',
+      channel: 'DIRECT',
+      type: 'VENTA',
+      prefix: this.companyPrefix(),
+      resolutionNumber: '',
+      resolutionLabel: '',
+      rangeFrom: null as number | null,
+      rangeTo: null as number | null,
+      validFrom: '',
+      validTo: '',
+      branchId: '',
+      posTerminalId: '',
+      isActive: true,
+      isDefault: false,
+    };
+  }
+  private emptyCommercialFlowForm() {
+    return {
+      quoteId: '',
+      posSaleId: '',
+      salesOrderId: '',
+      deliveryNoteId: '',
+      customerId: '',
+      issueDate: new Date().toISOString().slice(0, 10),
+      dueDate: '',
+      notes: '',
+      applyAdvance: false,
+    };
+  }
+
+  loadDocumentConfigs() {
+    this.http.get<any>(this.DOC_CFG_API).subscribe({
+      next: response => this.documentConfigs.set(response?.data ?? response ?? []),
+      error: () => this.notify.warning('No fue posible cargar la configuración documental'),
+    });
+  }
+
+  loadSalesOrders() {
+    this.http.get<any>(this.ORDER_API).subscribe({
+      next: response => this.salesOrders.set(response?.data ?? response ?? []),
+      error: () => this.salesOrders.set([]),
+    });
+  }
+
+  loadDeliveryNotes() {
+    this.http.get<any>(this.DELIVERY_LIST_API).subscribe({
+      next: response => this.deliveryNotes.set(response?.data ?? response ?? []),
+      error: () => this.deliveryNotes.set([]),
+    });
+  }
+
+  openConfigModal() {
+    this.showConfigModal.set(true);
+    if (!this.documentConfigs().length) this.resetDocumentConfigForm();
+  }
+
+  openCommercialFlowModal() {
+    this.commercialFlowMode = 'order';
+    this.commercialFlowForm = this.emptyCommercialFlowForm();
+    this.showCommercialFlowModal.set(true);
+    this.loadSalesOrders();
+    this.loadDeliveryNotes();
+  }
+
+  openFiscalModal() {
+    this.showFiscalModal.set(true);
+    if (!this.fiscalSummaryReport()) {
+      this.loadFiscalReports();
+    }
+  }
+
+  openAnalyticsModal() {
+    this.showAnalyticsModal.set(true);
+    if (!this.invoiceAnalytics()) {
+      this.loadAnalytics();
+    }
+  }
+
+  openOperationsModal() {
+    this.showOperationsModal.set(true);
+    this.loadOperationsMonitor();
+  }
+
+  closeCommercialFlowModal() {
+    this.showCommercialFlowModal.set(false);
+  }
+
+  closeFiscalModal() {
+    this.showFiscalModal.set(false);
+  }
+
+  closeAnalyticsModal() {
+    this.showAnalyticsModal.set(false);
+  }
+
+  closeOperationsModal() {
+    this.showOperationsModal.set(false);
+  }
+
+  closeConfigModal() {
+    this.showConfigModal.set(false);
+  }
+
+  loadFiscalReports() {
+    if (!this.fiscalFilters.dateFrom || !this.fiscalFilters.dateTo) {
+      this.notify.warning('Define el rango de fechas para los reportes fiscales');
+      return;
+    }
+    const params = {
+      dateFrom: this.fiscalFilters.dateFrom,
+      dateTo: this.fiscalFilters.dateTo,
+    };
+    this.loadingFiscalReports.set(true);
+    this.http.get<InvoiceFiscalSummaryReport>(this.FISCAL_SUMMARY_API, { params }).subscribe({
+      next: response => this.fiscalSummaryReport.set(response),
+      error: () => this.fiscalSummaryReport.set(null),
+    });
+    this.http.get<InvoiceVatSalesBookRow[]>(this.VAT_SALES_BOOK_API, { params }).subscribe({
+      next: response => this.vatSalesBook.set(response ?? []),
+      error: () => this.vatSalesBook.set([]),
+    });
+    this.http.get<InvoiceWithholdingsBookRow[]>(this.WITHHOLDINGS_BOOK_API, { params }).subscribe({
+      next: response => this.withholdingsBook.set(response ?? []),
+      error: () => this.withholdingsBook.set([]),
+    });
+    this.http.get<InvoiceDianValidationRow[]>(this.DIAN_VALIDATION_REPORT_API, { params }).subscribe({
+      next: response => {
+        this.dianValidationReport.set(response ?? []);
+        this.loadingFiscalReports.set(false);
+      },
+      error: () => {
+        this.dianValidationReport.set([]);
+        this.loadingFiscalReports.set(false);
+      },
+    });
+  }
+
+  loadAnalytics() {
+    if (!this.analyticsFilters.dateFrom || !this.analyticsFilters.dateTo) {
+      this.notify.warning('Define el rango de fechas para la analítica');
+      return;
+    }
+    this.loadingAnalytics.set(true);
+    this.http.get<InvoiceAnalyticsSummary>(this.ANALYTICS_SUMMARY_API, {
+      params: {
+        dateFrom: this.analyticsFilters.dateFrom,
+        dateTo: this.analyticsFilters.dateTo,
+      },
+    }).subscribe({
+      next: response => {
+        this.invoiceAnalytics.set(response);
+        this.loadingAnalytics.set(false);
+      },
+      error: () => {
+        this.invoiceAnalytics.set(null);
+        this.loadingAnalytics.set(false);
+        this.notify.error('No fue posible cargar la analítica de facturación');
+      },
+    });
+  }
+
+  loadOperationsMonitor() {
+    this.loadingOperations.set(true);
+    this.http.get<InvoiceOperationalMonitor>(this.OPERATIONS_MONITOR_API).subscribe({
+      next: response => {
+        this.operationsMonitor.set(response);
+        this.externalIntakes.set(response.externalIntakes.recent ?? []);
+        this.loadingOperations.set(false);
+      },
+      error: () => {
+        this.operationsMonitor.set(null);
+        this.externalIntakes.set([]);
+        this.loadingOperations.set(false);
+        this.notify.error('No fue posible cargar el monitor operativo DIAN');
+      },
+    });
+  }
+
+  queueBulkReprocess() {
+    this.savingOperations.set(true);
+    const body: any = { actionType: this.operationsForm.actionType };
+    if (this.operationsForm.scope === 'SELECTED') {
+      body.invoiceIds = this.invoices().slice(0, 20).map((item) => item.id);
+    }
+    this.http.post<any>(this.BULK_REPROCESS_API, body).subscribe({
+      next: response => {
+        this.savingOperations.set(false);
+        this.notify.success(`Se encolaron ${response?.queued ?? 0} operaciones DIAN`);
+        this.loadOperationsMonitor();
+      },
+      error: error => {
+        this.savingOperations.set(false);
+        this.notify.error(error?.error?.message ?? 'No fue posible encolar el reproceso masivo');
+      },
+    });
+  }
+
+  processQueuedOperations() {
+    this.savingOperations.set(true);
+    this.http.post<any>(this.PROCESS_QUEUE_API, {}).subscribe({
+      next: response => {
+        this.savingOperations.set(false);
+        this.notify.success(`Cola procesada: ${response?.processed ?? 0} tareas`);
+        this.loadOperationsMonitor();
+        this.load();
+      },
+      error: error => {
+        this.savingOperations.set(false);
+        this.notify.error(error?.error?.message ?? 'No fue posible ejecutar la cola DIAN');
+      },
+    });
+  }
+
+  queueSingleReprocess(actionType: 'SEND_DIAN' | 'QUERY_DIAN_STATUS') {
+    const invoice = this.detailInvoice();
+    if (!invoice) {
+      this.notify.warning('Abre una factura para reintentarlo');
+      return;
+    }
+    this.savingOperations.set(true);
+    this.http.post<any>(this.QUEUE_REPROCESS_API(invoice.id), { actionType }).subscribe({
+      next: () => {
+        this.savingOperations.set(false);
+        this.notify.success('Factura agregada a la cola de reproceso');
+        this.loadOperationsMonitor();
+      },
+      error: error => {
+        this.savingOperations.set(false);
+        this.notify.error(error?.error?.message ?? 'No fue posible agregar la factura a la cola');
+      },
+    });
+  }
+
+  submitExternalIntake() {
+    if (!this.externalIntakeForm.externalRef.trim() || !this.externalIntakeForm.customerId) {
+      this.notify.warning('Define referencia externa y cliente para registrar el intake');
+      return;
+    }
+    const firstProduct = this.lineProducts()[0];
+    if (!firstProduct) {
+      this.notify.warning('Se requiere al menos un producto para simular el intake externo');
+      return;
+    }
+    this.savingOperations.set(true);
+    this.http.post<any>(this.EXTERNAL_INTAKES_API, {
+      channel: this.externalIntakeForm.channel,
+      externalRef: this.externalIntakeForm.externalRef.trim(),
+      notes: this.externalIntakeForm.notes.trim() || undefined,
+      autoProcess: this.externalIntakeForm.autoProcess,
+      customerPayload: {
+        customerId: this.externalIntakeForm.customerId,
+      },
+      invoicePayload: {
+        customerId: this.externalIntakeForm.customerId,
+        sourceChannel: this.externalIntakeForm.channel,
+        notes: this.externalIntakeForm.notes.trim() || undefined,
+        items: [
+          {
+            productId: firstProduct.id,
+            description: firstProduct.name,
+            quantity: 1,
+            unitPrice: Number(firstProduct.price),
+            taxRate: Number(firstProduct.taxRate ?? 19),
+            discount: 0,
+            position: 1,
+          },
+        ],
+      },
+    }).subscribe({
+      next: () => {
+        this.savingOperations.set(false);
+        this.externalIntakeForm = this.emptyExternalIntakeForm();
+        this.notify.success('Intake externo registrado');
+        this.loadOperationsMonitor();
+        this.load();
+      },
+      error: error => {
+        this.savingOperations.set(false);
+        this.notify.error(error?.error?.message ?? 'No fue posible registrar el intake externo');
+      },
+    });
+  }
+
+  resetDocumentConfigForm() {
+    this.editingDocumentConfigId = null;
+    this.documentConfigForm = this.emptyDocumentConfigForm();
+  }
+
+  editDocumentConfig(config: InvoiceDocumentConfig) {
+    this.editingDocumentConfigId = config.id;
+    this.documentConfigForm = {
+      name: config.name,
+      channel: config.channel,
+      type: config.type,
+      prefix: config.prefix,
+      resolutionNumber: config.resolutionNumber || '',
+      resolutionLabel: config.resolutionLabel || '',
+      rangeFrom: config.rangeFrom ?? null,
+      rangeTo: config.rangeTo ?? null,
+      validFrom: config.validFrom || '',
+      validTo: config.validTo || '',
+      branchId: config.branchId || '',
+      posTerminalId: config.posTerminalId || '',
+      isActive: config.isActive,
+      isDefault: config.isDefault,
+    };
+  }
+
+  saveDocumentConfig() {
+    if (!this.documentConfigForm.name.trim() || !this.documentConfigForm.prefix.trim()) {
+      this.notify.warning('Define al menos nombre y prefijo para la configuración documental');
+      return;
+    }
+    const payload = {
+      ...this.documentConfigForm,
+      name: this.documentConfigForm.name.trim(),
+      prefix: this.documentConfigForm.prefix.trim().toUpperCase(),
+      branchId: this.documentConfigForm.branchId.trim() || undefined,
+      posTerminalId: this.documentConfigForm.posTerminalId.trim() || undefined,
+      resolutionNumber: this.documentConfigForm.resolutionNumber.trim() || undefined,
+      resolutionLabel: this.documentConfigForm.resolutionLabel.trim() || undefined,
+      validFrom: this.documentConfigForm.validFrom || undefined,
+      validTo: this.documentConfigForm.validTo || undefined,
+      rangeFrom: this.documentConfigForm.rangeFrom ?? undefined,
+      rangeTo: this.documentConfigForm.rangeTo ?? undefined,
+    };
+    this.savingConfig.set(true);
+    const request = this.editingDocumentConfigId
+      ? this.http.patch(`${this.DOC_CFG_API}/${this.editingDocumentConfigId}`, payload)
+      : this.http.post(this.DOC_CFG_API, payload);
+    request.subscribe({
+      next: () => {
+        this.notify.success(this.editingDocumentConfigId ? 'Configuración documental actualizada' : 'Configuración documental creada');
+        this.savingConfig.set(false);
+        this.loadDocumentConfigs();
+        this.resetDocumentConfigForm();
+      },
+      error: (error) => {
+        this.savingConfig.set(false);
+        this.notify.error(error?.error?.message ?? 'No fue posible guardar la configuración documental');
+      },
+    });
+  }
+
+  availableDocumentConfigs() {
+    const channel = this.newInvoice.sourceChannel || 'DIRECT';
+    const type = this.newInvoice.type || 'VENTA';
+    return this.documentConfigs().filter((cfg) => cfg.channel === channel && cfg.type === type && cfg.isActive);
+  }
+
+  selectedDocumentConfig() {
+    return this.documentConfigs().find((cfg) => cfg.id === this.newInvoice.documentConfigId) || null;
+  }
+
+  defaultDocumentConfig(channel: string, type: string) {
+    const configs = this.documentConfigs().filter((cfg) => cfg.channel === channel && cfg.type === type && cfg.isActive);
+    return configs.find((cfg) => cfg.isDefault) || configs[0] || null;
+  }
+
+  onDocumentConfigSelected(documentConfigId: string) {
+    const selected = this.documentConfigs().find((cfg) => cfg.id === documentConfigId);
+    if (!selected) {
+      this.newInvoice.prefix = this.companyPrefix();
+      return;
+    }
+    this.newInvoice.prefix = selected.prefix;
+    this.newInvoice.sourceChannel = selected.channel;
+  }
+
+  onInvoiceChannelChanged() {
+    const defaultConfig = this.defaultDocumentConfig(this.newInvoice.sourceChannel || 'DIRECT', this.newInvoice.type || 'VENTA');
+    this.newInvoice.documentConfigId = defaultConfig?.id || '';
+    this.newInvoice.prefix = defaultConfig?.prefix || this.companyPrefix();
+  }
+
+  documentConfigScope(config: InvoiceDocumentConfig) {
+    if (config.posTerminal) return `Caja ${config.posTerminal.code} · ${config.posTerminal.name}`;
+    if (config.branch) return `Sucursal ${config.branch.name}`;
+    if (config.posTerminalId) return `Caja ${config.posTerminalId}`;
+    if (config.branchId) return `Sucursal ${config.branchId}`;
+    return 'Empresa';
+  }
+
+  formatRange(from?: number | null, to?: number | null) {
+    if (!from && !to) return 'Abierto';
+    return `${from ?? '—'} a ${to ?? '—'}`;
+  }
+
+  channelLabel(channel?: string | null) {
+    return ({
+      DIRECT:'Directo',
+      POS:'POS',
+      ONLINE:'Online',
+      WHOLESALE:'Mayorista',
+      ECOMMERCE:'E-commerce',
+      MARKETPLACE:'Marketplace',
+      API:'API',
+    } as any)[channel ?? 'DIRECT'] ?? (channel || 'Directo');
+  }
+
+  invoiceFlowLabel(invoice: Invoice) {
+    if (invoice.deliveryNoteId) return 'Remisión → Factura';
+    if (invoice.salesOrderId) return 'Pedido → Factura';
+    if (invoice.sourceQuoteId) return 'Cotización → Factura';
+    if (invoice.sourcePosSaleId || invoice.sourceChannel === 'POS') return 'POS → Factura';
+    return invoice.type === 'NOTA_CREDITO' || invoice.type === 'NOTA_DEBITO' ? 'Ajuste documental' : 'Facturación directa';
+  }
+
+  inventoryStatusLabel(status?: string | null) {
+    return ({
+      PENDING: 'Pendiente',
+      POSTED: 'Aplicado',
+      EXTERNAL: 'Gestionado por otro módulo',
+      DELIVERED: 'Consumido por remisión',
+      NOT_APPLICABLE: 'No aplica',
+      RETURNED: 'Reintegrado',
+    } as any)[status ?? 'PENDING'] ?? (status || 'Pendiente');
+  }
+
+  deliveryStatusLabel(status?: string | null) {
+    return ({
+      PENDING: 'Pendiente',
+      DELIVERED: 'Entregado',
+      RETURNED: 'Devuelto',
+      EXTERNAL: 'Gestionado externamente',
+    } as any)[status ?? 'PENDING'] ?? (status || 'Pendiente');
+  }
+
+  approvalActionLabel(action?: string | null) {
+    return ({ ISSUE: 'Emitir', CANCEL: 'Anular' } as any)[action ?? 'ISSUE'] ?? (action || 'Emitir');
+  }
+
+  approvalStatusLabel(status?: string | null) {
+    return ({
+      PENDING: 'Pendiente',
+      APPROVED: 'Aprobada',
+      REJECTED: 'Rechazada',
+      CONSUMED: 'Consumida',
+    } as any)[status ?? 'PENDING'] ?? (status || 'Pendiente');
+  }
+
+  pendingApproval() {
+    return this.approvalFlow().find((item) => item.status === 'PENDING') ?? null;
+  }
+
+  pendingApprovalActionLabel() {
+    const actionType = this.pendingApproval()?.actionType;
+    return actionType === 'CANCEL' ? 'anular' : 'emitir';
+  }
+
+  auditActionLabel(action?: string | null) {
+    return ({
+      INVOICE_CREATED: 'Factura creada',
+      INVOICE_ISSUED_TO_DIAN: 'Factura enviada a DIAN',
+      INVOICE_DIAN_STATUS_QUERIED: 'Estado DIAN consultado',
+      INVOICE_CANCELLED: 'Factura anulada',
+      INVOICE_MARKED_PAID: 'Factura marcada como pagada',
+      INVOICE_APPROVAL_REQUESTED: 'Aprobación solicitada',
+      INVOICE_APPROVAL_APPROVED: 'Aprobación aceptada',
+      INVOICE_APPROVAL_REJECTED: 'Aprobación rechazada',
+      INVOICE_ATTACHMENT_ADDED: 'Soporte agregado',
+    } as any)[action ?? ''] ?? (action || 'Evento');
+  }
+
+  fiscalValidationLabel(status?: string | null) {
+    return ({
+      READY: 'Lista para DIAN',
+      REVIEW_REQUIRED: 'Requiere revisión',
+      PENDING: 'Pendiente',
+    } as any)[status ?? 'PENDING'] ?? (status || 'Pendiente');
+  }
+
+  commercialFlowInventoryHint() {
+    if (this.commercialFlowMode === 'delivery') {
+      return 'La remisión mueve inventario en operación directa. Si el origen es POS, el inventario se respeta como externo.';
+    }
+    if (this.commercialFlowMode === 'invoice') {
+      return 'La factura descuenta inventario solo cuando no viene de POS ni de una remisión ya aplicada.';
+    }
+    return 'El pedido comercial reserva el flujo, pero no mueve inventario hasta la remisión o la factura según el origen.';
+  }
+
+  commercialFlowActionLabel() {
+    return this.commercialFlowMode === 'order'
+      ? 'Crear pedido'
+      : this.commercialFlowMode === 'delivery'
+        ? 'Crear remisión'
+        : 'Crear factura desde origen';
+  }
+
+  useSalesOrder(order: SalesOrderSummary) {
+    this.commercialFlowForm.salesOrderId = order.id;
+    this.commercialFlowForm.customerId = '';
+    if (this.commercialFlowMode === 'invoice') {
+      this.commercialFlowForm.deliveryNoteId = '';
+    }
+  }
+
+  useDeliveryNote(note: DeliveryNoteSummary) {
+    this.commercialFlowForm.deliveryNoteId = note.id;
+    this.commercialFlowForm.salesOrderId = note.salesOrderId || '';
+    this.commercialFlowForm.customerId = '';
+    this.commercialFlowMode = 'invoice';
+  }
+
+  commercialFlowKpis() {
+    const orders = this.salesOrders();
+    const notes = this.deliveryNotes();
+    return [
+      { label: 'Pedidos abiertos', value: String(orders.filter((item) => item.status === 'OPEN').length) },
+      { label: 'Remisiones emitidas', value: String(notes.filter((item) => item.status === 'POSTED').length) },
+      { label: 'Pedidos recientes', value: String(orders.length) },
+      { label: 'Remisiones recientes', value: String(notes.length) },
+    ];
+  }
+
+  submitCommercialFlow() {
+    this.savingFlow.set(true);
+    const payload = {
+      ...this.commercialFlowForm,
+      quoteId: this.commercialFlowForm.quoteId || undefined,
+      posSaleId: this.commercialFlowForm.posSaleId || undefined,
+      salesOrderId: this.commercialFlowForm.salesOrderId || undefined,
+      deliveryNoteId: this.commercialFlowForm.deliveryNoteId || undefined,
+      customerId: this.commercialFlowForm.customerId || undefined,
+      dueDate: this.commercialFlowForm.dueDate || undefined,
+      notes: this.commercialFlowForm.notes || undefined,
+      applyAdvance: !!this.commercialFlowForm.applyAdvance,
+    };
+    const request = this.commercialFlowMode === 'order'
+      ? this.http.post(this.ORDER_API, payload)
+      : this.commercialFlowMode === 'delivery'
+        ? this.http.post(this.DELIVERY_API, payload)
+        : this.http.post(this.SOURCE_INVOICE_API, payload);
+
+    request.subscribe({
+      next: () => {
+        this.notify.success(
+          this.commercialFlowMode === 'order'
+            ? 'Pedido comercial creado'
+            : this.commercialFlowMode === 'delivery'
+              ? 'Remisión creada'
+              : 'Factura creada desde origen comercial',
+        );
+        this.savingFlow.set(false);
+        this.loadSalesOrders();
+        this.loadDeliveryNotes();
+        this.closeCommercialFlowModal();
+        this.load();
+      },
+      error: (error) => {
+        this.savingFlow.set(false);
+        this.notify.error(error?.error?.message ?? 'No fue posible ejecutar el flujo comercial');
+      },
+    });
+  }
 
   // ── Notas Crédito / Débito ───────────────────────────────────────────
 
@@ -1993,12 +4822,17 @@ export class InvoicesListComponent implements OnInit {
       next: bal => { this.noteBalance.set(bal); this.loadingBalance.set(false); },
       error: ()  => this.loadingBalance.set(false),
     });
+    this.http.get<InvoiceNoteContext>(this.NOTE_CONTEXT_API(inv.id)).subscribe({
+      next: context => this.noteContext.set(context),
+      error: () => this.noteContext.set(null),
+    });
   }
 
   closeNoteModal() {
     this.noteModal.set('none');
     this.noteTarget.set(null);
     this.noteBalance.set(null);
+    this.noteContext.set(null);
   }
 
   addNoteLine() {
@@ -2016,6 +4850,76 @@ export class InvoicesListComponent implements OnInit {
 
   noteTotalAmount(): number {
     return this.noteForm.items.reduce((s, item) => s + this.noteLineTotal(item), 0);
+  }
+
+  noteReasonOptions() {
+    const context = this.noteContext();
+    if (!context) {
+      return this.noteModal() === 'credit'
+        ? [
+            { code: '1', label: 'Devolución parcial de bienes o servicios' },
+            { code: '2', label: 'Anulación o reverso total de la factura' },
+            { code: '3', label: 'Rebaja o descuento sobre la operación' },
+            { code: '4', label: 'Ajuste comercial o de calidad' },
+            { code: '5', label: 'Rescisión o nulidad' },
+            { code: '6', label: 'Otros ajustes del documento' },
+          ]
+        : [
+            { code: '1', label: 'Intereses' },
+            { code: '2', label: 'Gastos por cobrar' },
+            { code: '3', label: 'Cambio en el valor facturado' },
+            { code: '4', label: 'Otros' },
+            { code: '5', label: 'Ajuste por servicio adicional' },
+            { code: '6', label: 'Regularización comercial' },
+          ];
+    }
+    return this.noteModal() === 'credit' ? context.reasonCatalog.credit : context.reasonCatalog.debit;
+  }
+
+  notePendingLinesCount() {
+    return this.noteContext()?.lines.filter((line) => line.remainingCreditQty > 0.0001).length ?? 0;
+  }
+
+  addOriginalLineToNote(line: InvoiceNoteContext['lines'][number]) {
+    const quantity = Math.max(0, Number(line.remainingCreditQty ?? 0));
+    if (quantity <= 0) return;
+    this.noteForm.items = [
+      ...this.noteForm.items,
+      {
+        productId: line.productId ?? '',
+        description: line.description,
+        quantity,
+        unitPrice: Number(line.unitPrice),
+        taxRate: Number(line.taxRate ?? 19),
+        discount: Number(line.discount ?? 0),
+      },
+    ];
+  }
+
+  loadPendingOriginalLines() {
+    const context = this.noteContext();
+    if (!context) return;
+    const pending = context.lines
+      .filter((line) => line.remainingCreditQty > 0.0001)
+      .map((line) => ({
+        productId: line.productId ?? '',
+        description: line.description,
+        quantity: Number(line.remainingCreditQty),
+        unitPrice: Number(line.unitPrice),
+        taxRate: Number(line.taxRate ?? 19),
+        discount: Number(line.discount ?? 0),
+      }));
+    if (!pending.length) {
+      this.notify.info('No hay líneas pendientes por revertir');
+      return;
+    }
+    this.noteForm.items = pending;
+  }
+
+  loadFullReverseNote() {
+    this.loadPendingOriginalLines();
+    this.noteForm.discrepancyReasonCode = '2';
+    this.noteForm.discrepancyReason = 'Reverso total guiado del documento original';
   }
 
   submitNote() {
