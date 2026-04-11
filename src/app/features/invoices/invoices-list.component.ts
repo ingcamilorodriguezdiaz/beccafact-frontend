@@ -2891,6 +2891,12 @@ interface InvoiceExternalIntake {
     .tab-btn--utility {
       background:linear-gradient(180deg, #f7fffc 0%, #eefbf6 100%);
     }
+    .tab-btn--utility.tab-btn--active,
+    .tab-btn--utility.tab-btn--active:hover {
+      border-color:#0f274b;
+      background:linear-gradient(135deg, #102a4f 0%, #163d73 58%, #00a084 100%);
+      box-shadow:0 24px 36px rgba(15,39,75,.24);
+    }
 
     /* KPI strip */
     .kpi-strip {

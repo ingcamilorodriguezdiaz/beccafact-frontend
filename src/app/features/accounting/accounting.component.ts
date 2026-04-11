@@ -336,6 +336,22 @@ interface InvoiceAccountingProfile {
   icaRate?: number | null;
 }
 
+interface PayrollAccountingProfile {
+  id: string;
+  profileName: string;
+  branchId?: string | null;
+  payrollTypeConfigId?: string | null;
+  payrollTypeConfig?: { id: string; code?: string | null; name?: string | null } | null;
+  expenseAccount: { id: string; code: string; name: string };
+  netPayableAccount: { id: string; code: string; name: string };
+  employeeDeductionsAccount: { id: string; code: string; name: string };
+  employerExpenseAccount: { id: string; code: string; name: string };
+  employerContributionsAccount: { id: string; code: string; name: string };
+  costCenter?: string | null;
+  projectCode?: string | null;
+  isActive: boolean;
+}
+
 interface FiscalSummaryResponse {
   dateFrom: string;
   dateTo: string;
@@ -517,6 +533,21 @@ interface InvoiceAccountingProfileForm {
   withholdingRate: number | null;
   icaReceivableAccountId: string;
   icaRate: number | null;
+  isActive: boolean;
+}
+
+interface PayrollAccountingProfileForm {
+  id?: string;
+  profileName: string;
+  branchId: string;
+  payrollTypeConfigId: string;
+  expenseAccountId: string;
+  netPayableAccountId: string;
+  employeeDeductionsAccountId: string;
+  employerExpenseAccountId: string;
+  employerContributionsAccountId: string;
+  costCenter: string;
+  projectCode: string;
   isActive: boolean;
 }
 
@@ -1755,6 +1786,7 @@ const LEVEL_LABELS: Record<number, string> = {
                 <p class="filters-kicker">Integración contable avanzada</p>
                 <h3>Perfiles por tipo de factura</h3>
               </div>
+              <button class="btn btn-secondary" (click)="openInvoiceAccountingProfileModal()">Nuevo perfil factura</button>
             </div>
 
             @if (invoiceAccountingProfiles().length === 0) {
@@ -1796,6 +1828,63 @@ const LEVEL_LABELS: Record<number, string> = {
                       </td>
                       <td class="actions-cell">
                         <button class="btn-icon" title="Editar perfil" (click)="openInvoiceAccountingProfileModal(item)">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+
+          <div class="table-card panel-card">
+            <div class="panel-card__header">
+              <div>
+                <p class="filters-kicker">Integración contable avanzada</p>
+                <h3>Perfiles contables de nómina</h3>
+              </div>
+              <button class="btn btn-secondary" (click)="openPayrollAccountingProfileModal()">Nuevo perfil nómina</button>
+            </div>
+
+            @if (payrollAccountingProfiles().length === 0) {
+              <div class="empty-state compact">
+                <p>No hay perfiles contables de nómina configurados aún.</p>
+              </div>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Perfil</th>
+                    <th>Alcance</th>
+                    <th>Dimensiones</th>
+                    <th>Cuentas</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of payrollAccountingProfiles(); track item.id) {
+                    <tr>
+                      <td>
+                        <strong>{{ item.profileName }}</strong>
+                        <div class="text-muted">{{ item.isActive ? 'Activo' : 'Inactivo' }}</div>
+                      </td>
+                      <td>
+                        <div>{{ item.payrollTypeConfig?.name || 'Todos los tipos' }}</div>
+                        <div class="text-muted">{{ item.branchId || 'Todas las sucursales' }}</div>
+                      </td>
+                      <td>
+                        <div>{{ item.costCenter || 'Sin centro de costo' }}</div>
+                        <div class="text-muted">{{ item.projectCode || 'Sin proyecto' }}</div>
+                      </td>
+                      <td>
+                        <div class="text-muted">{{ item.expenseAccount.code }} · Gasto base</div>
+                        <div class="text-muted">{{ item.netPayableAccount.code }} · Neto por pagar</div>
+                        <div class="text-muted">{{ item.employeeDeductionsAccount.code }} · Deducciones</div>
+                        <div class="text-muted">{{ item.employerContributionsAccount.code }} · Aportes</div>
+                      </td>
+                      <td class="actions-cell">
+                        <button class="btn-icon" title="Editar perfil" (click)="openPayrollAccountingProfileModal(item)">
                           <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
                         </button>
                       </td>
@@ -2498,6 +2587,102 @@ const LEVEL_LABELS: Record<number, string> = {
           <div class="modal-foot">
             <button class="btn btn-secondary" (click)="closeInvoiceAccountingProfileModal()">Cancelar</button>
             <button class="btn btn-primary" (click)="saveInvoiceAccountingProfile()" [disabled]="savingTaxConfig()">Guardar</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showPayrollAccountingProfileModal()) {
+      <div class="modal-backdrop" (click)="closePayrollAccountingProfileModal()"></div>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-card modal-card--wide">
+          <div class="modal-head">
+            <div>
+              <h3>Perfil contable de nómina</h3>
+              <p>Define cuentas base, dimensiones y mejor conciliación contable para nómina.</p>
+            </div>
+            <button class="modal-close" (click)="closePayrollAccountingProfileModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <label class="field">
+                <span>Nombre del perfil</span>
+                <input type="text" [(ngModel)]="payrollAccountingProfileForm.profileName" placeholder="Nómina administrativa"/>
+              </label>
+              <label class="field">
+                <span>Sucursal</span>
+                <select [(ngModel)]="payrollAccountingProfileForm.branchId">
+                  <option value="">Todas</option>
+                  @for (branch of branches(); track branch.id) {
+                    <option [value]="branch.id">{{ branch.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Centro de costo</span>
+                <input type="text" [(ngModel)]="payrollAccountingProfileForm.costCenter" placeholder="ADM-001"/>
+              </label>
+              <label class="field">
+                <span>Proyecto</span>
+                <input type="text" [(ngModel)]="payrollAccountingProfileForm.projectCode" placeholder="PRJ-NOMINA"/>
+              </label>
+              <label class="field">
+                <span>Cuenta gasto base</span>
+                <select [(ngModel)]="payrollAccountingProfileForm.expenseAccountId">
+                  <option value="">Selecciona una cuenta</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Cuenta neto por pagar</span>
+                <select [(ngModel)]="payrollAccountingProfileForm.netPayableAccountId">
+                  <option value="">Selecciona una cuenta</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Cuenta deducciones empleado</span>
+                <select [(ngModel)]="payrollAccountingProfileForm.employeeDeductionsAccountId">
+                  <option value="">Selecciona una cuenta</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Cuenta gasto patronal</span>
+                <select [(ngModel)]="payrollAccountingProfileForm.employerExpenseAccountId">
+                  <option value="">Selecciona una cuenta</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Cuenta aportes patronales</span>
+                <select [(ngModel)]="payrollAccountingProfileForm.employerContributionsAccountId">
+                  <option value="">Selecciona una cuenta</option>
+                  @for (acc of allAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.code }} · {{ acc.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>Estado</span>
+                <select [(ngModel)]="payrollAccountingProfileForm.isActive">
+                  <option [ngValue]="true">Activo</option>
+                  <option [ngValue]="false">Inactivo</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-secondary" (click)="closePayrollAccountingProfileModal()">Cancelar</button>
+            <button class="btn btn-primary" (click)="savePayrollAccountingProfile()" [disabled]="savingTaxConfig()">Guardar</button>
           </div>
         </div>
       </div>
@@ -3900,6 +4085,7 @@ export class AccountingComponent implements OnInit {
   private readonly ACCOUNTING_BANK_RECONCILIATION_API = `${environment.apiUrl}/accounting/bank-reconciliation/pending`;
   private readonly ACCOUNTING_TAX_CONFIG_API = `${environment.apiUrl}/accounting/taxes/config`;
   private readonly ACCOUNTING_INVOICE_PROFILES_API = `${environment.apiUrl}/accounting/invoice-accounting-profiles`;
+  private readonly ACCOUNTING_PAYROLL_PROFILES_API = `${environment.apiUrl}/accounting/payroll-accounting-profiles`;
   private readonly ACCOUNTING_FISCAL_SUMMARY_API = `${environment.apiUrl}/accounting/reports/fiscal-summary`;
   private readonly ACCOUNTING_VAT_SALES_BOOK_API = `${environment.apiUrl}/accounting/reports/vat-sales-book`;
   private readonly ACCOUNTING_VAT_PURCHASES_BOOK_API = `${environment.apiUrl}/accounting/reports/vat-purchases-book`;
@@ -3987,6 +4173,7 @@ export class AccountingComponent implements OnInit {
   filterBankStatus = '';
   taxConfigs = signal<AccountingTaxConfig[]>([]);
   invoiceAccountingProfiles = signal<InvoiceAccountingProfile[]>([]);
+  payrollAccountingProfiles = signal<PayrollAccountingProfile[]>([]);
   fiscalSummary = signal<FiscalSummaryResponse | null>(null);
   vatSalesBook = signal<VatSalesBookItem[]>([]);
   vatPurchasesBook = signal<VatPurchasesBookItem[]>([]);
@@ -4024,6 +4211,7 @@ export class AccountingComponent implements OnInit {
   showImportStatementModal = signal(false);
   showTaxConfigModal = signal(false);
   showInvoiceAccountingProfileModal = signal(false);
+  showPayrollAccountingProfileModal = signal(false);
   showFixedAssetModal = signal(false);
   showDeferredChargeModal = signal(false);
   showProvisionTemplateModal = signal(false);
@@ -4038,6 +4226,7 @@ export class AccountingComponent implements OnInit {
   bankStatementForm: BankStatementForm = this.emptyBankStatementForm();
   taxConfigForm: TaxConfigForm = this.emptyTaxConfigForm();
   invoiceAccountingProfileForm: InvoiceAccountingProfileForm = this.emptyInvoiceAccountingProfileForm();
+  payrollAccountingProfileForm: PayrollAccountingProfileForm = this.emptyPayrollAccountingProfileForm();
   fixedAssetForm: FixedAssetForm = this.emptyFixedAssetForm();
   deferredChargeForm: DeferredChargeForm = this.emptyDeferredChargeForm();
   provisionTemplateForm: ProvisionTemplateForm = this.emptyProvisionTemplateForm();
@@ -4492,6 +4681,11 @@ export class AccountingComponent implements OnInit {
       error: () => this.invoiceAccountingProfiles.set([]),
     });
 
+    this.http.get<PayrollAccountingProfile[]>(this.ACCOUNTING_PAYROLL_PROFILES_API).subscribe({
+      next: (data) => this.payrollAccountingProfiles.set(data ?? []),
+      error: () => this.payrollAccountingProfiles.set([]),
+    });
+
     this.http.get<FiscalSummaryResponse>(this.ACCOUNTING_FISCAL_SUMMARY_API, { params }).subscribe({
       next: (data) => this.fiscalSummary.set(data),
       error: () => this.fiscalSummary.set(null),
@@ -4557,6 +4751,33 @@ export class AccountingComponent implements OnInit {
     this.invoiceAccountingProfileForm = this.emptyInvoiceAccountingProfileForm();
   }
 
+  openPayrollAccountingProfileModal(profile?: PayrollAccountingProfile) {
+    if (profile) {
+      this.payrollAccountingProfileForm = {
+        id: profile.id,
+        profileName: profile.profileName,
+        branchId: profile.branchId ?? '',
+        payrollTypeConfigId: profile.payrollTypeConfigId ?? '',
+        expenseAccountId: profile.expenseAccount.id,
+        netPayableAccountId: profile.netPayableAccount.id,
+        employeeDeductionsAccountId: profile.employeeDeductionsAccount.id,
+        employerExpenseAccountId: profile.employerExpenseAccount.id,
+        employerContributionsAccountId: profile.employerContributionsAccount.id,
+        costCenter: profile.costCenter ?? '',
+        projectCode: profile.projectCode ?? '',
+        isActive: profile.isActive,
+      };
+    } else {
+      this.payrollAccountingProfileForm = this.emptyPayrollAccountingProfileForm();
+    }
+    this.showPayrollAccountingProfileModal.set(true);
+  }
+
+  closePayrollAccountingProfileModal() {
+    this.showPayrollAccountingProfileModal.set(false);
+    this.payrollAccountingProfileForm = this.emptyPayrollAccountingProfileForm();
+  }
+
   saveTaxConfig() {
     const form = this.taxConfigForm;
     if (!form.taxCode || !form.label.trim() || !form.accountId) {
@@ -4617,6 +4838,41 @@ export class AccountingComponent implements OnInit {
       error: (e) => {
         this.savingTaxConfig.set(false);
         this.notify.error(e?.error?.message ?? 'Error al guardar el perfil contable');
+      },
+    });
+  }
+
+  savePayrollAccountingProfile() {
+    const form = this.payrollAccountingProfileForm;
+    if (!form.profileName.trim() || !form.expenseAccountId || !form.netPayableAccountId || !form.employeeDeductionsAccountId || !form.employerExpenseAccountId || !form.employerContributionsAccountId) {
+      this.notify.warning('Nombre y cuentas contables base son obligatorios');
+      return;
+    }
+
+    this.savingTaxConfig.set(true);
+    this.http.post<PayrollAccountingProfile>(this.ACCOUNTING_PAYROLL_PROFILES_API, {
+      id: form.id || undefined,
+      profileName: form.profileName.trim(),
+      branchId: form.branchId || undefined,
+      payrollTypeConfigId: form.payrollTypeConfigId || undefined,
+      expenseAccountId: form.expenseAccountId,
+      netPayableAccountId: form.netPayableAccountId,
+      employeeDeductionsAccountId: form.employeeDeductionsAccountId,
+      employerExpenseAccountId: form.employerExpenseAccountId,
+      employerContributionsAccountId: form.employerContributionsAccountId,
+      costCenter: form.costCenter.trim() || undefined,
+      projectCode: form.projectCode.trim() || undefined,
+      isActive: form.isActive,
+    }).subscribe({
+      next: () => {
+        this.notify.success('Perfil contable de nómina guardado');
+        this.savingTaxConfig.set(false);
+        this.closePayrollAccountingProfileModal();
+        this.loadTaxReports();
+      },
+      error: (e) => {
+        this.savingTaxConfig.set(false);
+        this.notify.error(e?.error?.message ?? 'Error al guardar el perfil contable de nómina');
       },
     });
   }
@@ -5786,6 +6042,22 @@ export class AccountingComponent implements OnInit {
       withholdingRate: null,
       icaReceivableAccountId: '',
       icaRate: null,
+      isActive: true,
+    };
+  }
+
+  private emptyPayrollAccountingProfileForm(): PayrollAccountingProfileForm {
+    return {
+      profileName: '',
+      branchId: '',
+      payrollTypeConfigId: '',
+      expenseAccountId: '',
+      netPayableAccountId: '',
+      employeeDeductionsAccountId: '',
+      employerExpenseAccountId: '',
+      employerContributionsAccountId: '',
+      costCenter: '',
+      projectCode: '',
       isActive: true,
     };
   }
