@@ -11,7 +11,7 @@ import { environment } from '../../../environments/environment';
   imports: [CommonModule, RouterLink],
   template: `
     <div class="db">
-      <section class="db__hero">
+      <section class="db__hero" id="tour-welcome">
         <div class="db__hero-copy">
           <div class="db__eyebrow">
             <span class="db__eyebrow-dot"></span>
@@ -34,7 +34,7 @@ import { environment } from '../../../environments/environment';
             <span>{{ currentPeriod }}</span>
           </div>
 
-          <div class="db__hero-actions">
+          <div class="db__hero-actions" id="tour-quick-actions">
             @for (action of heroActions(); track action.label) {
               <a [routerLink]="action.route" class="db__hero-btn" [class.db__hero-btn--ghost]="action.ghost">
                 <span>{{ action.label }}</span>
@@ -97,7 +97,7 @@ import { environment } from '../../../environments/environment';
         </div>
       </section>
 
-      <section class="db__stats">
+      <section class="db__stats" id="tour-stats">
         @for (stat of heroStats(); track stat.label) {
           <article class="db__stat-card" [class.db__stat-card--accent]="stat.accent" [class.db__stat-card--warning]="stat.warning">
             <div class="db__stat-top">

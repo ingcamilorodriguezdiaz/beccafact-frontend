@@ -601,7 +601,7 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
     <div class="page animate-in">
 
       <!-- ── Header hero ───────────────────────────────────────── -->
-      <section class="hero-shell">
+      <section class="hero-shell" id="tour-purchasing-header">
         <div class="page-header">
           <div class="hero-copy">
             <p class="hero-kicker">Gestión de compras</p>
@@ -724,7 +724,7 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
       </section>
 
       <!-- ── Pestañas ───────────────────────────────────────────── -->
-      <section class="tabs-shell">
+      <section class="tabs-shell" id="tour-purchasing-nav">
         <div class="tabs-shell__head">
           <div>
             <span class="tabs-shell__eyebrow">Navegación del módulo</span>

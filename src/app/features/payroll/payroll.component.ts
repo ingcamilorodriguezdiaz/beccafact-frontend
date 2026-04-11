@@ -627,7 +627,7 @@ type ViewMode  = 'table' | 'grid';
     <div class="py">
 
       <!-- ── Header ──────────────────────────────────────────────────────── -->
-      <section class="hero-shell">
+      <section class="hero-shell" id="tour-payroll-header">
         <div class="page-header">
           <div class="hero-copy">
             <p class="hero-kicker">Gestion laboral</p>
@@ -641,7 +641,7 @@ type ViewMode  = 'table' | 'grid';
               </button>
             }
             @if (activeTab() === 'records' && canSubmit()) {
-              <button class="btn btn--secondary btn--sm" (click)="openOperationsModal()">
+              <button class="btn btn--secondary btn--sm" id="tour-payroll-operations" (click)="openOperationsModal()">
                 <span class="material-symbols-outlined">developer_board</span> Operación DIAN
               </button>
             }
@@ -713,7 +713,7 @@ type ViewMode  = 'table' | 'grid';
         </article>
       </section>
 
-      <section class="tabs-shell">
+      <section class="tabs-shell" id="tour-payroll-nav">
         <div class="tabs-shell__head">
           <div>
             <span class="tabs-shell__eyebrow">Navegación del módulo</span>

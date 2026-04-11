@@ -290,7 +290,7 @@ interface QuoteApprovalPolicy {
     <div class="page animate-in">
 
       <!-- ── Header ─────────────────────────────────────────────────────────── -->
-      <section class="hero-shell">
+      <section class="hero-shell" id="tour-quotes-header">
         <div class="page-header">
           <div class="hero-copy">
             <p class="hero-kicker">Gestión comercial</p>
@@ -321,7 +321,7 @@ interface QuoteApprovalPolicy {
         </div>
       </section>
 
-      <section class="tabs-shell">
+      <section class="tabs-shell" id="tour-quotes-nav">
         <div class="tabs-shell__head">
           <div>
             <span class="tabs-shell__eyebrow">Navegación del módulo</span>

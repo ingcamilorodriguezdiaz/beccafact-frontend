@@ -178,24 +178,33 @@ const FEATURE_LABELS: Record<string, string> = {
       <!-- Plan features -->
       @if (!collapsed() && plan && planFeatureList().length > 0) {
         <div class="plan-section">
-          <div class="plan-section-header">
-            <svg viewBox="0 0 16 16" fill="currentColor" width="11">
-              <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>
-              <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
-            </svg>
-            MÓDULOS DEL PLAN
-          </div>
-          <div class="plan-features-list">
-            @for (f of planFeatureList(); track f.key) {
-              <div class="plan-feat-row" [class.feat-off]="!f.enabled">
-                <span class="feat-dot" [class.feat-dot--on]="f.enabled" [class.feat-dot--off]="!f.enabled"></span>
-                <span class="feat-name">{{ f.label }}</span>
-                @if (!f.isBoolean) {
-                  <span class="feat-limit">{{ f.value === '-1' ? '∞' : f.value }}</span>
-                }
-              </div>
-            }
-          </div>
+          <button id="tour-plan-modules" class="plan-section-header plan-section-header--toggle" type="button" (click)="togglePlanModules()">
+            <span class="plan-section-title">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="11">
+                <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>
+                <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+              </svg>
+              <span>MÓDULOS DEL PLAN</span>
+            </span>
+            <span class="plan-toggle-icon" [class.plan-toggle-icon--open]="planModulesExpanded()">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/>
+              </svg>
+            </span>
+          </button>
+          @if (planModulesExpanded()) {
+            <div class="plan-features-list">
+              @for (f of planFeatureList(); track f.key) {
+                <div class="plan-feat-row" [class.feat-off]="!f.enabled">
+                  <span class="feat-dot" [class.feat-dot--on]="f.enabled" [class.feat-dot--off]="!f.enabled"></span>
+                  <span class="feat-name">{{ f.label }}</span>
+                  @if (!f.isBoolean) {
+                    <span class="feat-limit">{{ f.value === '-1' ? '∞' : f.value }}</span>
+                  }
+                </div>
+              }
+            </div>
+          }
         </div>
       }
 
@@ -453,6 +462,36 @@ const FEATURE_LABELS: Record<string, string> = {
       font-size: 10px; font-weight: 800; color: #4f77a4; letter-spacing: 0.12em;
       border-bottom: 1px solid rgba(255,255,255,0.05);
     }
+    .plan-section-header--toggle {
+      width: 100%;
+      justify-content: space-between;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s ease;
+    }
+    .plan-section-header--toggle:hover {
+      background: rgba(255,255,255,0.04);
+    }
+    .plan-section-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .plan-toggle-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #7ea3cc;
+      transition: transform 0.18s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+    .plan-toggle-icon--open {
+      transform: rotate(180deg);
+      color: #d4e4f7;
+    }
     .plan-features-list { padding: 6px 10px 8px; }
     .plan-feat-row { display: flex; align-items: center; gap: 7px; padding: 3px 0; font-size: 12px; color: #7ea3cc; }
     .plan-feat-row.feat-off { opacity: 0.4; }
@@ -545,6 +584,7 @@ export class SidebarComponent {
   @Output() mobileClose  = new EventEmitter<void>();
 
   collapsed        = signal(false);
+  planModulesExpanded = signal(false);
   showUpgradeToast = signal(false);
   lockedItemLabel  = signal('');
 
@@ -553,6 +593,7 @@ export class SidebarComponent {
   private toastTimer: any;
 
   toggleCollapse(): void { this.collapsed.update(v => !v); }
+  togglePlanModules(): void { this.planModulesExpanded.update(v => !v); }
 
   companyInitials(): string {
     const name = this.user?.company?.name ?? '';

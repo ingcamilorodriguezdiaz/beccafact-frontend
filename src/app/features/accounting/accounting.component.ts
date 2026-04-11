@@ -632,7 +632,7 @@ const LEVEL_LABELS: Record<number, string> = {
     <div class="page animate-in">
 
       <!-- ── Hero header ──────────────────────────────────────────────────── -->
-      <section class="hero-shell">
+      <section class="hero-shell" id="tour-accounting-header">
         <div class="page-header">
           <div class="hero-copy">
             <p class="hero-kicker">Módulo financiero</p>
@@ -694,7 +694,7 @@ const LEVEL_LABELS: Record<number, string> = {
       </section>
 
       <!-- ── Navegación del módulo ─────────────────────────────────────────── -->
-      <section class="tabs-shell">
+      <section class="tabs-shell" id="tour-accounting-nav">
         <div class="tabs-shell__head">
           <div>
             <span class="tabs-shell__eyebrow">Navegación del módulo</span>

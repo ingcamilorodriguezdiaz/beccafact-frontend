@@ -392,77 +392,124 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 /* Contenedor del paso */
 .shepherd-has-cancel-icon .shepherd-content,
 .beccafact-tour.shepherd-element .shepherd-content {
-  border-radius: 14px !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: 0 12px 48px rgba(12,28,53,0.18) !important;
+  border-radius: 22px !important;
+  border: 1px solid rgba(159, 192, 228, 0.34) !important;
+  box-shadow: 0 28px 60px rgba(12,28,53,0.24) !important;
   overflow: hidden;
   font-family: var(--font-b) !important;
-  max-width: 360px !important;
-  min-width: 300px !important;
+  max-width: 420px !important;
+  min-width: 320px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
 }
 
 /* Header */
 .beccafact-tour.shepherd-element .shepherd-header {
-  background: linear-gradient(135deg, #0c1c35, #1a407e) !important;
-  padding: 16px 20px 14px !important;
+  background:
+    radial-gradient(circle at top right, rgba(0, 198, 160, 0.22), transparent 30%),
+    linear-gradient(135deg, #0c1c35 0%, #143563 56%, #1a407e 100%) !important;
+  padding: 18px 22px 14px !important;
   border-bottom: none !important;
 }
 .beccafact-tour.shepherd-element .shepherd-title {
   font-family: var(--font-d) !important;
-  font-size: 15px !important;
+  font-size: 17px !important;
   font-weight: 700 !important;
   color: #ffffff !important;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  max-width: 92%;
 }
 .beccafact-tour.shepherd-element .shepherd-cancel-icon {
-  color: rgba(255,255,255,0.55) !important;
+  color: rgba(255,255,255,0.62) !important;
   font-size: 20px !important;
-  transition: color 0.15s;
+  transition: color 0.15s, background 0.15s;
+  border-radius: 10px !important;
+  width: 30px !important;
+  height: 30px !important;
 }
 .beccafact-tour.shepherd-element .shepherd-cancel-icon:hover {
+  background: rgba(255,255,255,0.1) !important;
   color: #ffffff !important;
 }
 
 /* Body */
 .beccafact-tour.shepherd-element .shepherd-text {
-  padding: 16px 20px 10px !important;
+  padding: 18px 22px 10px !important;
   font-size: 14px !important;
   color: var(--text-2) !important;
-  line-height: 1.65 !important;
-  background: var(--surface) !important;
+  line-height: 1.7 !important;
+  background: transparent !important;
 }
 .beccafact-tour.shepherd-element .shepherd-text strong {
   color: var(--brand) !important;
   font-weight: 700;
 }
+.tour-step-body {
+  display: grid;
+  gap: 12px;
+}
+.tour-step-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tour-step-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(0,198,160,0.12), rgba(26,64,126,0.12));
+  color: #135d84;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.tour-step-count {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #6f8399;
+}
+.tour-step-copy {
+  color: var(--text-2);
+}
 
 /* Footer */
 .beccafact-tour.shepherd-element .shepherd-footer {
-  padding: 10px 20px 16px !important;
-  background: var(--surface) !important;
-  border-top: 1px solid var(--border) !important;
+  padding: 12px 22px 18px !important;
+  background: transparent !important;
+  border-top: 1px solid rgba(220,230,240,0.8) !important;
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
+  flex-wrap: wrap !important;
 }
 
 /* Progress indicator */
 .tour-progress {
   font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-3);
+  font-weight: 700;
+  color: #6f8399;
   margin-right: auto;
   letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef5fb;
 }
 
 /* Buttons */
 .tour-btn {
   display: inline-flex;
   align-items: center;
-  padding: 7px 14px;
-  border-radius: var(--r);
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 15px;
+  border-radius: 12px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   border: none;
   cursor: pointer;
   transition: all var(--t);
@@ -470,31 +517,31 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   white-space: nowrap;
 }
 .tour-btn--primary {
-  background: var(--brand);
+  background: linear-gradient(135deg, #123f7b 0%, #00a084 100%);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(26,64,126,0.25);
+  box-shadow: 0 12px 22px rgba(18,63,123,0.24);
 }
 .tour-btn--primary:hover {
-  background: var(--brand-dark);
+  background: linear-gradient(135deg, #0f3566 0%, #019176 100%);
   transform: translateY(-1px);
 }
 .tour-btn--secondary {
-  background: var(--bg);
-  color: var(--text-2);
-  border: 1px solid var(--border);
+  background: #eef4fa;
+  color: #31465f;
+  border: 1px solid #d5e1ec;
 }
 .tour-btn--secondary:hover {
-  background: var(--bg-2);
+  background: #e4edf7;
 }
 .tour-btn--skip {
   background: transparent;
-  color: var(--text-3);
+  color: #6f8399;
   font-size: 12px;
   padding: 7px 10px;
 }
 .tour-btn--skip:hover {
-  color: var(--danger);
-  background: var(--danger-bg);
+  color: #c2410c;
+  background: #fff2e8;
 }
 
 /* Arrow */
@@ -505,14 +552,26 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 
 /* Modal overlay */
 .shepherd-modal-overlay-container .shepherd-modal-mask {
-  fill: rgba(12, 28, 53, 0.55) !important;
+  fill: rgba(12, 28, 53, 0.62) !important;
 }
 
 /* Responsive: full width on mobile */
 @media (max-width: 640px) {
   .beccafact-tour.shepherd-element .shepherd-content {
-    max-width: 92vw !important;
+    max-width: 94vw !important;
     min-width: unset !important;
+    border-radius: 20px !important;
+  }
+  .beccafact-tour.shepherd-element .shepherd-header,
+  .beccafact-tour.shepherd-element .shepherd-text,
+  .beccafact-tour.shepherd-element .shepherd-footer {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .tour-progress {
+    order: 3;
+    width: 100%;
+    justify-content: center;
   }
 }
 
