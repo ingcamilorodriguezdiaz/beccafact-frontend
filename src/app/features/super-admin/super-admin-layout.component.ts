@@ -594,7 +594,7 @@ interface SANavItem {
       flex:1;
       display:flex;
       flex-direction:column;
-      overflow:hidden;
+      overflow:visible;
       min-width:0;
     }
 
@@ -728,6 +728,8 @@ interface SANavItem {
       flex:1;
       overflow-y:auto;
       padding:20px;
+      position:relative;
+      z-index:1;
     }
     .sa-content::-webkit-scrollbar { width:6px; }
     .sa-content::-webkit-scrollbar-thumb { background:#dce6f0; border-radius:999px; }
@@ -739,7 +741,8 @@ interface SANavItem {
       background:rgba(255, 255, 255, 0.72);
       border:1px solid #dce6f0;
       box-shadow:0 20px 38px rgba(12, 28, 53, 0.06);
-      backdrop-filter:blur(12px);
+      position:relative;
+      overflow:visible;
     }
 
     @media (max-width: 1180px) {

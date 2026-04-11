@@ -143,7 +143,7 @@ const CARD_PRIORITY = [
          MODAL CREAR / EDITAR PLAN
          ════════════════════════════════════ -->
     @if (showModal()) {
-      <div class="modal-overlay" >
+      <div class="modal-overlay" role="dialog" aria-modal="true">
         <div class="modal" (click)="$event.stopPropagation()">
 
           <div class="modal-header">
@@ -336,8 +336,8 @@ const CARD_PRIORITY = [
     @keyframes shimmer { 0%{background-position:200%} 100%{background-position:-200%} }
 
     /* ── Modal ─────────────────────────────────────────────── */
-    .modal-overlay { position:fixed; inset:0; background:rgba(12,28,53,.55); display:flex; align-items:center; justify-content:center; z-index:1000; padding:16px; backdrop-filter:blur(2px); }
-    .modal { background:#fff; border-radius:16px; width:100%; max-width:860px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(12,28,53,.25); }
+    .modal-overlay { position:fixed; inset:0; width:100vw; height:100dvh; background:rgba(12,28,53,.58); display:flex; align-items:center; justify-content:center; z-index:5000; padding:24px; backdrop-filter:blur(4px); }
+    .modal { background:#fff; border-radius:18px; width:min(960px, 100%); max-height:min(92dvh, 920px); display:flex; flex-direction:column; box-shadow:0 28px 80px rgba(12,28,53,.28); overflow:hidden; }
     .modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 22px; border-bottom:1px solid #f0f4f8; flex-shrink:0; }
     .modal-header h3 { font-family:'Sora',sans-serif; font-size:16px; font-weight:700; color:#0c1c35; margin:0; }
     .modal-close { background:none; border:none; color:#94a3b8; cursor:pointer; padding:4px; border-radius:6px; }
@@ -403,8 +403,8 @@ const CARD_PRIORITY = [
     }
     @media (max-width: 640px) {
       .plans-grid { grid-template-columns:1fr; }
-      .modal-overlay { align-items:flex-end; padding:0; }
-      .modal { border-radius:20px 20px 0 0; max-height:95dvh; max-width:100%; }
+      .modal-overlay { align-items:center; justify-content:center; padding:16px; }
+      .modal { border-radius:18px; width:100%; max-height:92dvh; max-width:100%; }
       .form-grid { grid-template-columns:1fr; }
       .modal-footer { flex-direction:column-reverse; gap:8px; }
       .modal-footer .btn { width:100%; justify-content:center; }

@@ -30,7 +30,7 @@ import { AuthService } from '../../core/auth/auth.service';
           <div class="form-intro">
             <span class="form-kicker">Acceso seguro</span>
             <h1 class="form-headline">Iniciar sesión</h1>
-            <p class="form-desc">Entra a tu operación diaria y gestiona facturación, cartera, POS, nómina e inventario desde un solo lugar.</p>
+            <p class="form-desc">Entra a tu operación diaria y gestiona facturación, cotizaciones, compras, contabilidad, cartera, POS, nómina e inventario desde un solo lugar.</p>
           </div>
 
           <div class="trust-strip">
@@ -122,11 +122,12 @@ import { AuthService } from '../../core/auth/auth.service';
       <!-- Right panel: hero -->
       <div class="login-hero">
         <div class="hero-inner">
-          <div class="hero-badge">Operacion certificada · Factura + Nómina + POS</div>
+          <div class="hero-badge">Operacion certificada · Factura + Nómina + POS + Contabilidad</div>
           <h2 class="hero-headline">ERP Cloud para<br>empresas colombianas<br>que crecen.</h2>
           <p class="hero-desc">
-            Facturación electrónica, nómina, POS, inventario y cartera,
-            todo integrado y certificado por la DIAN desde un solo panel.
+            Facturación electrónica, cotizaciones, compras, contabilidad,
+            nómina, POS, inventario y cartera integrados en un solo panel
+            para operar con más control y trazabilidad.
           </p>
 
           <div class="hero-features">
@@ -156,7 +157,7 @@ import { AuthService } from '../../core/auth/auth.service';
           <div class="hero-floating-card">
             <span class="hero-floating-label">Control en tiempo real</span>
             <strong>Todo tu negocio en una sola sesión</strong>
-            <p>Consulta métricas, emite documentos y registra operaciones sin cambiar de sistema.</p>
+            <p>Consulta métricas, cotiza, compra, contabiliza y emite documentos sin cambiar de sistema.</p>
           </div>
         </div>
 
@@ -460,6 +461,9 @@ export class LoginComponent {
 
   features = [
     { label: 'Facturación electrónica certificada DIAN' },
+    { label: 'Cotizaciones y flujo comercial multipaso' },
+    { label: 'Compras y abastecimiento conectados al ERP' },
+    { label: 'Contabilidad integrada con operación y fiscalidad' },
     { label: 'Nómina electrónica individual y de ajuste' },
     { label: 'Punto de venta (POS) integrado' },
     { label: 'Inventario y cartera en tiempo real' },

@@ -270,7 +270,7 @@ interface Company {
          MODAL: Confirmación de inicio
          ════════════════════════════════════════════════════════ -->
     @if (showConfirmModal()) {
-      <div class="modal-overlay" (click)="closeConfirmModal()">
+      <div class="modal-overlay" role="dialog" aria-modal="true">
         <div class="modal modal-sm" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Iniciar Set de Pruebas</h3>
@@ -319,7 +319,7 @@ interface Company {
          MODAL: Confirmación de reset
          ════════════════════════════════════════════════════════ -->
     @if (showResetModal()) {
-      <div class="modal-overlay" (click)="closeResetModal()">
+      <div class="modal-overlay" role="dialog" aria-modal="true">
         <div class="modal modal-sm" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Reiniciar Set de Pruebas</h3>
@@ -361,7 +361,7 @@ interface Company {
          MODAL: Detalle del test set
          ════════════════════════════════════════════════════════ -->
     @if (showDetailModal() && selectedTestSet()) {
-      <div class="modal-overlay" (click)="closeDetail()">
+      <div class="modal-overlay" role="dialog" aria-modal="true">
         <div class="modal modal-xl" (click)="$event.stopPropagation()">
 
           <!-- Header modal -->
@@ -780,20 +780,21 @@ interface Company {
 
     /* ─── Modales ───────────────────────────────────────────── */
     .modal-overlay {
-      position: fixed; inset: 0;
-      background: rgba(12,28,53,.55); backdrop-filter: blur(3px);
+      position: fixed; inset: 0; width:100vw; height:100dvh;
+      background: rgba(12,28,53,.58); backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center;
-      z-index: 500; padding: 20px;
+      z-index: 5000; padding: 24px;
       animation: fadeIn .2s ease;
     }
     @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
     .modal {
       background: #fff; border-radius: 16px; width: 100%;
-      max-width: 560px; max-height: 90vh;
+      max-width: 560px; max-height: min(92dvh, 920px);
       display: flex; flex-direction: column;
       box-shadow: 0 20px 60px rgba(12,28,53,.25);
       animation: slideUp .25s ease;
+      overflow: hidden;
     }
     .modal-sm  { max-width: 420px; }
     .modal-xl  { max-width: 880px; }

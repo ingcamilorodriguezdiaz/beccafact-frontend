@@ -818,14 +818,14 @@ const EMPTY_FORM = () => ({
     .btn-success-ghost:hover { background:#dcfce7; }
 
     /* ── Modales ─────────────────────────────────────── */
-    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; display:flex; align-items:center; justify-content:center; padding:16px; }
-    .modal { background:#fff; border-radius:16px; width:100%; max-width:520px; max-height:92dvh; overflow-y:auto; display:flex; flex-direction:column; }
+    .modal-overlay { position:fixed; inset:0; width:100vw; height:100dvh; background:rgba(12,28,53,.52); z-index:5000; display:flex; align-items:center; justify-content:center; padding:24px; backdrop-filter:blur(4px); }
+    .modal { background:#fff; border-radius:18px; width:min(560px, 100%); max-height:min(92dvh, 920px); overflow:hidden; display:flex; flex-direction:column; box-shadow:0 28px 80px rgba(12,28,53,.28); }
     .modal-lg { max-width:680px; }
     .modal-header { display:flex; align-items:flex-start; justify-content:space-between; padding:18px 24px; border-bottom:1px solid #f0f4f8; flex-shrink:0; }
     .modal-header h3 { font-family:'Sora',sans-serif; font-size:16px; font-weight:700; color:#0c1c35; margin:0; }
     .modal-sub { font-size:12px; color:#94a3b8; margin:3px 0 0; }
     .modal-close { background:none; border:none; cursor:pointer; color:#9ca3af; font-size:22px; padding:0 4px; flex-shrink:0; }
-    .modal-body { padding:20px 24px; overflow-y:auto; }
+    .modal-body { padding:20px 24px; overflow:auto; }
     .modal-footer { display:flex; justify-content:flex-end; gap:10px; padding:16px 24px; border-top:1px solid #f0f4f8; flex-shrink:0; flex-wrap:wrap; }
     .modal-footer-users { justify-content:space-between; }
 
@@ -984,9 +984,8 @@ const EMPTY_FORM = () => ({
     }
 
     @media (max-width: 560px) {
-      /* Modales: bottom sheet */
-      .modal-overlay { align-items:flex-end; padding:0; }
-      .modal, .modal-lg { border-radius:18px 18px 0 0; max-width:100%; max-height:94dvh; }
+      .modal-overlay { align-items:center; justify-content:center; padding:16px; }
+      .modal, .modal-lg { border-radius:18px; width:100%; max-width:100%; max-height:92dvh; }
       .form-row { grid-template-columns:1fr; }
       .detail-grid { grid-template-columns:1fr; }
       .detail-item:last-child { border-bottom:none; }

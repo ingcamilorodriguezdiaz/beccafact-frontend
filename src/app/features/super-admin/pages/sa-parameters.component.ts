@@ -126,7 +126,7 @@ interface Parameter {
 
     <!-- ══ Modal Crear / Editar ══ -->
     @if (showModal()) {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay" role="dialog" aria-modal="true">
         <div class="modal-box" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>{{ editParam() ? 'Editar parámetro' : 'Nuevo parámetro' }}</h3>
@@ -253,12 +253,12 @@ interface Parameter {
     .empty-state { display:flex; flex-direction:column; align-items:center; gap:10px; padding:52px 24px; color:#94a3b8; font-size:14px; }
 
     /* Modal */
-    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:500; padding:16px; }
-    .modal-box { background:#fff; border-radius:16px; padding:0; width:100%; max-width:480px; box-shadow:0 20px 60px rgba(0,0,0,.2); display:flex; flex-direction:column; max-height:92dvh; overflow-y:auto; }
+    .modal-overlay { position:fixed; inset:0; width:100vw; height:100dvh; background:rgba(12,28,53,.52); display:flex; align-items:center; justify-content:center; z-index:5000; padding:24px; backdrop-filter:blur(4px); }
+    .modal-box { background:#fff; border-radius:18px; padding:0; width:min(560px, 100%); box-shadow:0 28px 80px rgba(12,28,53,.28); display:flex; flex-direction:column; max-height:min(92dvh, 820px); overflow:hidden; }
     .modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid #f0f4f8; }
     .modal-header h3 { font-size:16px; font-weight:700; color:#0c1c35; margin:0; }
     .modal-close { background:none; border:none; cursor:pointer; color:#9ca3af; font-size:22px; padding:0 4px; }
-    .modal-body { padding:20px 24px; }
+    .modal-body { padding:20px 24px; overflow:auto; }
     .modal-footer { display:flex; justify-content:flex-end; gap:10px; padding:16px 24px; border-top:1px solid #f0f4f8; }
 
     .form-group { margin-bottom:16px; }
