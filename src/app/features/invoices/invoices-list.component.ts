@@ -123,6 +123,27 @@ interface DeliveryNoteSummary {
   total: number;
 }
 
+interface QuoteFlowSummary {
+  id: string;
+  number: string;
+  status: string;
+  issueDate: string;
+  total: number;
+  customerName: string;
+  customerDocument?: string | null;
+}
+
+interface PosSaleFlowSummary {
+  id: string;
+  saleNumber: string;
+  status: string;
+  total: number;
+  customerName: string;
+  orderType?: string | null;
+  orderStatus?: string | null;
+  createdAt?: string | null;
+}
+
 interface InvoiceStatement {
   invoice: {
     id: string;
@@ -1671,7 +1692,7 @@ interface InvoiceExternalIntake {
     }
 
     @if (showConfigModal()) {
-      <div class="modal-overlay" (click)="closeConfigModal()">
+      <div class="modal-overlay">
         <div class="modal modal-xl" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Configuración documental</h3>
@@ -1785,7 +1806,7 @@ interface InvoiceExternalIntake {
     }
 
     @if (showCommercialFlowModal()) {
-      <div class="modal-overlay" (click)="closeCommercialFlowModal()">
+      <div class="modal-overlay">
         <div class="modal modal-xl" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Flujo comercial multipaso</h3>
@@ -1803,38 +1824,154 @@ interface InvoiceExternalIntake {
               }
             </div>
             <div class="commercial-flow-layout">
-              <div class="commercial-flow-panel">
+              <div class="commercial-flow-panel commercial-flow-panel--primary">
                 <div class="commercial-flow-title">Centro operativo</div>
-                <div class="form-group">
-                  <label>Operación</label>
-                  <select [(ngModel)]="commercialFlowMode" class="form-control">
-                    <option value="order">Crear pedido</option>
-                    <option value="delivery">Crear remisión</option>
-                    <option value="invoice">Facturar origen</option>
-                  </select>
-                </div>
-                <div class="invoice-inline-banner">
-                  {{ commercialFlowInventoryHint() }}
-                </div>
-                <div class="form-row-3">
-                  <div class="form-group">
-                    <label>ID cotización</label>
-                    <input type="text" [(ngModel)]="commercialFlowForm.quoteId" class="form-control" placeholder="Opcional"/>
+                <div class="commercial-flow-form-section">
+                  <h4>Operación base</h4>
+                  <div class="form-group" style="margin-bottom:0">
+                    <label>Operación</label>
+                    <select [(ngModel)]="commercialFlowMode" class="form-control">
+                      <option value="order">Crear pedido</option>
+                      <option value="delivery">Crear remisión</option>
+                      <option value="invoice">Facturar origen</option>
+                    </select>
                   </div>
-                  <div class="form-group">
-                    <label>ID venta POS</label>
-                    <input type="text" [(ngModel)]="commercialFlowForm.posSaleId" class="form-control" placeholder="Opcional"/>
-                  </div>
-                  <div class="form-group">
-                    <label>ID pedido</label>
-                    <input type="text" [(ngModel)]="commercialFlowForm.salesOrderId" class="form-control" placeholder="Opcional"/>
-                  </div>
-                  <div class="form-group">
-                    <label>ID remisión</label>
-                    <input type="text" [(ngModel)]="commercialFlowForm.deliveryNoteId" class="form-control" placeholder="Opcional"/>
+                  <div class="invoice-inline-banner" style="margin:12px 0 0">
+                    {{ commercialFlowInventoryHint() }}
                   </div>
                 </div>
-                <div class="form-row-3">
+                <div class="commercial-flow-form-section">
+                  <h4>Fuentes comerciales</h4>
+                  <div class="commercial-flow-form-grid">
+                  <div class="form-group">
+                    <label>Cotización origen</label>
+                    <div class="source-picker">
+                      <input
+                        type="text"
+                        [(ngModel)]="commercialSourceSearch.quote"
+                        (ngModelChange)="onCommercialSourceSearchChanged('quote', $event)"
+                        class="form-control"
+                        placeholder="Busca por número, cliente o documento"
+                      />
+                      <select
+                        [(ngModel)]="commercialFlowForm.quoteId"
+                        (ngModelChange)="onQuoteOptionSelected($event)"
+                        class="form-control"
+                      >
+                        <option value="">Sin cotización</option>
+                        @for (quote of quoteOptions(); track quote.id) {
+                          <option [value]="quote.id">
+                            {{ quote.number }} · {{ quote.customerName }} · {{ fmtCOP(quote.total) }}
+                          </option>
+                        }
+                      </select>
+                      <small class="source-picker__hint">
+                        @if (selectedQuoteOption()) {
+                          <strong>{{ selectedQuoteOption()!.number }}</strong> · {{ selectedQuoteOption()!.customerName }}
+                        } @else {
+                          Busca la cotización por cliente o número comercial.
+                        }
+                      </small>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>Venta POS origen</label>
+                    <div class="source-picker">
+                      <input
+                        type="text"
+                        [(ngModel)]="commercialSourceSearch.posSale"
+                        (ngModelChange)="onCommercialSourceSearchChanged('posSale', $event)"
+                        class="form-control"
+                        placeholder="Busca por venta, cliente o canal POS"
+                      />
+                      <select
+                        [(ngModel)]="commercialFlowForm.posSaleId"
+                        (ngModelChange)="onPosSaleOptionSelected($event)"
+                        class="form-control"
+                      >
+                        <option value="">Sin venta POS</option>
+                        @for (sale of posSaleOptions(); track sale.id) {
+                          <option [value]="sale.id">
+                            {{ sale.saleNumber }} · {{ sale.customerName }} · {{ fmtCOP(sale.total) }}
+                          </option>
+                        }
+                      </select>
+                      <small class="source-picker__hint">
+                        @if (selectedPosSaleOption()) {
+                          <strong>{{ selectedPosSaleOption()!.saleNumber }}</strong> · {{ selectedPosSaleOption()!.customerName }}
+                        } @else {
+                          Busca la venta POS por número de venta o nombre del cliente.
+                        }
+                      </small>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>Pedido comercial</label>
+                    <div class="source-picker">
+                      <input
+                        type="text"
+                        [(ngModel)]="commercialSourceSearch.salesOrder"
+                        (ngModelChange)="onCommercialSourceSearchChanged('salesOrder', $event)"
+                        class="form-control"
+                        placeholder="Busca por pedido, cliente o estado"
+                      />
+                      <select
+                        [(ngModel)]="commercialFlowForm.salesOrderId"
+                        (ngModelChange)="onSalesOrderSelected($event)"
+                        class="form-control"
+                      >
+                        <option value="">Sin pedido</option>
+                        @for (order of salesOrders(); track order.id) {
+                          <option [value]="order.id">
+                            {{ order.number }} · {{ order.customerName }} · {{ fmtCOP(order.total) }}
+                          </option>
+                        }
+                      </select>
+                      <small class="source-picker__hint">
+                        @if (selectedSalesOrderOption()) {
+                          <strong>{{ selectedSalesOrderOption()!.number }}</strong> · {{ selectedSalesOrderOption()!.customerName }}
+                        } @else {
+                          Selecciona un pedido para remisionar o facturar parcialmente.
+                        }
+                      </small>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>Remisión</label>
+                    <div class="source-picker">
+                      <input
+                        type="text"
+                        [(ngModel)]="commercialSourceSearch.deliveryNote"
+                        (ngModelChange)="onCommercialSourceSearchChanged('deliveryNote', $event)"
+                        class="form-control"
+                        placeholder="Busca por remisión, cliente o estado"
+                      />
+                      <select
+                        [(ngModel)]="commercialFlowForm.deliveryNoteId"
+                        (ngModelChange)="onDeliveryNoteSelected($event)"
+                        class="form-control"
+                      >
+                        <option value="">Sin remisión</option>
+                        @for (note of deliveryNotes(); track note.id) {
+                          <option [value]="note.id">
+                            {{ note.number }} · {{ note.customerName }} · {{ fmtCOP(note.total) }}
+                          </option>
+                        }
+                      </select>
+                      <small class="source-picker__hint">
+                        @if (selectedDeliveryNoteOption()) {
+                          <strong>{{ selectedDeliveryNoteOption()!.number }}</strong> · {{ selectedDeliveryNoteOption()!.customerName }}
+                        } @else {
+                          Selecciona la remisión cuando la factura deba salir desde entrega previa.
+                        }
+                      </small>
+                    </div>
+                  </div>
+                  </div>
+                </div>
+                <div class="commercial-flow-form-section">
+                  <h4>Datos del documento</h4>
+                  <div class="commercial-flow-meta-grid">
                   <div class="form-group">
                     <label>Cliente</label>
                     <select [(ngModel)]="commercialFlowForm.customerId" class="form-control">
@@ -1856,10 +1993,11 @@ interface InvoiceExternalIntake {
                       <span>Aplicar anticipo POS</span>
                     </label>
                   </div>
-                </div>
-                <div class="form-group">
-                  <label>Notas</label>
-                  <textarea [(ngModel)]="commercialFlowForm.notes" class="form-control" rows="3" placeholder="Observaciones del flujo comercial..."></textarea>
+                  </div>
+                  <div class="form-group" style="margin:14px 0 0">
+                    <label>Notas</label>
+                    <textarea [(ngModel)]="commercialFlowForm.notes" class="form-control" rows="3" placeholder="Observaciones del flujo comercial..."></textarea>
+                  </div>
                 </div>
               </div>
               <div class="commercial-flow-panel">
@@ -1907,7 +2045,7 @@ interface InvoiceExternalIntake {
     }
 
     @if (showFiscalModal()) {
-      <div class="modal-overlay" (click)="closeFiscalModal()">
+      <div class="modal-overlay">
         <div class="modal modal-xl" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Fiscalidad empresarial Colombia</h3>
@@ -2004,7 +2142,7 @@ interface InvoiceExternalIntake {
     }
 
     @if (showAnalyticsModal()) {
-      <div class="modal-overlay" (click)="closeAnalyticsModal()">
+      <div class="modal-overlay">
         <div class="modal modal-xl" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Analítica y gestión documental</h3>
@@ -2117,7 +2255,7 @@ interface InvoiceExternalIntake {
     }
 
     @if (showOperationsModal()) {
-      <div class="modal-overlay" (click)="closeOperationsModal()">
+      <div class="modal-overlay">
         <div class="modal modal-xl" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Resiliencia operativa e integraciones empresariales</h3>
@@ -2288,7 +2426,7 @@ interface InvoiceExternalIntake {
     }
 
     @if (showApprovalRequestModal()) {
-      <div class="modal-overlay" (click)="closeApprovalRequestModal()">
+      <div class="modal-overlay">
         <div class="modal modal-box" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Solicitar aprobación</h3>
@@ -2320,7 +2458,7 @@ interface InvoiceExternalIntake {
     }
 
     @if (showAttachmentModal()) {
-      <div class="modal-overlay" (click)="closeAttachmentModal()">
+      <div class="modal-overlay">
         <div class="modal modal-box" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Agregar soporte</h3>
@@ -2367,7 +2505,7 @@ interface InvoiceExternalIntake {
     }
 
     @if (showPaymentModal()) {
-      <div class="modal-overlay" (click)="closePaymentModal()">
+      <div class="modal-overlay">
         <div class="modal modal-box" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Registrar pago parcial</h3>
@@ -2419,7 +2557,7 @@ interface InvoiceExternalIntake {
     }
 
     @if (showAgreementModal()) {
-      <div class="modal-overlay" (click)="closeAgreementModal()">
+      <div class="modal-overlay">
         <div class="modal modal-box" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Crear acuerdo de pago</h3>
@@ -2453,7 +2591,7 @@ interface InvoiceExternalIntake {
 
     <!-- ── Modal Nota Crédito / Débito ─────────────────────────────── -->
     @if (noteModal() !== 'none') {
-      <div class="modal-overlay" (click)="closeNoteModal()">
+      <div class="modal-overlay">
         <div class="modal modal-box modal-lg" (click)="$event.stopPropagation()">
 
           <div class="modal-header">
@@ -3281,12 +3419,44 @@ interface InvoiceExternalIntake {
       background:#fbfdff;
       padding:16px;
     }
+    .commercial-flow-panel--primary {
+      background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      box-shadow:0 16px 32px rgba(26,64,126,.06);
+    }
     .commercial-flow-title {
       font-family:'Sora',sans-serif;
       font-size:15px;
       font-weight:700;
       color:#0c1c35;
       margin-bottom:12px;
+    }
+    .commercial-flow-form-section {
+      border:1px solid #e5eef8;
+      border-radius:16px;
+      background:#fff;
+      padding:14px;
+      margin-bottom:14px;
+    }
+    .commercial-flow-form-section:last-child {
+      margin-bottom:0;
+    }
+    .commercial-flow-form-section h4 {
+      margin:0 0 10px;
+      font-size:12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#6b7f96;
+    }
+    .commercial-flow-form-grid {
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:14px;
+    }
+    .commercial-flow-meta-grid {
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:14px;
     }
     .commercial-order-list {
       display:flex;
@@ -3438,6 +3608,8 @@ interface InvoiceExternalIntake {
       .document-config-banner,
       .document-admin-layout,
       .commercial-flow-layout { grid-template-columns:1fr; }
+      .commercial-flow-form-grid,
+      .commercial-flow-meta-grid { grid-template-columns:1fr; }
     }
     @media (max-width:600px) {
       .hero-shell {
@@ -3509,6 +3681,9 @@ interface InvoiceExternalIntake {
     .invoice-inline-banner { margin-bottom:12px; padding:10px 12px; border-radius:10px; background:#eff6ff; color:#1d4ed8; font-size:12.5px; font-weight:600; }
     .invoice-mini-list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
     .invoice-mini-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 10px; border-radius:8px; background:#f8fafc; font-size:12.5px; color:#475569; }
+    .source-picker { display:flex; flex-direction:column; gap:8px; }
+    .source-picker__hint { font-size:12px; color:#64748b; line-height:1.4; }
+    .source-picker__hint strong { color:#0f172a; }
     .note-guided-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; background:#eff6ff; color:#1d4ed8; font-size:11px; font-weight:700; }
     .note-lines-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
     .note-line { display:grid; grid-template-columns:1fr 80px 110px 70px 70px 100px 28px; gap:6px; align-items:center; margin-bottom:6px; }
@@ -3537,6 +3712,8 @@ export class InvoicesListComponent implements OnInit {
   private readonly PROD_API = `${environment.apiUrl}/invoices/products`;
   private readonly COMP_API = `${environment.apiUrl}/companies/me`;
   private readonly DOC_CFG_API = `${environment.apiUrl}/invoices/document-configs`;
+  private readonly QUOTE_API = `${environment.apiUrl}/quotes`;
+  private readonly POS_SALES_API = `${environment.apiUrl}/pos/sales`;
   private readonly ORDER_API = `${environment.apiUrl}/invoices/sales-orders`;
   private readonly DELIVERY_API = `${environment.apiUrl}/invoices/delivery-notes`;
   private readonly DELIVERY_LIST_API = `${environment.apiUrl}/invoices/delivery-notes`;
@@ -3601,6 +3778,8 @@ export class InvoicesListComponent implements OnInit {
   sending  = signal<Record<string, boolean>>({});
   querying = signal<Record<string, boolean>>({});
   documentConfigs = signal<InvoiceDocumentConfig[]>([]);
+  quoteOptions = signal<QuoteFlowSummary[]>([]);
+  posSaleOptions = signal<PosSaleFlowSummary[]>([]);
   salesOrders = signal<SalesOrderSummary[]>([]);
   deliveryNotes = signal<DeliveryNoteSummary[]>([]);
   invoiceStatement = signal<InvoiceStatement | null>(null);
@@ -3651,6 +3830,7 @@ export class InvoicesListComponent implements OnInit {
   documentConfigForm = this.emptyDocumentConfigForm();
   commercialFlowMode: 'order' | 'delivery' | 'invoice' = 'order';
   commercialFlowForm = this.emptyCommercialFlowForm();
+  commercialSourceSearch = this.emptyCommercialSourceSearch();
   paymentForm = this.emptyPaymentForm();
   agreementForm = this.emptyAgreementForm();
   approvalRequestForm = this.emptyApprovalRequestForm();
@@ -4285,6 +4465,15 @@ export class InvoicesListComponent implements OnInit {
     };
   }
 
+  private emptyCommercialSourceSearch() {
+    return {
+      quote: '',
+      posSale: '',
+      salesOrder: '',
+      deliveryNote: '',
+    };
+  }
+
   loadDocumentConfigs() {
     this.http.get<any>(this.DOC_CFG_API).subscribe({
       next: response => this.documentConfigs.set(response?.data ?? response ?? []),
@@ -4292,15 +4481,64 @@ export class InvoicesListComponent implements OnInit {
     });
   }
 
-  loadSalesOrders() {
-    this.http.get<any>(this.ORDER_API).subscribe({
+  loadQuoteOptions(search = '') {
+    const params: any = { limit: 12 };
+    if (search.trim()) params.search = search.trim();
+    this.http.get<any>(this.QUOTE_API, { params }).subscribe({
+      next: response => {
+        const rows = response?.data ?? response ?? [];
+        this.quoteOptions.set(
+          rows.map((item: any) => ({
+            id: item.id,
+            number: item.number,
+            status: item.status,
+            issueDate: item.issueDate,
+            total: Number(item.total ?? 0),
+            customerName: item.customer?.name ?? 'Cliente sin nombre',
+            customerDocument: item.customer?.documentNumber ?? null,
+          })),
+        );
+      },
+      error: () => this.quoteOptions.set([]),
+    });
+  }
+
+  loadPosSaleOptions(search = '') {
+    const params: any = { limit: 12 };
+    if (search.trim()) params.search = search.trim();
+    this.http.get<any>(this.POS_SALES_API, { params }).subscribe({
+      next: response => {
+        const rows = response?.data ?? response ?? [];
+        this.posSaleOptions.set(
+          rows.map((item: any) => ({
+            id: item.id,
+            saleNumber: item.saleNumber,
+            status: item.status,
+            total: Number(item.total ?? 0),
+            customerName: item.customer?.name ?? item.customerName ?? 'Cliente POS',
+            orderType: item.orderType ?? null,
+            orderStatus: item.orderStatus ?? null,
+            createdAt: item.createdAt ?? null,
+          })),
+        );
+      },
+      error: () => this.posSaleOptions.set([]),
+    });
+  }
+
+  loadSalesOrders(search = '') {
+    const params: any = {};
+    if (search.trim()) params.search = search.trim();
+    this.http.get<any>(this.ORDER_API, { params }).subscribe({
       next: response => this.salesOrders.set(response?.data ?? response ?? []),
       error: () => this.salesOrders.set([]),
     });
   }
 
-  loadDeliveryNotes() {
-    this.http.get<any>(this.DELIVERY_LIST_API).subscribe({
+  loadDeliveryNotes(search = '') {
+    const params: any = {};
+    if (search.trim()) params.search = search.trim();
+    this.http.get<any>(this.DELIVERY_LIST_API, { params }).subscribe({
       next: response => this.deliveryNotes.set(response?.data ?? response ?? []),
       error: () => this.deliveryNotes.set([]),
     });
@@ -4314,7 +4552,10 @@ export class InvoicesListComponent implements OnInit {
   openCommercialFlowModal() {
     this.commercialFlowMode = 'order';
     this.commercialFlowForm = this.emptyCommercialFlowForm();
+    this.commercialSourceSearch = this.emptyCommercialSourceSearch();
     this.showCommercialFlowModal.set(true);
+    this.loadQuoteOptions();
+    this.loadPosSaleOptions();
     this.loadSalesOrders();
     this.loadDeliveryNotes();
   }
@@ -4745,17 +4986,79 @@ export class InvoicesListComponent implements OnInit {
         : 'Crear factura desde origen';
   }
 
-  useSalesOrder(order: SalesOrderSummary) {
-    this.commercialFlowForm.salesOrderId = order.id;
-    this.commercialFlowForm.customerId = '';
+  onCommercialSourceSearchChanged(
+    type: 'quote' | 'posSale' | 'salesOrder' | 'deliveryNote',
+    value: string,
+  ) {
+    this.commercialSourceSearch = {
+      ...this.commercialSourceSearch,
+      [type]: value,
+    };
+    if (type === 'quote') {
+      this.loadQuoteOptions(value);
+      return;
+    }
+    if (type === 'posSale') {
+      this.loadPosSaleOptions(value);
+      return;
+    }
+    if (type === 'salesOrder') {
+      this.loadSalesOrders(value);
+      return;
+    }
+    this.loadDeliveryNotes(value);
+  }
+
+  selectedQuoteOption() {
+    return this.quoteOptions().find((item) => item.id === this.commercialFlowForm.quoteId) ?? null;
+  }
+
+  selectedPosSaleOption() {
+    return this.posSaleOptions().find((item) => item.id === this.commercialFlowForm.posSaleId) ?? null;
+  }
+
+  selectedSalesOrderOption() {
+    return this.salesOrders().find((item) => item.id === this.commercialFlowForm.salesOrderId) ?? null;
+  }
+
+  selectedDeliveryNoteOption() {
+    return this.deliveryNotes().find((item) => item.id === this.commercialFlowForm.deliveryNoteId) ?? null;
+  }
+
+  onQuoteOptionSelected(quoteId: string) {
+    this.commercialFlowForm.quoteId = quoteId;
+  }
+
+  onPosSaleOptionSelected(posSaleId: string) {
+    this.commercialFlowForm.posSaleId = posSaleId;
+  }
+
+  onSalesOrderSelected(salesOrderId: string) {
+    this.commercialFlowForm.salesOrderId = salesOrderId;
+    const order = this.salesOrders().find((item) => item.id === salesOrderId);
+    if (!order) return;
+    if (order.quoteId) this.commercialFlowForm.quoteId = order.quoteId;
+    if (order.posSaleId) this.commercialFlowForm.posSaleId = order.posSaleId;
     if (this.commercialFlowMode === 'invoice') {
       this.commercialFlowForm.deliveryNoteId = '';
     }
   }
 
+  onDeliveryNoteSelected(deliveryNoteId: string) {
+    this.commercialFlowForm.deliveryNoteId = deliveryNoteId;
+    const note = this.deliveryNotes().find((item) => item.id === deliveryNoteId);
+    if (!note) return;
+    if (note.salesOrderId) this.commercialFlowForm.salesOrderId = note.salesOrderId;
+    if (note.posSaleId) this.commercialFlowForm.posSaleId = note.posSaleId;
+  }
+
+  useSalesOrder(order: SalesOrderSummary) {
+    this.onSalesOrderSelected(order.id);
+    this.commercialFlowForm.customerId = '';
+  }
+
   useDeliveryNote(note: DeliveryNoteSummary) {
-    this.commercialFlowForm.deliveryNoteId = note.id;
-    this.commercialFlowForm.salesOrderId = note.salesOrderId || '';
+    this.onDeliveryNoteSelected(note.id);
     this.commercialFlowForm.customerId = '';
     this.commercialFlowMode = 'invoice';
   }

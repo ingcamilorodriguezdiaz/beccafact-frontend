@@ -297,26 +297,6 @@ interface QuoteApprovalPolicy {
             <h2 class="page-title">Cotizaciones</h2>
             <p class="page-subtitle">Crea, envía y convierte cotizaciones a facturas. Controla el ciclo de ventas desde la propuesta hasta el cierre.</p>
           </div>
-          <div class="header-actions">
-            <button class="btn btn-secondary" (click)="openApprovalPoliciesModal()">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                <path fill-rule="evenodd" d="M10 1.75a.75.75 0 01.75.75v.756a6.502 6.502 0 012.52 1.045l.535-.536a.75.75 0 111.06 1.061l-.535.535a6.502 6.502 0 011.045 2.52h.756a.75.75 0 010 1.5h-.756a6.502 6.502 0 01-1.045 2.52l.535.535a.75.75 0 11-1.06 1.061l-.536-.535a6.502 6.502 0 01-2.52 1.045v.756a.75.75 0 01-1.5 0v-.756a6.502 6.502 0 01-2.52-1.045l-.536.535a.75.75 0 11-1.06-1.06l.535-.536A6.502 6.502 0 014.23 9.776h-.756a.75.75 0 010-1.5h.756A6.502 6.502 0 015.275 5.76l-.535-.536a.75.75 0 111.06-1.06l.536.535A6.502 6.502 0 018.856 3.65V2.5a.75.75 0 01.75-.75zm0 4a3.25 3.25 0 100 6.5 3.25 3.25 0 000-6.5z"/>
-              </svg>
-              Aprobaciones
-            </button>
-            <button class="btn btn-secondary" (click)="openCommercialMastersModal()">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                <path d="M10 2a2 2 0 012 2v.341a6.002 6.002 0 012.5 1.443l.241-.14a2 2 0 012.732.732l1 1.732a2 2 0 01-.732 2.732l-.243.14a6.064 6.064 0 010 2.89l.243.14a2 2 0 01.732 2.732l-1 1.732a2 2 0 01-2.732.732l-.241-.14A6.002 6.002 0 0112 15.659V16a2 2 0 11-4 0v-.341a6.002 6.002 0 01-2.5-1.443l-.241.14a2 2 0 01-2.732-.732l-1-1.732a2 2 0 01.732-2.732l.243-.14a6.064 6.064 0 010-2.89l-.243-.14A2 2 0 011.527 3.99l1-1.732A2 2 0 015.26 1.526l.241.14A6.002 6.002 0 018 4.341V4a2 2 0 012-2zm0 5a3 3 0 100 6 3 3 0 000-6z"/>
-              </svg>
-              Maestros comerciales
-            </button>
-            <button class="btn btn-primary" (click)="openFormModal()">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
-              </svg>
-              Nueva cotización
-            </button>
-          </div>
         </div>
         <div class="hero-aside">
           <div class="hero-highlight">
@@ -336,6 +316,71 @@ interface QuoteApprovalPolicy {
             <div class="hero-mini-card">
               <span class="hero-mini-card__label">Rechazadas</span>
               <strong>{{ rejectedCount() }}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tabs-shell">
+        <div class="tabs-shell__head">
+          <div>
+            <span class="tabs-shell__eyebrow">Navegación del módulo</span>
+            <h3>Áreas de Cotizaciones</h3>
+            <p>Administra políticas, catálogos comerciales y la creación de nuevas propuestas desde una sola navegación.</p>
+          </div>
+        </div>
+        <div class="tabs-groups">
+          <div class="tab-group">
+            <div class="tab-group__header">
+              <div>
+                <span class="tab-group__label">Gestión comercial</span>
+                <strong class="tab-group__title">Operación y gobierno de cotizaciones</strong>
+              </div>
+              <small>Define políticas, administra catálogos y abre nuevas propuestas con el mismo patrón visual del resto del ERP.</small>
+            </div>
+            <div class="tab-grid">
+              <button
+                type="button"
+                class="tab-btn"
+                [class.tab-btn--active]="focusedModuleAction() === 'approvals'"
+                (click)="openApprovalPoliciesModal()"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 1.75a.75.75 0 01.75.75v.756a6.502 6.502 0 012.52 1.045l.535-.536a.75.75 0 111.06 1.061l-.535.535a6.502 6.502 0 011.045 2.52h.756a.75.75 0 010 1.5h-.756a6.502 6.502 0 01-1.045 2.52l.535.535a.75.75 0 11-1.06 1.061l-.536-.535a6.502 6.502 0 01-2.52 1.045v.756a.75.75 0 01-1.5 0v-.756a6.502 6.502 0 01-2.52-1.045l-.536.535a.75.75 0 11-1.06-1.06l.535-.536A6.502 6.502 0 014.23 9.776h-.756a.75.75 0 010-1.5h.756A6.502 6.502 0 015.275 5.76l-.535-.536a.75.75 0 111.06-1.06l.536.535A6.502 6.502 0 018.856 3.65V2.5a.75.75 0 01.75-.75zm0 4a3.25 3.25 0 100 6.5 3.25 3.25 0 000-6.5z"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Aprobaciones</span>
+                  <span class="tab-btn__meta">Políticas, umbrales y flujo de autorización para cotizaciones.</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="tab-btn"
+                [class.tab-btn--active]="focusedModuleAction() === 'masters'"
+                (click)="openCommercialMastersModal()"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 2a2 2 0 012 2v.341a6.002 6.002 0 012.5 1.443l.241-.14a2 2 0 012.732.732l1 1.732a2 2 0 01-.732 2.732l-.243.14a6.064 6.064 0 010 2.89l.243.14a2 2 0 01.732 2.732l-1 1.732a2 2 0 01-2.732.732l-.241-.14A6.002 6.002 0 0112 15.659V16a2 2 0 11-4 0v-.341a6.002 6.002 0 01-2.5-1.443l-.241.14a2 2 0 01-2.732-.732l-1-1.732a2 2 0 01.732-2.732l.243-.14a6.064 6.064 0 010-2.89l-.243-.14A2 2 0 011.527 3.99l1-1.732A2 2 0 015.26 1.526l.241.14A6.002 6.002 0 018 4.341V4a2 2 0 012-2zm0 5a3 3 0 100 6 3 3 0 000-6z"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Maestros comerciales</span>
+                  <span class="tab-btn__meta">Canales, responsables, etapas, listas de precios y plantillas.</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="tab-btn"
+                [class.tab-btn--active]="focusedModuleAction() === 'new'"
+                (click)="openFormModal()"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
+                </svg>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Nueva cotización</span>
+                  <span class="tab-btn__meta">Abre el formulario comercial para crear o preparar una propuesta.</span>
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -1376,7 +1421,7 @@ interface QuoteApprovalPolicy {
 
     @if (showCommercialMastersModal()) {
       <div class="modal-overlay">
-        <div class="modal modal-xl" (click)="$event.stopPropagation()">
+        <div class="modal modal-xl modal-commercial-masters" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>Maestros comerciales</h3>
             <button class="drawer-close" (click)="closeCommercialMastersModal()">
@@ -1754,7 +1799,6 @@ interface QuoteApprovalPolicy {
       color:#fff;
     }
     .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
-    .header-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
     .hero-copy { max-width:620px; }
     .hero-kicker {
       margin:0 0 10px;
@@ -1767,6 +1811,155 @@ interface QuoteApprovalPolicy {
     .page-title { font-family:'Sora',sans-serif; font-size:32px; line-height:1.02; font-weight:800; color:#fff; margin:0 0 10px; letter-spacing:-.05em; }
     .page-subtitle { font-size:14px; color:rgba(236,244,255,.8); margin:0; line-height:1.6; }
     .hero-aside { display:grid; gap:12px; align-content:start; }
+    .tabs-shell {
+      margin-bottom:18px;
+      border-radius:28px;
+      padding:20px;
+      background:linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(247,251,255,.96) 100%);
+      border:1px solid #dce6f0;
+      box-shadow:0 20px 36px rgba(12,28,53,.06);
+    }
+    .tabs-shell__head {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:18px;
+      margin-bottom:18px;
+    }
+    .tabs-shell__eyebrow {
+      display:block;
+      margin-bottom:6px;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#00a084;
+    }
+    .tabs-shell__head h3 {
+      margin:0;
+      font-family:'Sora',sans-serif;
+      font-size:22px;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+    }
+    .tabs-shell__head p {
+      margin:0;
+      max-width:56ch;
+      font-size:13px;
+      line-height:1.6;
+      color:#6b7f96;
+      text-align:right;
+    }
+    .tabs-groups {
+      display:grid;
+      gap:16px;
+    }
+    .tab-group {
+      padding:16px;
+      border-radius:22px;
+      border:1px solid #e3ecf5;
+      background:linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(246,250,255,.95) 100%);
+    }
+    .tab-group__header {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .tab-group__label {
+      display:block;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:#1a407e;
+      margin-bottom:4px;
+    }
+    .tab-group__title {
+      display:block;
+      color:#0c1c35;
+      font-size:15px;
+      letter-spacing:-.02em;
+    }
+    .tab-group__header small {
+      color:#7a8ea7;
+      font-size:12px;
+      line-height:1.5;
+      text-align:right;
+    }
+    .tab-grid {
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:12px;
+    }
+    .tab-btn {
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      min-height:78px;
+      width:100%;
+      padding:16px;
+      border-radius:18px;
+      border:1px solid #dbe5ef;
+      background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      color:#0c1c35;
+      cursor:pointer;
+      text-align:left;
+      transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+      box-shadow:0 12px 22px rgba(12,28,53,.05);
+    }
+    .tab-btn svg {
+      width:20px;
+      height:20px;
+      flex-shrink:0;
+      color:#1a407e;
+      margin-top:2px;
+      transition:color .18s ease, transform .18s ease;
+    }
+    .tab-btn__content {
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:0;
+    }
+    .tab-btn__title {
+      font-size:14px;
+      font-weight:800;
+      color:#0c1c35;
+      letter-spacing:-.02em;
+    }
+    .tab-btn__meta {
+      font-size:12px;
+      line-height:1.5;
+      color:#6f8399;
+    }
+    .tab-btn:hover {
+      transform:translateY(-2px);
+      border-color:#93c5fd;
+      box-shadow:0 18px 30px rgba(26,64,126,.1);
+      background:linear-gradient(180deg, #ffffff 0%, #eef6ff 100%);
+    }
+    .tab-btn:hover svg {
+      color:#123f7b;
+      transform:scale(1.05);
+    }
+    .tab-btn--active {
+      border-color:#0f274b;
+      background:linear-gradient(135deg, #102a4f 0%, #163d73 58%, #00a084 100%);
+      box-shadow:0 24px 36px rgba(15,39,75,.24);
+    }
+    .tab-btn--active .tab-btn__title,
+    .tab-btn--active .tab-btn__meta {
+      color:#f8fbff;
+    }
+    .tab-btn--active svg { color:#dffef5; }
+    .tab-btn--active .tab-btn__meta { color:rgba(236,244,255,.82); }
+    .tab-btn--active:hover {
+      border-color:#0f274b;
+      background:linear-gradient(135deg, #102a4f 0%, #163d73 58%, #00a084 100%);
+      box-shadow:0 28px 40px rgba(15,39,75,.28);
+    }
     .hero-highlight {
       padding:18px;
       border-radius:20px;
@@ -2299,6 +2492,8 @@ interface QuoteApprovalPolicy {
     .modal { background:#fff; border-radius:16px; width:100%; max-width:580px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.2); }
     .modal-sm { max-width:420px; }
     .modal-lg { max-width:860px; }
+    .modal-xl { max-width:1180px; }
+    .modal-commercial-masters { max-width:min(96vw, 1260px); max-height:92vh; }
     .modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid #f0f4f8; }
     .modal-header h3 { font-family:'Sora',sans-serif; font-size:17px; font-weight:700; color:#0c1c35; margin:0; }
     .modal-body { flex:1; overflow-y:auto; padding:20px 24px; }
@@ -2373,18 +2568,21 @@ interface QuoteApprovalPolicy {
     }
     .commercial-masters {
       display:grid;
-      grid-template-columns:220px minmax(0,1fr);
-      gap:18px;
+      grid-template-columns:260px minmax(0,1fr);
+      gap:22px;
+      align-items:start;
     }
     .masters-sidebar {
       display:flex;
       flex-direction:column;
       gap:8px;
-      padding:10px;
+      padding:12px;
       border:1px solid #e2e8f0;
-      border-radius:18px;
+      border-radius:20px;
       background:#f8fbff;
       align-self:start;
+      position:sticky;
+      top:0;
     }
     .master-tab-btn {
       display:flex;
@@ -2408,22 +2606,22 @@ interface QuoteApprovalPolicy {
       color:#163a63;
       box-shadow:0 8px 18px rgba(12,28,53,.05);
     }
-    .masters-content { display:grid; gap:14px; min-width:0; }
+    .masters-content { display:grid; gap:16px; min-width:0; }
     .masters-toolbar {
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      padding:16px 18px;
-      border-radius:18px;
+      padding:18px 20px;
+      border-radius:20px;
       border:1px solid #dce6f0;
       background:linear-gradient(135deg,#f8fbff 0%,#ffffff 100%);
     }
     .masters-toolbar h3 { margin:0; font-family:'Sora',sans-serif; font-size:20px; letter-spacing:-.04em; color:#0c1c35; }
     .master-editor-card,
     .master-list-card {
-      padding:18px;
-      border-radius:18px;
+      padding:20px;
+      border-radius:20px;
       border:1px solid #dce6f0;
       background:#fff;
       box-shadow:0 14px 26px rgba(12,28,53,.05);
@@ -2482,11 +2680,21 @@ interface QuoteApprovalPolicy {
       .hero-shell { grid-template-columns:1fr; padding:18px; border-radius:24px; }
       .page-title { font-size:26px; }
       .page-header { flex-direction:column; align-items:stretch; gap:10px; }
-      .header-actions { width:100%; flex-direction:column; }
-      .page-header .btn { width:100%; justify-content:center; }
       .hero-mini-grid,
       .kpi-strip,
       .analytics-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .tabs-shell {
+        padding:18px;
+        border-radius:24px;
+      }
+      .tabs-shell__head {
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .tabs-shell__head p {
+        text-align:left;
+      }
+      .tab-grid { grid-template-columns:1fr; }
       .filters-head { flex-direction:column; align-items:flex-start; }
       .filters-bar { gap:8px; }
       .search-wrap { max-width:100%; flex:1 1 100%; }
@@ -2499,6 +2707,7 @@ interface QuoteApprovalPolicy {
       .hero-mini-grid,
       .kpi-strip,
       .analytics-strip { grid-template-columns:1fr; }
+      .tabs-shell { padding:16px; }
       .filters-shell { padding:14px; }
       .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
       .data-table { min-width:620px; }
@@ -2517,6 +2726,7 @@ interface QuoteApprovalPolicy {
       .form-row--triple { grid-template-columns:1fr; }
       .line-fields { grid-template-columns:1fr 1fr; }
       .line-fields--template { grid-template-columns:1fr 1fr; }
+      .modal-commercial-masters { max-width:100%; }
       .commercial-masters { grid-template-columns:1fr; }
       .masters-sidebar { flex-direction:row; overflow:auto; }
       .master-tab-btn { min-width:180px; }
@@ -2548,6 +2758,7 @@ export class QuotesComponent implements OnInit {
   page        = signal(1);
   totalPages  = signal(1);
   analyticsSummary = signal<QuoteAnalyticsSummary | null>(null);
+  focusedModuleAction = signal<'approvals' | 'masters' | 'new'>('new');
   readonly limit = 20;
 
   // Filtros
@@ -2832,6 +3043,7 @@ export class QuotesComponent implements OnInit {
   }
 
   openCommercialMastersModal(tab: MasterTab = 'salesOwners') {
+    this.focusedModuleAction.set('masters');
     this.setMasterTab(tab);
     this.showCommercialMastersModal.set(true);
     this.loadCommercialMasters();
@@ -2844,6 +3056,7 @@ export class QuotesComponent implements OnInit {
   }
 
   openApprovalPoliciesModal() {
+    this.focusedModuleAction.set('approvals');
     this.showApprovalPoliciesModal.set(true);
     this.loadApprovalPolicies();
   }
@@ -3189,6 +3402,7 @@ export class QuotesComponent implements OnInit {
   // ── Modal: Formulario ──────────────────────────────────────────────────────
 
   openFormModal(quote?: Quote) {
+    this.focusedModuleAction.set('new');
     this.loadCommercialMasters();
     if (quote) {
       // Editar cotización existente — carga el detalle para obtener los ítems
