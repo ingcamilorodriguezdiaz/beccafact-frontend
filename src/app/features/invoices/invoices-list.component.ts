@@ -1014,6 +1014,7 @@ interface InvoiceExternalIntake {
                   <div class="dw-fiscal-row"><span>Configuración</span><strong>{{ detailInvoice()?.documentConfig?.name || 'Legado / empresa' }}</strong></div>
                   <div class="dw-fiscal-row"><span>Prefijo</span><strong>{{ detailInvoice()?.documentConfig?.prefix || detailInvoice()?.prefix || '—' }}</strong></div>
                   <div class="dw-fiscal-row"><span>Resolución</span><strong>{{ detailInvoice()?.resolutionNumber || detailInvoice()?.documentConfig?.resolutionNumber || '—' }}</strong></div>
+                  <div class="dw-fiscal-row"><span>Clave técnica</span><strong>{{ detailInvoice()?.documentConfig?.technicalKey || '—' }}</strong></div>
                   <div class="dw-fiscal-row"><span>Rango</span><strong>{{ formatRange(detailInvoice()?.numberingRangeFrom || detailInvoice()?.documentConfig?.rangeFrom, detailInvoice()?.numberingRangeTo || detailInvoice()?.documentConfig?.rangeTo) }}</strong></div>
                 </div>
               </div>
@@ -1754,6 +1755,12 @@ interface InvoiceExternalIntake {
                     <label>Etiqueta</label>
                     <input type="text" [(ngModel)]="documentConfigForm.resolutionLabel" class="form-control" placeholder="Resolución principal"/>
                   </div>
+                  <div class="form-group">
+                    <label>Clave técnica</label>
+                    <input type="text" [(ngModel)]="documentConfigForm.technicalKey" class="form-control" placeholder="Clave técnica DIAN"/>
+                  </div>
+                </div>
+                <div class="form-row-3">
                   <div class="form-group">
                     <label>Rango desde</label>
                     <input type="number" [(ngModel)]="documentConfigForm.rangeFrom" class="form-control" min="1"/>
@@ -3345,7 +3352,26 @@ interface InvoiceExternalIntake {
     .dian-error-notif .dian-error-badge { background:#e0f2fe; color:#0369a1; }
     .dian-error-text { color:#374151; }
     .dw-notes { font-size:13px; color:#475569; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; line-height:1.5; }
-    .drawer-footer { padding:14px 22px; border-top:1px solid #f0f4f8; display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; }
+    .drawer-footer {
+      padding:14px 22px;
+      border-top:1px solid #f0f4f8;
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:10px;
+      flex-shrink:0;
+      background:linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    }
+    .drawer-footer .btn {
+      width:100%;
+      min-height:40px;
+      justify-content:center;
+      text-align:center;
+      white-space:normal;
+      line-height:1.25;
+      padding-inline:12px;
+      box-shadow:0 8px 18px rgba(12,28,53,.04);
+    }
+    .drawer-footer .btn svg { flex-shrink:0; }
 
     /* MODALS */
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; display:flex; align-items:center; justify-content:center; padding:16px; }
@@ -3610,6 +3636,7 @@ interface InvoiceExternalIntake {
       .commercial-flow-layout { grid-template-columns:1fr; }
       .commercial-flow-form-grid,
       .commercial-flow-meta-grid { grid-template-columns:1fr; }
+      .drawer-footer { grid-template-columns:1fr; }
     }
     @media (max-width:600px) {
       .hero-shell {
@@ -4441,6 +4468,7 @@ export class InvoicesListComponent implements OnInit {
       prefix: this.companyPrefix(),
       resolutionNumber: '',
       resolutionLabel: '',
+      technicalKey: '',
       rangeFrom: null as number | null,
       rangeTo: null as number | null,
       validFrom: '',
@@ -4793,6 +4821,7 @@ export class InvoicesListComponent implements OnInit {
       prefix: config.prefix,
       resolutionNumber: config.resolutionNumber || '',
       resolutionLabel: config.resolutionLabel || '',
+      technicalKey: config.technicalKey || '',
       rangeFrom: config.rangeFrom ?? null,
       rangeTo: config.rangeTo ?? null,
       validFrom: config.validFrom || '',
@@ -4817,6 +4846,7 @@ export class InvoicesListComponent implements OnInit {
       posTerminalId: this.documentConfigForm.posTerminalId.trim() || undefined,
       resolutionNumber: this.documentConfigForm.resolutionNumber.trim() || undefined,
       resolutionLabel: this.documentConfigForm.resolutionLabel.trim() || undefined,
+      technicalKey: this.documentConfigForm.technicalKey.trim() || undefined,
       validFrom: this.documentConfigForm.validFrom || undefined,
       validTo: this.documentConfigForm.validTo || undefined,
       rangeFrom: this.documentConfigForm.rangeFrom ?? undefined,
