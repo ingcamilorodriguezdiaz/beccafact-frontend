@@ -210,7 +210,10 @@ interface SANavItem {
         <section class="sa-hero">
           <div class="sa-hero-copy">
             <p class="hero-kicker">Panel ejecutivo</p>
-            <h1>{{ currentPageMeta().title }}</h1>
+            <div class="sa-hero-headline">
+              <h1>{{ currentPageMeta().title }}</h1>
+              <span class="hero-pill">{{ currentPageMeta().badge }}</span>
+            </div>
             <p>{{ currentPageMeta().subtitle }}</p>
           </div>
 
@@ -651,62 +654,87 @@ interface SANavItem {
 
     .sa-hero {
       margin:20px 20px 0;
-      padding:24px;
-      border-radius:28px;
+      padding:18px 20px;
+      border-radius:24px;
       background:
         radial-gradient(circle at top right, rgba(0, 198, 160, 0.18), transparent 30%),
         radial-gradient(circle at bottom left, rgba(26, 64, 126, 0.18), transparent 35%),
         linear-gradient(135deg, #0d2344 0%, #173d74 55%, #0c8f79 100%);
       color:#fff;
       display:grid;
-      grid-template-columns:minmax(0, 1.2fr) minmax(290px, .8fr);
-      gap:18px;
-      box-shadow:0 24px 42px rgba(12, 28, 53, 0.12);
+      grid-template-columns:minmax(0, 1.4fr) minmax(320px, .9fr);
+      gap:14px;
+      align-items:center;
+      box-shadow:0 18px 34px rgba(12, 28, 53, 0.1);
       flex-shrink:0;
     }
 
     .hero-kicker {
-      margin:0 0 10px;
-      font-size:11px;
+      margin:0 0 8px;
+      font-size:10px;
       font-weight:800;
       text-transform:uppercase;
       letter-spacing:.14em;
       color:#8bf3cb;
     }
 
+    .sa-hero-headline {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
     .sa-hero-copy h1 {
       margin:0;
       font-family:var(--font-d, 'Sora', sans-serif);
-      font-size:34px;
-      line-height:1.02;
+      font-size:28px;
+      line-height:1.04;
       letter-spacing:-.06em;
     }
 
     .sa-hero-copy p:last-child {
-      margin:12px 0 0;
-      max-width:58ch;
-      font-size:14px;
-      line-height:1.7;
+      margin:8px 0 0;
+      max-width:62ch;
+      font-size:13px;
+      line-height:1.55;
       color:rgba(236, 244, 255, 0.8);
+    }
+
+    .hero-pill {
+      display:inline-flex;
+      align-items:center;
+      padding:5px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.16);
+      color:#d7f7ec;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      white-space:nowrap;
     }
 
     .sa-hero-stats {
       display:grid;
-      gap:12px;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:10px;
     }
 
     .hero-stat {
       display:grid;
-      gap:4px;
-      padding:14px 16px;
-      border-radius:18px;
+      gap:2px;
+      min-height:72px;
+      padding:10px 12px;
+      border-radius:16px;
       background:rgba(255, 255, 255, 0.1);
       border:1px solid rgba(255, 255, 255, 0.12);
       backdrop-filter:blur(12px);
     }
 
     .hero-stat span {
-      font-size:10px;
+      font-size:9px;
       font-weight:800;
       text-transform:uppercase;
       letter-spacing:.12em;
@@ -714,9 +742,10 @@ interface SANavItem {
     }
 
     .hero-stat strong {
-      font-size:17px;
+      font-size:15px;
       font-weight:800;
       color:#fff;
+      line-height:1.25;
     }
 
     .hero-stat--accent {
@@ -748,6 +777,9 @@ interface SANavItem {
     @media (max-width: 1180px) {
       .sa-hero {
         grid-template-columns:1fr;
+      }
+      .sa-hero-stats {
+        grid-template-columns:repeat(3, minmax(0, 1fr));
       }
     }
 
@@ -787,10 +819,12 @@ interface SANavItem {
       .badge-text { display:none; }
       .sa-hero {
         margin:14px 14px 0;
-        padding:18px;
+        padding:16px;
         border-radius:22px;
       }
-      .sa-hero-copy h1 { font-size:28px; }
+      .sa-hero-copy h1 { font-size:24px; }
+      .sa-hero-stats { grid-template-columns:1fr; }
+      .hero-stat { min-height:auto; }
       .sa-content { padding:14px; }
       .sa-content-shell { padding:16px; border-radius:22px; }
     }
