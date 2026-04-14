@@ -34,6 +34,24 @@ interface DianFacturacionConfig {
   hasCertificate: boolean;
 }
 
+interface DianNumberingRangeItem {
+  resolutionNumber: string;
+  resolutionDate: string;
+  prefix: string;
+  fromNumber: number;
+  toNumber: number;
+  validDateFrom: string;
+  validDateTo: string;
+  technicalKey: string;
+}
+
+interface DianNumberingRangeResponse {
+  operationCode: string;
+  operationDescription: string;
+  selected: DianNumberingRangeItem | null;
+  ranges: DianNumberingRangeItem[];
+}
+
 interface DianCertificateConfig {
   hasCertificate: boolean;
   certificate: string;
@@ -213,7 +231,18 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
                   </div>
                   <div class="form-group">
                     <label>Clave técnica</label>
-                    <input type="text" [(ngModel)]="draftFact.claveTecnica" class="form-control" placeholder="Clave técnica del set"/>
+                    <div class="input-action-row">
+                      <input type="text" [(ngModel)]="draftFact.claveTecnica" class="form-control" placeholder="Clave técnica del set"/>
+                      @if (draftFact.ambiente === 'produccion') {
+                        <button
+                          type="button"
+                          class="btn btn-secondary btn-inline"
+                          [disabled]="loadingNumberingRange()"
+                          (click)="consultNumberingRange()">
+                          {{ loadingNumberingRange() ? 'Consultando...' : 'Consultar DIAN' }}
+                        </button>
+                      }
+                    </div>
                   </div>
                 </div>
 
@@ -526,6 +555,8 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
     .form-group { margin-bottom:14px; }
     .form-group--full { grid-column:span 2; }
     .form-group label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:5px; }
+    .input-action-row { display:flex; align-items:center; gap:10px; }
+    .input-action-row .form-control { flex:1; }
     .form-control { width:100%; padding:9px 12px; border:1px solid #dce6f0; border-radius:8px; font-size:14px; outline:none; box-sizing:border-box; color:#0c1c35; background:#fff; transition:border-color .15s; }
     .form-control:focus { border-color:#1a407e; box-shadow:0 0 0 3px rgba(26,64,126,.08); }
 
@@ -590,6 +621,7 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
     .btn-primary:disabled { opacity:.6; cursor:default; }
     .btn-secondary { background:#f0f4f9; color:#374151; border:1px solid #dce6f0; }
     .btn-secondary:hover { background:#e8eef8; }
+    .btn-inline { white-space:nowrap; }
 
     .empty-state { display:flex; flex-direction:column; align-items:center; padding:60px 20px; text-align:center; background:#fff; border:1px solid #dce6f0; border-radius:12px; gap:10px; }
     .empty-state p { font-size:14px; color:#374151; margin:0; }
@@ -605,6 +637,7 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
       .search-wrap { flex: none; }
       .form-row { grid-template-columns: 1fr; }
       .form-group--full { grid-column: span 1; }
+      .input-action-row { flex-direction: column; align-items: stretch; }
       .radio-group { grid-template-columns: 1fr; }
       .dual-resolution-grid { grid-template-columns: 1fr; }
     }
@@ -628,6 +661,7 @@ export class SaIntegrationsComponent implements OnInit {
   // Facturación
   loadingFact = signal(false);
   savingFact  = signal(false);
+  loadingNumberingRange = signal(false);
   facturacion = signal<DianFacturacionConfig>(EMPTY_FACT());
   draftFact: DianFacturacionConfig = EMPTY_FACT();
 
@@ -712,6 +746,60 @@ export class SaIntegrationsComponent implements OnInit {
     this.http.put<DianFacturacionConfig>(`${this.SA_API}/${this.selectedCompanyId}/integrations/dian`, this.draftFact).subscribe({
       next: r => { this.facturacion.set(r); this.notify.success('Configuración DIAN Facturación guardada'); this.savingFact.set(false); this.panelOpen.set(null); },
       error: e => { this.notify.error(e?.error?.message ?? 'Error al guardar'); this.savingFact.set(false); },
+    });
+  }
+
+  consultNumberingRange() {
+    if (!this.selectedCompanyId) return;
+    if (this.draftFact.ambiente !== 'produccion') {
+      this.notify.error('La consulta de numeración DIAN solo aplica para producción');
+      return;
+    }
+    if (!this.draftFact.softwareId?.trim()) {
+      this.notify.error('Configura primero el Software ID');
+      return;
+    }
+
+    this.loadingNumberingRange.set(true);
+    this.http.post<DianNumberingRangeResponse>(
+      `${this.SA_API}/${this.selectedCompanyId}/integrations/dian/numbering-range`,
+      {
+        softwareCode: this.draftFact.softwareId,
+        prefijo: this.draftFact.venta?.prefijo,
+        resolucion: this.draftFact.venta?.resolucion,
+      },
+    ).subscribe({
+      next: (response) => {
+        const selected = response.selected;
+        if (!selected) {
+          this.notify.error('DIAN no devolvió rangos de numeración para esta empresa');
+          this.loadingNumberingRange.set(false);
+          return;
+        }
+
+        this.draftFact.claveTecnica = selected.technicalKey || this.draftFact.claveTecnica;
+        this.draftFact.venta = {
+          resolucion: selected.resolutionNumber || this.draftFact.venta.resolucion,
+          prefijo: selected.prefix || this.draftFact.venta.prefijo,
+          rangoDesde: selected.fromNumber ?? this.draftFact.venta.rangoDesde,
+          rangoHasta: selected.toNumber ?? this.draftFact.venta.rangoHasta,
+          vigenciaDesde: selected.validDateFrom || this.draftFact.venta.vigenciaDesde,
+          vigenciaHasta: selected.validDateTo || this.draftFact.venta.vigenciaHasta,
+        };
+        this.draftFact.resolucion = this.draftFact.venta.resolucion;
+        this.draftFact.prefijo = this.draftFact.venta.prefijo;
+        this.draftFact.rangoDesde = this.draftFact.venta.rangoDesde;
+        this.draftFact.rangoHasta = this.draftFact.venta.rangoHasta;
+        this.draftFact.vigenciaDesde = this.draftFact.venta.vigenciaDesde;
+        this.draftFact.vigenciaHasta = this.draftFact.venta.vigenciaHasta;
+
+        this.notify.success(response.operationDescription || 'Numeración DIAN consultada correctamente');
+        this.loadingNumberingRange.set(false);
+      },
+      error: (e) => {
+        this.notify.error(e?.error?.message ?? 'No fue posible consultar la numeración DIAN');
+        this.loadingNumberingRange.set(false);
+      },
     });
   }
 
