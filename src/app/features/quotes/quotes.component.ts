@@ -27,6 +27,8 @@ interface Quote {
   opportunityName?: string;
   sourceChannel?: string;
   lostReason?: string;
+  priceListId?: string;
+  templateId?: string;
   currency: string;
   paymentTermLabel?: string;
   paymentTermDays?: number;
@@ -875,7 +877,7 @@ interface QuoteApprovalPolicy {
 
                 <!-- Descripción -->
                 <div class="form-group">
-                  <label>Descripción *</label>
+                  <label>Descripción</label>
                   <input type="text" [(ngModel)]="line.description" class="form-control"
                          placeholder="Descripción del producto o servicio"/>
                 </div>
@@ -1203,13 +1205,18 @@ interface QuoteApprovalPolicy {
             </div>
 
             <div class="detail-section detail-card">
-              <div class="detail-section-title">Bitácora de auditoría</div>
+              <div class="detail-section-header">
+                <div class="detail-section-title">Bitácora de auditoría</div>
+                <span class="detail-section-meta">{{ quoteAuditTrail().length }} eventos</span>
+              </div>
               @if (quoteAuditTrail().length === 0) {
                 <div class="followups-empty">Todavía no hay eventos de auditoría visibles para esta cotización.</div>
               } @else {
-                <div class="audit-list">
+                <div class="audit-scroll">
+                  <div class="audit-list">
                   @for (entry of quoteAuditTrail(); track entry.id) {
                     <div class="audit-row">
+                      <span class="audit-dot" aria-hidden="true"></span>
                       <div>
                         <strong>{{ auditActionLabel(entry.action) }}</strong>
                         <small>
@@ -1221,6 +1228,7 @@ interface QuoteApprovalPolicy {
                       </div>
                     </div>
                   }
+                </div>
                 </div>
               }
             </div>
@@ -2426,7 +2434,45 @@ interface QuoteApprovalPolicy {
     .followup-content { display:grid; gap:4px; }
     .followup-content strong { font-size:13.5px; color:#0c1c35; }
     .followup-content small { font-size:12px; color:#6b7f95; line-height:1.45; }
+    .detail-section-meta {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:28px;
+      padding:4px 10px;
+      border-radius:999px;
+      background:#eff6ff;
+      color:#1d4ed8;
+      border:1px solid #bfdbfe;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.03em;
+      text-transform:uppercase;
+    }
+    .audit-scroll {
+      max-height:320px;
+      overflow-y:auto;
+      padding-right:6px;
+      margin-top:4px;
+    }
+    .audit-scroll::-webkit-scrollbar { width:8px; }
+    .audit-scroll::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:999px; }
+    .audit-scroll::-webkit-scrollbar-track { background:#f8fafc; border-radius:999px; }
     .document-list, .comment-list, .audit-list { display:flex; flex-direction:column; gap:10px; }
+    .audit-list {
+      position:relative;
+      padding-left:10px;
+    }
+    .audit-list::before {
+      content:'';
+      position:absolute;
+      left:16px;
+      top:6px;
+      bottom:6px;
+      width:2px;
+      background:linear-gradient(180deg,#bfdbfe 0%, #dbeafe 100%);
+      border-radius:999px;
+    }
     .document-row, .comment-row, .audit-row {
       display:flex;
       align-items:flex-start;
@@ -2442,6 +2488,23 @@ interface QuoteApprovalPolicy {
     .document-row > div, .comment-row, .audit-row > div { display:grid; gap:4px; min-width:0; }
     .document-row strong, .comment-row strong, .audit-row strong { font-size:13.5px; color:#0c1c35; }
     .document-row small, .comment-row small, .audit-row small { font-size:12px; color:#6b7f95; line-height:1.45; }
+    .audit-row {
+      position:relative;
+      padding-left:18px;
+      background:#fbfdff;
+    }
+    .audit-dot {
+      position:absolute;
+      left:0;
+      top:16px;
+      width:12px;
+      height:12px;
+      border-radius:999px;
+      background:linear-gradient(135deg,#2563eb,#1d4ed8);
+      border:2px solid #fff;
+      box-shadow:0 0 0 2px #bfdbfe;
+      flex-shrink:0;
+    }
     .comment-row p { margin:0; color:#374151; font-size:13px; line-height:1.6; white-space:pre-wrap; }
     .document-link { flex-shrink:0; align-self:center; font-size:12px; font-weight:800; color:#1d4ed8; }
     .btn-xs { min-height:34px; padding:8px 12px; border-radius:12px; font-size:12px; }
@@ -3405,7 +3468,7 @@ export class QuotesComponent implements OnInit {
     this.focusedModuleAction.set('new');
     this.loadCommercialMasters();
     if (quote) {
-      // Editar cotización existente — carga el detalle para obtener los ítems
+      // Editar cotización existente — siempre cargar detalle completo
       this.editingId.set(quote.id);
       this.quoteForm = {
         issueDate:  quote.issueDate?.substring(0, 10) ?? '',
@@ -3425,44 +3488,46 @@ export class QuotesComponent implements OnInit {
         opportunityName: quote.opportunityName ?? '',
         sourceChannelId: this.findMasterIdByName('sourceChannels', quote.sourceChannel),
         sourceChannel: quote.sourceChannel ?? '',
-        priceListId: '',
-        templateId: '',
+        priceListId: quote.priceListId ?? '',
+        templateId: quote.templateId ?? '',
       };
       this.selectedCustomer.set({ id: quote.customer.id, name: quote.customer.name, documentNumber: quote.customer.documentNumber });
       this.customerSearch = quote.customer.name;
-
-      // Cargar ítems completos si no están en la cotización de la lista
-      if (quote.items && quote.items.length > 0) {
-        this.setLinesFromItems(quote.items);
-      } else {
-        this.http.get<Quote>(`${this.API}/${quote.id}`).subscribe({
-          next: (full) => {
-            this.quoteForm = {
-              issueDate:  full.issueDate?.substring(0, 10) ?? '',
-              expiresAt:  full.expiresAt?.substring(0, 10) ?? '',
-              notes:      full.notes ?? '',
-              terms:      full.terms ?? '',
-              paymentTermLabel: full.paymentTermLabel ?? '',
-              paymentTermDays: full.paymentTermDays ?? null,
-              deliveryLeadTimeDays: full.deliveryLeadTimeDays ?? null,
-              deliveryTerms: full.deliveryTerms ?? '',
-              incotermCode: full.incotermCode ?? '',
-              incotermLocation: full.incotermLocation ?? '',
-              exchangeRate: full.exchangeRate ?? 1,
-              commercialConditions: full.commercialConditions ?? '',
-              salesOwnerId: this.findMasterIdByName('salesOwners', full.salesOwnerName),
-              salesOwnerName: full.salesOwnerName ?? '',
-              opportunityName: full.opportunityName ?? '',
-              sourceChannelId: this.findMasterIdByName('sourceChannels', full.sourceChannel),
-              sourceChannel: full.sourceChannel ?? '',
-              priceListId: '',
-              templateId: '',
-            };
-            this.setLinesFromItems(full.items ?? []);
-          },
-          error: () => this.lines.set([this.emptyLine()]),
-        });
-      }
+      this.lines.set([this.emptyLine()]);
+      this.lineProductSearch = [''];
+      this.http.get<Quote>(`${this.API}/${quote.id}`).subscribe({
+        next: (full) => {
+          this.quoteForm = {
+            issueDate:  full.issueDate?.substring(0, 10) ?? '',
+            expiresAt:  full.expiresAt?.substring(0, 10) ?? '',
+            notes:      full.notes ?? '',
+            terms:      full.terms ?? '',
+            paymentTermLabel: full.paymentTermLabel ?? '',
+            paymentTermDays: full.paymentTermDays ?? null,
+            deliveryLeadTimeDays: full.deliveryLeadTimeDays ?? null,
+            deliveryTerms: full.deliveryTerms ?? '',
+            incotermCode: full.incotermCode ?? '',
+            incotermLocation: full.incotermLocation ?? '',
+            exchangeRate: full.exchangeRate ?? 1,
+            commercialConditions: full.commercialConditions ?? '',
+            salesOwnerId: this.findMasterIdByName('salesOwners', full.salesOwnerName),
+            salesOwnerName: full.salesOwnerName ?? '',
+            opportunityName: full.opportunityName ?? '',
+            sourceChannelId: this.findMasterIdByName('sourceChannels', full.sourceChannel),
+            sourceChannel: full.sourceChannel ?? '',
+            priceListId: full.priceListId ?? '',
+            templateId: full.templateId ?? '',
+          };
+          this.selectedCustomer.set({ id: full.customer.id, name: full.customer.name, documentNumber: full.customer.documentNumber });
+          this.customerSearch = full.customer.name;
+          this.setLinesFromItems(full.items ?? []);
+        },
+        error: () => {
+          this.lines.set([this.emptyLine()]);
+          this.lineProductSearch = [''];
+          this.notify.error('No fue posible cargar el detalle completo de la cotización');
+        },
+      });
     } else {
       // Nueva cotización
       this.editingId.set(null);
@@ -3495,6 +3560,16 @@ export class QuotesComponent implements OnInit {
     this.lineProductSearch = mapped.map(() => '');
   }
 
+  private isMeaningfulQuoteLine(line: QuoteLineForm) {
+    return !!(
+      line.productId ||
+      line.description?.trim() ||
+      Number(line.quantity ?? 0) > 1 ||
+      Number(line.unitPrice ?? 0) > 0 ||
+      Number(line.discount ?? 0) > 0
+    );
+  }
+
   closeFormModal() {
     this.showFormModal.set(false);
     this.activeProductDropdown.set(null);
@@ -3510,13 +3585,14 @@ export class QuotesComponent implements OnInit {
       this.notify.warning('La fecha de emisión es obligatoria');
       return;
     }
-    if (this.lines().length === 0) {
+    const effectiveLines = this.lines().filter((line) => this.isMeaningfulQuoteLine(line));
+    if (effectiveLines.length === 0) {
       this.notify.warning('Agrega al menos una línea a la cotización');
       return;
     }
-    const invalidLine = this.lines().find(l => !l.description?.trim());
+    const invalidLine = effectiveLines.find((line) => !line.description?.trim());
     if (invalidLine) {
-      this.notify.warning('Todas las líneas deben tener descripción');
+      this.notify.warning('Las líneas diligenciadas deben tener descripción');
       return;
     }
 
@@ -3539,8 +3615,10 @@ export class QuotesComponent implements OnInit {
       salesOwnerName: this.quoteForm.salesOwnerName || undefined,
       opportunityName: this.quoteForm.opportunityName || undefined,
       sourceChannel: this.quoteForm.sourceChannel || undefined,
+      priceListId: this.quoteForm.priceListId || undefined,
+      templateId: this.quoteForm.templateId || undefined,
       currency: this.selectedCommercialCurrency(),
-      items: this.lines().map((l, idx) => ({
+      items: effectiveLines.map((l, idx) => ({
         productId:   l.productId   || undefined,
         description: l.description,
         quantity:    Number(l.quantity)  || 1,
