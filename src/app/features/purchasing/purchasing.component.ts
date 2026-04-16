@@ -1387,6 +1387,9 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
                     </td>
                     <td>{{ r.itemsCount || r.items?.length || 0 }}</td>
                     <td class="actions-cell">
+                      <button class="btn-icon" title="Ver detalle" (click)="openRequestDetail(r)">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
+                      </button>
                       @if (r.status === 'DRAFT' || r.status === 'REJECTED') {
                         <button class="btn-icon" title="Editar" (click)="openRequestModal(r)">
                           <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
@@ -2548,6 +2551,143 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
             <button class="btn btn-primary" [disabled]="saving()" (click)="saveRequest()">
               {{ saving() ? 'Guardando...' : (editingRequestId() ? 'Actualizar solicitud' : 'Crear solicitud') }}
             </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ════════════════════════════════════════════════════════ -->
+    <!-- DRAWER: Detalle de Solicitud de Compra                  -->
+    <!-- ════════════════════════════════════════════════════════ -->
+    @if (detailRequest()) {
+      <div class="modal-overlay modal-overlay--drawer" (click)="detailRequest.set(null)">
+        <div class="modal modal-drawer" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div>
+              <h3>Solicitud {{ detailRequest()!.number }}</h3>
+              <div class="modal-sub">
+                {{ detailRequest()!.requestingArea || 'Sin área' }}
+                @if (detailRequest()!.requestDate) { · {{ formatDate(detailRequest()!.requestDate) }} }
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="order-status-badge order-status-{{ detailRequest()!.status.toLowerCase() }}">
+                {{ requestStatusLabel(detailRequest()!.status) }}
+              </span>
+              <button class="drawer-close" (click)="detailRequest.set(null)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="18"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <!-- Info general -->
+            <div class="detail-grid">
+              <div class="detail-item">
+                <span>Área solicitante</span>
+                <strong>{{ detailRequest()!.requestingArea || '—' }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Centro de costo</span>
+                <strong>{{ detailRequest()!.costCenter || '—' }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Código proyecto</span>
+                <strong>{{ detailRequest()!.projectCode || '—' }}</strong>
+              </div>
+              <div class="detail-item">
+                <span>Fecha requerida</span>
+                <strong>{{ detailRequest()!.neededByDate ? formatDate(detailRequest()!.neededByDate!) : '—' }}</strong>
+              </div>
+              @if (detailRequest()!.customer) {
+                <div class="detail-item">
+                  <span>Proveedor sugerido</span>
+                  <strong>{{ detailRequest()!.customer!.name }}</strong>
+                </div>
+              }
+            </div>
+
+            @if (detailRequest()!.approval?.status === 'REJECTED' && detailRequest()!.approval?.rejectedReason) {
+              <div class="detail-notes" style="border-left-color: var(--danger, #e53e3e);">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.536-10.95a1 1 0 10-1.414-1.415L10 7.757 7.879 5.636A1 1 0 106.464 7.05L8.586 9.17l-2.122 2.122a1 1 0 001.415 1.414L10 10.586l2.121 2.12a1 1 0 001.415-1.413L11.414 9.17l2.122-2.121z" clip-rule="evenodd"/></svg>
+                <strong>Motivo de rechazo:</strong> {{ detailRequest()!.approval!.rejectedReason }}
+              </div>
+            }
+
+            @if (detailRequest()!.notes) {
+              <div class="detail-notes">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                {{ detailRequest()!.notes }}
+              </div>
+            }
+
+            <!-- Ítems de la solicitud -->
+            @if (detailRequest()!.items && detailRequest()!.items!.length > 0) {
+              <div class="detail-section">
+                <div class="detail-section-title">Ítems solicitados</div>
+                <table class="data-table data-table--inner">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Descripción</th>
+                      <th>Cantidad</th>
+                      <th>Precio estimado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (item of detailRequest()!.items; track $index) {
+                      <tr>
+                        <td>{{ item.position }}</td>
+                        <td>{{ item.description }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.estimatedUnitPrice != null ? formatCurrency(item.estimatedUnitPrice) : '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+
+            <!-- Órdenes vinculadas -->
+            @if (detailRequest()!.linkedOrders && detailRequest()!.linkedOrders!.length > 0) {
+              <div class="detail-section">
+                <div class="detail-section-title">Órdenes generadas</div>
+                @for (o of detailRequest()!.linkedOrders; track o.id) {
+                  <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-color, #e2e8f0);">
+                    <span class="order-number">{{ o.orderNumber }}</span>
+                    <span class="order-status-badge order-status-{{ o.status.toLowerCase() }}">{{ o.status }}</span>
+                    <span style="margin-left:auto;">{{ formatCurrency(o.total) }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          <div class="modal-footer">
+            @if (detailRequest()!.status === 'DRAFT' || detailRequest()!.status === 'REJECTED') {
+              <button class="btn btn-secondary" (click)="openRequestModal(detailRequest()!); detailRequest.set(null)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                Editar
+              </button>
+              <button class="btn btn-primary" (click)="requestRequestApproval(detailRequest()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3a1 1 0 00.293.707l2 2a1 1 0 001.414-1.414L11 9.586V7z" clip-rule="evenodd"/></svg>
+                Solicitar Aprobación
+              </button>
+            }
+            @if (detailRequest()!.approval?.status === 'PENDING') {
+              <button class="btn btn-secondary" style="color:var(--danger,#e53e3e);border-color:var(--danger,#e53e3e);" (click)="rejectRequest(detailRequest()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.536-10.95a1 1 0 10-1.414-1.415L10 7.757 7.879 5.636A1 1 0 106.464 7.05L8.586 9.17l-2.122 2.122a1 1 0 001.415 1.414L10 10.586l2.121 2.12a1 1 0 001.415-1.413L11.414 9.17l2.122-2.121z" clip-rule="evenodd"/></svg>
+                Rechazar
+              </button>
+              <button class="btn btn-primary" (click)="approveRequest(detailRequest()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                Aprobar
+              </button>
+            }
+            @if (detailRequest()!.status === 'APPROVED') {
+              <button class="btn btn-primary" (click)="convertRequestToOrder(detailRequest()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V8z" clip-rule="evenodd"/></svg>
+                Convertir a orden
+              </button>
+            }
           </div>
         </div>
       </div>
@@ -4198,6 +4338,7 @@ export class PurchasingComponent implements OnInit {
 
   // ── Modal Solicitud ─────────────────────────────────────────────────────────
   showRequestModal = signal(false);
+  detailRequest = signal<PurchaseRequest | null>(null);
   editingRequestId = signal<string | null>(null);
   requestForm: RequestForm = this.emptyRequestForm();
 
@@ -4973,6 +5114,7 @@ export class PurchasingComponent implements OnInit {
       next: () => {
         this.notify.success('Solicitud enviada a aprobación');
         this.loadRequests();
+        if (this.detailRequest()?.id === request.id) this.openRequestDetail(request);
       },
       error: (err) => this.notify.error(err?.error?.message || 'No fue posible solicitar aprobación'),
     });
@@ -4983,6 +5125,7 @@ export class PurchasingComponent implements OnInit {
       next: () => {
         this.notify.success('Solicitud aprobada');
         this.loadRequests();
+        if (this.detailRequest()?.id === request.id) this.openRequestDetail(request);
       },
       error: (err) => this.notify.error(err?.error?.message || 'No fue posible aprobar la solicitud'),
     });
@@ -4993,6 +5136,7 @@ export class PurchasingComponent implements OnInit {
       next: () => {
         this.notify.success('Solicitud rechazada');
         this.loadRequests();
+        if (this.detailRequest()?.id === request.id) this.openRequestDetail(request);
       },
       error: (err) => this.notify.error(err?.error?.message || 'No fue posible rechazar la solicitud'),
     });
@@ -5924,6 +6068,20 @@ export class PurchasingComponent implements OnInit {
       error: (err) => {
         this.notify.error(err?.error?.message || (editingId ? 'Error al actualizar la orden' : 'Error al crear la orden'));
         this.saving.set(false);
+      },
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Detalle de solicitud
+  // ────────────────────────────────────────────────────────────────────────────
+
+  openRequestDetail(request: PurchaseRequest) {
+    this.http.get<PurchaseRequest>(`${this.REQUESTS_API}/${request.id}`).subscribe({
+      next: (full) => this.detailRequest.set(this.mapRequest(full)),
+      error: () => {
+        this.detailRequest.set(request);
+        this.notify.warning('No se pudieron cargar los detalles de la solicitud');
       },
     });
   }

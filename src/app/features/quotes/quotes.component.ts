@@ -600,6 +600,13 @@ interface QuoteApprovalPolicy {
                         <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"/>
                       </svg>
                     </button>
+                    <!-- Descargar Word — todos los estados -->
+                    <button class="btn-icon" title="Descargar Word (.docx)" [disabled]="downloadingDocx()" (click)="downloadDocx(q)">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                      </svg>
+                    </button>
                     <!-- Enviar a DIAN — solo ACCEPTED o CONVERTED -->
                     @if (q.status === 'ACCEPTED' || q.status === 'CONVERTED') {
                       <button class="btn-icon btn-icon-primary" [title]="q.invoiceId ? 'Enviar factura a DIAN' : 'Convertir y enviar a DIAN'" (click)="sendToDian(q)" [disabled]="sendingDian()[q.id]">
@@ -1290,6 +1297,12 @@ interface QuoteApprovalPolicy {
                   <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
                 </svg>
                 {{ downloadingPdf() ? 'Descargando...' : 'Descargar PDF' }}
+              </button>
+              <button class="btn btn-secondary" [disabled]="downloadingDocx()" (click)="downloadDocx(detailQuote()!)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"/>
+                </svg>
+                {{ downloadingDocx() ? 'Descargando...' : 'Descargar Word' }}
               </button>
             </div>
             <div class="drawer-footer__group drawer-footer__group--primary">
@@ -2937,6 +2950,7 @@ export class QuotesComponent implements OnInit {
   loadingPdf      = signal(false);
   pdfUrl          = signal<SafeResourceUrl | null>(null);
   downloadingPdf  = signal(false);
+  downloadingDocx = signal(false);
   sendingDian     = signal<{ [id: string]: boolean }>({});
   quoteFollowUps  = signal<QuoteFollowUp[]>([]);
   quoteAttachments = signal<QuoteAttachment[]>([]);
@@ -4051,6 +4065,27 @@ export class QuotesComponent implements OnInit {
       error: () => {
         this.downloadingPdf.set(false);
         this.notify.error('No fue posible descargar el PDF');
+      },
+    });
+  }
+
+  downloadDocx(q: Quote) {
+    this.downloadingDocx.set(true);
+    const token = localStorage.getItem('access_token') ?? '';
+    this.http.get(`${this.API}/${q.id}/docx`, {
+      responseType: 'blob',
+      headers: { Authorization: `Bearer ${token}` },
+    }).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(new Blob([blob], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
+        const a = document.createElement('a');
+        a.href = url; a.download = `${q.number}.docx`; a.click();
+        URL.revokeObjectURL(url);
+        this.downloadingDocx.set(false);
+      },
+      error: () => {
+        this.downloadingDocx.set(false);
+        this.notify.error('No fue posible descargar el documento Word');
       },
     });
   }
