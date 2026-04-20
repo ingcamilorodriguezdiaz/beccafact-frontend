@@ -260,6 +260,84 @@ interface Company {
                 </div>
               </div>
 
+              <div class="test-divider"></div>
+
+              <!-- POS Electrónico -->
+              <div class="test-section">
+                <div class="test-section-label">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="13">
+                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h7a1 1 0 110 2H4a1 1 0 01-1-1zm9 1a1 1 0 112 0v3a1 1 0 11-2 0v-3zm3-1a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1z"/>
+                  </svg>
+                  <span>POS Electrónico</span>
+                  <span class="doc-count-hint">(30 docs)</span>
+                  @if (getLatestTestSet(company.id, 'POS_ELECTRONICO'); as ts) {
+                    <span class="badge" [class]="statusClass(ts.status)">
+                      {{ statusLabel(ts.status) }}
+                    </span>
+                  } @else {
+                    <span class="badge badge-muted">Sin iniciar</span>
+                  }
+                </div>
+                @if (getLatestTestSet(company.id, 'POS_ELECTRONICO'); as ts) {
+                  <div class="progress-wrap">
+                    <div class="progress-bar">
+                      <div class="progress-fill" [style.width.%]="progressPct(ts)"
+                           [class.fill-success]="ts.status === 'COMPLETED'"
+                           [class.fill-warning]="ts.status === 'IN_PROGRESS' || ts.status === 'PARTIAL'"
+                           [class.fill-danger]="ts.status === 'FAILED'">
+                      </div>
+                    </div>
+                    <span class="progress-label">{{ ts.sentDocs }}/{{ ts.totalDocs }}</span>
+                  </div>
+                  <div class="test-stats">
+                    <span class="stat stat-ok">
+                      <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"/></svg>
+                      {{ ts.acceptedDocs }}
+                    </span>
+                    <span class="stat stat-err">
+                      <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zM8 4a.75.75 0 01.75.75v3a.75.75 0 01-1.5 0v-3A.75.75 0 018 4zm0 8a1 1 0 100-2 1 1 0 000 2z"/></svg>
+                      {{ ts.rejectedDocs + ts.errorDocs }}
+                    </span>
+                    @if (ts.startedAt) {
+                      <span class="stat stat-date">{{ ts.startedAt | date:'dd/MM/yy HH:mm' }}</span>
+                    }
+                  </div>
+                }
+                <div class="test-actions">
+                  @if (!getLatestTestSet(company.id, 'POS_ELECTRONICO') ||
+                       getLatestTestSet(company.id, 'POS_ELECTRONICO')?.status === 'FAILED') {
+                    <button class="btn btn-sm btn-primary"
+                            (click)="confirmStart(company, 'POS_ELECTRONICO')"
+                            [disabled]="actionLoading()">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
+                      </svg>
+                      Iniciar
+                    </button>
+                  }
+                  @if (getLatestTestSet(company.id, 'POS_ELECTRONICO'); as ts) {
+                    <button class="btn btn-sm btn-secondary"
+                            (click)="openDetail(ts.id)">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/>
+                      </svg>
+                      Ver detalle
+                    </button>
+                    @if (ts.status !== 'IN_PROGRESS' && ts.status !== 'PENDING') {
+                      <button class="btn btn-sm btn-danger"
+                              (click)="confirmReset(ts, company.id)"
+                              [disabled]="actionLoading()">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                          <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/>
+                        </svg>
+                        Reiniciar
+                      </button>
+                    }
+                  }
+                </div>
+              </div>
+
             </div>
           }
         </div>
@@ -289,15 +367,21 @@ interface Company {
             </div>
             <p class="confirm-text">
               ¿Iniciar set de pruebas de
-              <strong>{{ confirmType() === 'FACTURACION' ? 'Facturación (50 docs)' : 'Nómina (20 docs)' }}</strong>
+              <strong>{{
+                confirmType() === 'FACTURACION' ? 'Facturación (50 docs)' :
+                confirmType() === 'NOMINA' ? 'Nómina (20 docs)' :
+                'POS Electrónico (30 docs)'
+              }}</strong>
               para la empresa
               <strong>{{ confirmCompany()?.name }}</strong>?
             </p>
             <p class="confirm-sub">
               @if (confirmType() === 'FACTURACION') {
                 Se generarán y enviarán 30 facturas, 10 notas crédito y 10 notas débito a la DIAN en ambiente de habilitación.
-              } @else {
+              } @else if (confirmType() === 'NOMINA') {
                 Se generarán y enviarán 10 nóminas electrónicas individuales y 10 nóminas de ajuste a la DIAN.
+              } @else {
+                Se generarán y enviarán 30 tiquetes POS electrónicos (documentos equivalentes) a la DIAN en ambiente de habilitación (Res. 000165).
               }
             </p>
           </div>
@@ -373,7 +457,10 @@ interface Company {
                   {{ statusLabel(selectedTestSet()!.status) }}
                 </span>
                 <span class="badge badge-type">
-                  {{ selectedTestSet()!.type === 'FACTURACION' ? 'Facturación' : 'Nómina' }}
+                  {{
+                    selectedTestSet()!.type === 'FACTURACION' ? 'Facturación' :
+                    selectedTestSet()!.type === 'NOMINA' ? 'Nómina' : 'POS Electrónico'
+                  }}
                 </span>
                 @if (selectedTestSet()!.status === 'IN_PROGRESS') {
                   <span class="detail-refresh-badge">
@@ -995,7 +1082,7 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
 
   // Confirm start dialog state
   confirmCompany  = signal<Company | null>(null);
-  confirmType     = signal<'FACTURACION' | 'NOMINA'>('FACTURACION');
+  confirmType     = signal<'FACTURACION' | 'NOMINA' | 'POS_ELECTRONICO'>('FACTURACION');
 
   // Reset dialog state
   showResetModal  = signal(false);
@@ -1081,7 +1168,7 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
   }
 
   // ── Helpers ───────────────────────────────────────────────────
-  getLatestTestSet(companyId: string, type: 'FACTURACION' | 'NOMINA'): DianTestSet | null {
+  getLatestTestSet(companyId: string, type: 'FACTURACION' | 'NOMINA' | 'POS_ELECTRONICO'): DianTestSet | null {
     const sets = this.testSets().get(companyId) ?? [];
     const filtered = sets.filter(ts => ts.type === type);
     if (!filtered.length) return null;
@@ -1120,11 +1207,13 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
 
   docTypeLabel(docType: string): string {
     const map: Record<string, string> = {
-      FACTURA:       'Factura de Venta',
-      NOTA_CREDITO:  'Nota Crédito',
-      NOTA_DEBITO:   'Nota Débito',
-      NOMINA:        'Nómina Electrónica',
-      NOMINA_AJUSTE: 'Nómina de Ajuste',
+      FACTURA:          'Factura de Venta',
+      NOTA_CREDITO:     'Nota Crédito',
+      NOTA_DEBITO:      'Nota Débito',
+      NOMINA:           'Nómina Electrónica',
+      NOMINA_AJUSTE:    'Nómina de Ajuste',
+      NOMINA_ELECTRONICA: 'Nómina Electrónica',
+      POS_VENTA:        'Tiquete POS Electrónico',
     };
     return map[docType] ?? docType;
   }
@@ -1155,7 +1244,7 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
   }
 
   // ── Actions ───────────────────────────────────────────────────
-  confirmStart(company: Company, type: 'FACTURACION' | 'NOMINA'): void {
+  confirmStart(company: Company, type: 'FACTURACION' | 'NOMINA' | 'POS_ELECTRONICO'): void {
     this.confirmCompany.set(company);
     this.confirmType.set(type);
     this.showConfirmModal.set(true);
@@ -1174,12 +1263,16 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
     this.actionLoading.set(true);
     const obs = type === 'FACTURACION'
       ? this.service.startFacturacion(company.id)
-      : this.service.startNomina(company.id);
+      : type === 'NOMINA'
+        ? this.service.startNomina(company.id)
+        : this.service.startPosElectronico(company.id);
+
+    const typeLabel = type === 'FACTURACION' ? 'Facturación' : type === 'NOMINA' ? 'Nómina' : 'POS Electrónico';
 
     obs.subscribe({
       next: (newSet) => {
         this.notify.success(
-          `Set de pruebas de ${type === 'FACTURACION' ? 'Facturación' : 'Nómina'} iniciado`
+          `Set de pruebas de ${typeLabel} iniciado`
         );
         this.actionLoading.set(false);
         this.showConfirmModal.set(false);

@@ -65,6 +65,8 @@ interface Invoice {
 
 interface Customer { id: string; name: string; documentNumber: string; documentType: string; }
 interface Product { id: string; name: string; sku: string; price: number; taxRate: number; taxType: string; unit: string; }
+interface BranchOption { id: string; name: string; }
+interface PosTerminalOption { id: string; code: string; name: string; branchId?: string | null; branch?: { id: string; name: string } | null; }
 
 interface InvoiceLine {
   productId: string;
@@ -1726,7 +1728,7 @@ interface InvoiceExternalIntake {
                   </div>
                   <div class="form-group">
                     <label>Canal *</label>
-                    <select [(ngModel)]="documentConfigForm.channel" class="form-control">
+                    <select [(ngModel)]="documentConfigForm.channel" (ngModelChange)="onDocumentConfigChannelChanged($event)" class="form-control">
                       <option value="DIRECT">Directo</option>
                       <option value="POS">POS</option>
                       <option value="ONLINE">Online</option>
@@ -1736,7 +1738,7 @@ interface InvoiceExternalIntake {
                   <div class="form-group">
                     <label>Tipo *</label>
                     <select [(ngModel)]="documentConfigForm.type" class="form-control">
-                      <option value="VENTA">Factura venta</option>
+                      <option value="VENTA">{{ documentConfigForm.channel === 'POS' ? 'Factura POS electrónica' : 'Factura venta' }}</option>
                       <option value="NOTA_CREDITO">Nota crédito</option>
                       <option value="NOTA_DEBITO">Nota débito</option>
                     </select>
@@ -1780,12 +1782,22 @@ interface InvoiceExternalIntake {
                     <input type="date" [(ngModel)]="documentConfigForm.validTo" class="form-control"/>
                   </div>
                   <div class="form-group">
-                    <label>ID sucursal</label>
-                    <input type="text" [(ngModel)]="documentConfigForm.branchId" class="form-control" placeholder="Opcional"/>
+                    <label>Sucursal</label>
+                    <select [(ngModel)]="documentConfigForm.branchId" (ngModelChange)="onDocumentConfigBranchChanged($event)" class="form-control">
+                      <option value="">Empresa completa</option>
+                      @for (branch of branches(); track branch.id) {
+                        <option [value]="branch.id">{{ branch.name }}</option>
+                      }
+                    </select>
                   </div>
                   <div class="form-group">
-                    <label>ID caja / terminal</label>
-                    <input type="text" [(ngModel)]="documentConfigForm.posTerminalId" class="form-control" placeholder="Opcional"/>
+                    <label>Caja / terminal</label>
+                    <select [(ngModel)]="documentConfigForm.posTerminalId" class="form-control" [disabled]="documentConfigForm.channel !== 'POS'">
+                      <option value="">Todas las cajas</option>
+                      @for (terminal of availableDocumentConfigTerminals(); track terminal.id) {
+                        <option [value]="terminal.id">{{ terminal.code }} · {{ terminal.name }}{{ terminal.branch?.name ? ' · ' + terminal.branch?.name : '' }}</option>
+                      }
+                    </select>
                   </div>
                 </div>
                 <div class="form-row-3">
@@ -3738,7 +3750,9 @@ export class InvoicesListComponent implements OnInit {
   private readonly CUST_API = `${environment.apiUrl}/customers`;
   private readonly PROD_API = `${environment.apiUrl}/invoices/products`;
   private readonly COMP_API = `${environment.apiUrl}/companies/me`;
+  private readonly BRANCHES_API = `${environment.apiUrl}/branches`;
   private readonly DOC_CFG_API = `${environment.apiUrl}/invoices/document-configs`;
+  private readonly POS_TERMINALS_API = `${environment.apiUrl}/pos/terminals`;
   private readonly QUOTE_API = `${environment.apiUrl}/quotes`;
   private readonly POS_SALES_API = `${environment.apiUrl}/pos/sales`;
   private readonly ORDER_API = `${environment.apiUrl}/invoices/sales-orders`;
@@ -3805,6 +3819,8 @@ export class InvoicesListComponent implements OnInit {
   sending  = signal<Record<string, boolean>>({});
   querying = signal<Record<string, boolean>>({});
   documentConfigs = signal<InvoiceDocumentConfig[]>([]);
+  branches = signal<BranchOption[]>([]);
+  posTerminals = signal<PosTerminalOption[]>([]);
   quoteOptions = signal<QuoteFlowSummary[]>([]);
   posSaleOptions = signal<PosSaleFlowSummary[]>([]);
   salesOrders = signal<SalesOrderSummary[]>([]);
@@ -3883,7 +3899,15 @@ export class InvoicesListComponent implements OnInit {
     private sanitizer: DomSanitizer
   ) {}
 
-  ngOnInit() { this.load(); this.loadCustomers(); this.loadProducts(); this.loadCompanyPrefix(); this.loadDocumentConfigs(); }
+  ngOnInit() {
+    this.load();
+    this.loadCustomers();
+    this.loadProducts();
+    this.loadCompanyPrefix();
+    this.loadDocumentConfigs();
+    this.loadBranches();
+    this.loadPosTerminals();
+  }
 
   loadCompanyPrefix() {
     this.http.get<any>(this.COMP_API).subscribe({
@@ -3937,6 +3961,19 @@ export class InvoicesListComponent implements OnInit {
 
   loadCustomers() { this.http.get<any>(`${this.CUST_API}?limit=200`).subscribe({ next: r => this.customers.set(r.data ?? r), error: ()=>{} }); }
   loadProducts()  { this.http.get<any>(`${this.PROD_API}?limit=100&status=ACTIVE`).subscribe({ next: r => this.lineProducts.set(r.data ?? r), error: ()=>{} }); }
+  loadBranches() {
+    this.http.get<any>(this.BRANCHES_API).subscribe({
+      next: r => this.branches.set(r?.data ?? r ?? []),
+      error: () => this.branches.set([]),
+    });
+  }
+  loadPosTerminals(branchId?: string) {
+    const params: any = branchId ? { branchId } : { all: '1' };
+    this.http.get<any>(this.POS_TERMINALS_API, { params }).subscribe({
+      next: r => this.posTerminals.set(r?.data ?? r ?? []),
+      error: () => this.posTerminals.set([]),
+    });
+  }
 
   onSearch() { clearTimeout(this.searchTimer); this.searchTimer = setTimeout(()=>{ this.page.set(1); this.load(); }, 350); }
   setPage(p: number) { this.page.set(p); this.load(); }
@@ -4810,6 +4847,7 @@ export class InvoicesListComponent implements OnInit {
   resetDocumentConfigForm() {
     this.editingDocumentConfigId = null;
     this.documentConfigForm = this.emptyDocumentConfigForm();
+    this.loadPosTerminals();
   }
 
   editDocumentConfig(config: InvoiceDocumentConfig) {
@@ -4831,6 +4869,7 @@ export class InvoicesListComponent implements OnInit {
       isActive: config.isActive,
       isDefault: config.isDefault,
     };
+    this.loadPosTerminals(config.branchId || undefined);
   }
 
   saveDocumentConfig() {
@@ -4842,8 +4881,8 @@ export class InvoicesListComponent implements OnInit {
       ...this.documentConfigForm,
       name: this.documentConfigForm.name.trim(),
       prefix: this.documentConfigForm.prefix.trim().toUpperCase(),
-      branchId: this.documentConfigForm.branchId.trim() || undefined,
-      posTerminalId: this.documentConfigForm.posTerminalId.trim() || undefined,
+      branchId: this.documentConfigForm.branchId || undefined,
+      posTerminalId: this.documentConfigForm.posTerminalId || undefined,
       resolutionNumber: this.documentConfigForm.resolutionNumber.trim() || undefined,
       resolutionLabel: this.documentConfigForm.resolutionLabel.trim() || undefined,
       technicalKey: this.documentConfigForm.technicalKey.trim() || undefined,
@@ -4899,6 +4938,25 @@ export class InvoicesListComponent implements OnInit {
     const defaultConfig = this.defaultDocumentConfig(this.newInvoice.sourceChannel || 'DIRECT', this.newInvoice.type || 'VENTA');
     this.newInvoice.documentConfigId = defaultConfig?.id || '';
     this.newInvoice.prefix = defaultConfig?.prefix || this.companyPrefix();
+  }
+
+  availableDocumentConfigTerminals() {
+    const branchId = this.documentConfigForm.branchId || '';
+    if (!branchId) return this.posTerminals();
+    return this.posTerminals().filter((terminal) => (terminal.branchId ?? terminal.branch?.id ?? '') === branchId);
+  }
+
+  onDocumentConfigBranchChanged(branchId: string) {
+    this.documentConfigForm.branchId = branchId;
+    this.documentConfigForm.posTerminalId = '';
+    this.loadPosTerminals(branchId || undefined);
+  }
+
+  onDocumentConfigChannelChanged(channel: string) {
+    this.documentConfigForm.channel = channel;
+    if (channel !== 'POS') {
+      this.documentConfigForm.posTerminalId = '';
+    }
   }
 
   documentConfigScope(config: InvoiceDocumentConfig) {

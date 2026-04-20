@@ -20,7 +20,7 @@ export interface DianTestSetDocument {
 export interface DianTestSet {
   id: string;
   companyId: string;
-  type: 'FACTURACION' | 'NOMINA';
+  type: 'FACTURACION' | 'NOMINA' | 'POS_ELECTRONICO';
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'PARTIAL' | 'FAILED';
   totalDocs: number;
   sentDocs: number;
@@ -57,6 +57,10 @@ export class SaDianTestsService {
 
   checkStatuses(id: string): Observable<DianTestSet> {
     return this.http.post<DianTestSet>(`${this.base}/${id}/check-status`, {});
+  }
+
+  startPosElectronico(companyId: string): Observable<DianTestSet> {
+    return this.http.post<DianTestSet>(`${this.base}/company/${companyId}/pos-electronico`, {});
   }
 
   cancel(id: string): Observable<void> {

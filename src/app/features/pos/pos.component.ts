@@ -929,6 +929,39 @@ interface QueuedPosSalePayload {
             </div>
           </div>
 
+          @if (showTerminalForm()) {
+            <div class="config-inline-form">
+              <h4>{{ editingTerminalId ? 'Editar terminal POS' : 'Nueva terminal POS' }}</h4>
+              <div class="config-form-grid">
+                <label class="field-group"><span>Código</span><input class="field-input" type="text" [(ngModel)]="terminalForm.code" /></label>
+                <label class="field-group"><span>Nombre</span><input class="field-input" type="text" [(ngModel)]="terminalForm.name" /></label>
+                <label class="field-group"><span>Caja</span><input class="field-input" type="text" [(ngModel)]="terminalForm.cashRegisterName" /></label>
+                <label class="field-group"><span>Dispositivo</span><input class="field-input" type="text" [(ngModel)]="terminalForm.deviceName" /></label>
+                <label class="field-group"><span>Impresora</span><input class="field-input" type="text" [(ngModel)]="terminalForm.printerName" /></label>
+                <label class="field-group"><span>Conexión</span>
+                  <select class="field-input" [(ngModel)]="terminalForm.printerConnectionType">
+                    <option value="USB">USB</option>
+                    <option value="RED">RED</option>
+                    <option value="BLUETOOTH">BLUETOOTH</option>
+                  </select>
+                </label>
+                <label class="field-group"><span>Ancho papel</span><input class="field-input" type="number" [(ngModel)]="terminalForm.printerPaperWidth" /></label>
+                <label class="field-group"><span>Prefijo factura</span><input class="field-input" type="text" [(ngModel)]="terminalForm.invoicePrefix" /></label>
+                <label class="field-group"><span>Prefijo tirilla</span><input class="field-input" type="text" [(ngModel)]="terminalForm.receiptPrefix" /></label>
+                <label class="field-group"><span>Resolución</span><input class="field-input" type="text" [(ngModel)]="terminalForm.resolutionNumber" /></label>
+              </div>
+              <div class="config-switches">
+                <label><input type="checkbox" [(ngModel)]="terminalForm.isDefault" /> Terminal por defecto</label>
+                <label><input type="checkbox" [(ngModel)]="terminalForm.autoPrintReceipt" /> Autoimprimir tirilla</label>
+                <label><input type="checkbox" [(ngModel)]="terminalForm.requireCustomerForInvoice" /> Exigir cliente para facturar</label>
+              </div>
+              <div class="modal-footer modal-footer--inline">
+                <button class="btn-modal-sec" (click)="closeTerminalForm()">Cancelar</button>
+                <button class="btn-modal-pri" (click)="saveTerminal()" [disabled]="savingOperatingConfig()">Guardar terminal</button>
+              </div>
+            </div>
+          }
+
           <div class="config-section">
             <div class="config-section__header">
               <div>
@@ -951,6 +984,27 @@ interface QueuedPosSalePayload {
               }
             </div>
           </div>
+
+          @if (showShiftForm()) {
+            <div class="config-inline-form">
+              <h4>{{ editingShiftId ? 'Editar turno POS' : 'Nuevo turno POS' }}</h4>
+              <div class="config-form-grid">
+                <label class="field-group"><span>Código</span><input class="field-input" type="text" [(ngModel)]="shiftForm.code" /></label>
+                <label class="field-group"><span>Nombre</span><input class="field-input" type="text" [(ngModel)]="shiftForm.name" /></label>
+                <label class="field-group"><span>Hora inicio</span><input class="field-input" type="time" [(ngModel)]="shiftForm.startTime" /></label>
+                <label class="field-group"><span>Hora fin</span><input class="field-input" type="time" [(ngModel)]="shiftForm.endTime" /></label>
+                <label class="field-group"><span>Tolerancia</span><input class="field-input" type="number" [(ngModel)]="shiftForm.toleranceMinutes" /></label>
+              </div>
+              <div class="config-switches">
+                <label><input type="checkbox" [(ngModel)]="shiftForm.requiresBlindClose" /> Requiere cierre ciego</label>
+                <label><input type="checkbox" [(ngModel)]="shiftForm.isActive" /> Activo</label>
+              </div>
+              <div class="modal-footer modal-footer--inline">
+                <button class="btn-modal-sec" (click)="closeShiftForm()">Cancelar</button>
+                <button class="btn-modal-pri" (click)="saveShift()" [disabled]="savingOperatingConfig()">Guardar turno</button>
+              </div>
+            </div>
+          }
 
           <div class="config-section">
             <div class="config-section__header">
@@ -1896,54 +1950,6 @@ interface QueuedPosSalePayload {
               }
             </div>
           </div>
-
-          @if (showTerminalForm()) {
-            <div class="config-inline-form">
-              <h4>{{ editingTerminalId ? 'Editar terminal POS' : 'Nueva terminal POS' }}</h4>
-              <div class="config-form-grid">
-                <label class="field-group"><span>Código</span><input class="field-input" type="text" [(ngModel)]="terminalForm.code" /></label>
-                <label class="field-group"><span>Nombre</span><input class="field-input" type="text" [(ngModel)]="terminalForm.name" /></label>
-                <label class="field-group"><span>Caja</span><input class="field-input" type="text" [(ngModel)]="terminalForm.cashRegisterName" /></label>
-                <label class="field-group"><span>Dispositivo</span><input class="field-input" type="text" [(ngModel)]="terminalForm.deviceName" /></label>
-                <label class="field-group"><span>Impresora</span><input class="field-input" type="text" [(ngModel)]="terminalForm.printerName" /></label>
-                <label class="field-group"><span>Conexión</span><input class="field-input" type="text" [(ngModel)]="terminalForm.printerConnectionType" /></label>
-                <label class="field-group"><span>Ancho papel</span><input class="field-input" type="number" [(ngModel)]="terminalForm.printerPaperWidth" /></label>
-                <label class="field-group"><span>Prefijo factura</span><input class="field-input" type="text" [(ngModel)]="terminalForm.invoicePrefix" /></label>
-                <label class="field-group"><span>Prefijo tirilla</span><input class="field-input" type="text" [(ngModel)]="terminalForm.receiptPrefix" /></label>
-                <label class="field-group"><span>Resolución</span><input class="field-input" type="text" [(ngModel)]="terminalForm.resolutionNumber" /></label>
-              </div>
-              <div class="config-switches">
-                <label><input type="checkbox" [(ngModel)]="terminalForm.isDefault" /> Terminal por defecto</label>
-                <label><input type="checkbox" [(ngModel)]="terminalForm.autoPrintReceipt" /> Autoimprimir tirilla</label>
-                <label><input type="checkbox" [(ngModel)]="terminalForm.requireCustomerForInvoice" /> Exigir cliente para facturar</label>
-              </div>
-              <div class="modal-footer modal-footer--inline">
-                <button class="btn-modal-sec" (click)="closeTerminalForm()">Cancelar</button>
-                <button class="btn-modal-pri" (click)="saveTerminal()" [disabled]="savingOperatingConfig()">Guardar terminal</button>
-              </div>
-            </div>
-          }
-
-          @if (showShiftForm()) {
-            <div class="config-inline-form">
-              <h4>{{ editingShiftId ? 'Editar turno POS' : 'Nuevo turno POS' }}</h4>
-              <div class="config-form-grid">
-                <label class="field-group"><span>Código</span><input class="field-input" type="text" [(ngModel)]="shiftForm.code" /></label>
-                <label class="field-group"><span>Nombre</span><input class="field-input" type="text" [(ngModel)]="shiftForm.name" /></label>
-                <label class="field-group"><span>Hora inicio</span><input class="field-input" type="time" [(ngModel)]="shiftForm.startTime" /></label>
-                <label class="field-group"><span>Hora fin</span><input class="field-input" type="time" [(ngModel)]="shiftForm.endTime" /></label>
-                <label class="field-group"><span>Tolerancia</span><input class="field-input" type="number" [(ngModel)]="shiftForm.toleranceMinutes" /></label>
-              </div>
-              <div class="config-switches">
-                <label><input type="checkbox" [(ngModel)]="shiftForm.requiresBlindClose" /> Requiere cierre ciego</label>
-                <label><input type="checkbox" [(ngModel)]="shiftForm.isActive" /> Activo</label>
-              </div>
-              <div class="modal-footer modal-footer--inline">
-                <button class="btn-modal-sec" (click)="closeShiftForm()">Cancelar</button>
-                <button class="btn-modal-pri" (click)="saveShift()" [disabled]="savingOperatingConfig()">Guardar turno</button>
-              </div>
-            </div>
-          }
 
           @if (showLoyaltyCampaignForm()) {
             <div class="config-inline-form">
@@ -4054,7 +4060,7 @@ interface QueuedPosSalePayload {
       animation:slideUp .18s ease;
       overflow:hidden;
     }
-    .modal-pay { width:390px; }
+    .modal-pay { width:390px; max-height:min(88vh, 820px); }
     .modal-success { width:420px; }
     @keyframes slideUp { from{transform:translateY(18px);opacity:0} to{transform:none;opacity:1} }
 
@@ -4083,6 +4089,7 @@ interface QueuedPosSalePayload {
 
     /* Modal body & footer */
     .modal-body { padding:22px; }
+    .modal-pay .modal-body { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
     .modal-footer { display:flex; justify-content:flex-end; gap:9px; padding:16px 22px; border-top:1px solid #f0f4f8; }
 
     /* Session summary in modal */
@@ -4508,7 +4515,7 @@ interface QueuedPosSalePayload {
     .pos-config-chip strong { font-size:12px; color:#1d4ed8; }
     .pos-config-chip span { font-size:12px; color:#334155; }
     .modal-operating-config { width:min(1120px, 100%); }
-    .modal-body--config { display:grid; gap:18px; }
+    .modal-body--config { display:grid; gap:18px; overflow-y:auto; flex:1; min-height:0; padding:22px; }
     .config-summary-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; }
     .config-summary-card { padding:14px; border-radius:14px; background:#f8fbff; border:1px solid #dbe7f3; display:grid; gap:4px; }
     .config-summary-card span { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#64748b; font-weight:700; }
@@ -6114,6 +6121,9 @@ export class PosComponent implements OnInit, OnDestroy {
     this.editingTerminalId = null;
     this.terminalForm = this.emptyTerminalForm();
     this.showTerminalForm.set(true);
+    setTimeout(() => {
+      document.querySelector('.config-inline-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   }
 
   editTerminal(terminal: PosTerminal) {
@@ -6535,6 +6545,9 @@ export class PosComponent implements OnInit, OnDestroy {
     this.editingShiftId = null;
     this.shiftForm = this.emptyShiftForm();
     this.showShiftForm.set(true);
+    setTimeout(() => {
+      document.querySelector('.config-inline-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   }
 
   editShift(shift: PosShiftTemplate) {

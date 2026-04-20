@@ -24,7 +24,6 @@ interface DianFacturacionConfig {
   testSetId: string;
   claveTecnica: string;
   venta: DianResolutionBlock;
-  pos: DianResolutionBlock;
   resolucion: string;
   prefijo: string;
   rangoDesde: number | null;
@@ -32,6 +31,21 @@ interface DianFacturacionConfig {
   vigenciaDesde: string;
   vigenciaHasta: string;
   hasCertificate: boolean;
+}
+
+interface DianPosConfig {
+  enabled: boolean;
+  ambiente: 'habilitacion' | 'produccion';
+  softwareId: string;
+  softwarePin: string;
+  testSetId: string;
+  claveTecnica: string;
+  resolucion: string;
+  prefijo: string;
+  rangoDesde: number | null;
+  rangoHasta: number | null;
+  vigenciaDesde: string;
+  vigenciaHasta: string;
 }
 
 interface DianNumberingRangeItem {
@@ -69,9 +83,15 @@ const EMPTY_FACT = (): DianFacturacionConfig => ({
   enabled: false, ambiente: 'habilitacion',
   softwareId: '', softwarePin: '', testSetId: '', claveTecnica: '',
   venta: { resolucion: '', prefijo: '', rangoDesde: null, rangoHasta: null, vigenciaDesde: '', vigenciaHasta: '' },
-  pos: { resolucion: '', prefijo: '', rangoDesde: null, rangoHasta: null, vigenciaDesde: '', vigenciaHasta: '' },
   resolucion: '', prefijo: '', rangoDesde: null, rangoHasta: null,
   vigenciaDesde: '', vigenciaHasta: '', hasCertificate: false,
+});
+
+const EMPTY_POS = (): DianPosConfig => ({
+  enabled: false, ambiente: 'habilitacion',
+  softwareId: '', softwarePin: '', testSetId: '', claveTecnica: '',
+  resolucion: '', prefijo: '', rangoDesde: null, rangoHasta: null,
+  vigenciaDesde: '', vigenciaHasta: '',
 });
 
 const EMPTY_NOM = (): DianNominaConfig => ({
@@ -158,7 +178,7 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
                   <span class="cert-badge">🔐 Cert.</span>
                 }
               </div>
-              <div class="intg-desc">Configura software DIAN y dos resoluciones independientes: Factura Electrónica de Venta y Documento Equivalente POS Electrónico</div>
+              <div class="intg-desc">Configura software DIAN y resolución para Factura Electrónica de Venta</div>
             </div>
             <div class="intg-actions">
               <button class="btn" [class.btn-primary]="!facturacion().enabled" [class.btn-secondary]="facturacion().enabled"
@@ -246,86 +266,38 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
                   </div>
                 </div>
 
-                <div class="dual-resolution-grid">
-                  <section class="resolution-card">
-                    <div class="resolution-card__head">
-                      <div>
-                        <h4>Factura Electrónica de Venta</h4>
-                        <p>Usa su propio prefijo y rango autorizado por la DIAN.</p>
-                      </div>
-                      <span class="resolution-chip">Venta</span>
-                    </div>
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label>Número de resolución *</label>
-                        <input type="text" [(ngModel)]="draftFact.venta.resolucion" class="form-control" placeholder="Ej: 18760000001"/>
-                      </div>
-                      <div class="form-group">
-                        <label>Prefijo</label>
-                        <input type="text" [(ngModel)]="draftFact.venta.prefijo" class="form-control" placeholder="Ej: FEV"/>
-                      </div>
-                    </div>
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label>Rango desde *</label>
-                        <input type="number" [(ngModel)]="draftFact.venta.rangoDesde" class="form-control" placeholder="1"/>
-                      </div>
-                      <div class="form-group">
-                        <label>Rango hasta *</label>
-                        <input type="number" [(ngModel)]="draftFact.venta.rangoHasta" class="form-control" placeholder="1000"/>
-                      </div>
-                    </div>
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label>Vigencia desde *</label>
-                        <input type="date" [(ngModel)]="draftFact.venta.vigenciaDesde" class="form-control"/>
-                      </div>
-                      <div class="form-group">
-                        <label>Vigencia hasta *</label>
-                        <input type="date" [(ngModel)]="draftFact.venta.vigenciaHasta" class="form-control"/>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section class="resolution-card resolution-card--pos">
-                    <div class="resolution-card__head">
-                      <div>
-                        <h4>Documento Equivalente POS Electrónico</h4>
-                        <p>Mantén un prefijo y consecutivo independiente al de venta.</p>
-                      </div>
-                      <span class="resolution-chip resolution-chip--pos">POS</span>
-                    </div>
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label>Número de resolución *</label>
-                        <input type="text" [(ngModel)]="draftFact.pos.resolucion" class="form-control" placeholder="Ej: 18760000002"/>
-                      </div>
-                      <div class="form-group">
-                        <label>Prefijo</label>
-                        <input type="text" [(ngModel)]="draftFact.pos.prefijo" class="form-control" placeholder="Ej: POS"/>
-                      </div>
-                    </div>
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label>Rango desde *</label>
-                        <input type="number" [(ngModel)]="draftFact.pos.rangoDesde" class="form-control" placeholder="1"/>
-                      </div>
-                      <div class="form-group">
-                        <label>Rango hasta *</label>
-                        <input type="number" [(ngModel)]="draftFact.pos.rangoHasta" class="form-control" placeholder="1000"/>
-                      </div>
-                    </div>
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label>Vigencia desde *</label>
-                        <input type="date" [(ngModel)]="draftFact.pos.vigenciaDesde" class="form-control"/>
-                      </div>
-                      <div class="form-group">
-                        <label>Vigencia hasta *</label>
-                        <input type="date" [(ngModel)]="draftFact.pos.vigenciaHasta" class="form-control"/>
-                      </div>
-                    </div>
-                  </section>
+                <div class="resolution-section-header">
+                  <h4>Resolución — Factura Electrónica de Venta</h4>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Número de resolución</label>
+                    <input type="text" [(ngModel)]="draftFact.venta.resolucion" class="form-control" placeholder="Ej: 18760000001"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Prefijo</label>
+                    <input type="text" [(ngModel)]="draftFact.venta.prefijo" class="form-control" placeholder="Ej: FEV"/>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Rango desde</label>
+                    <input type="number" [(ngModel)]="draftFact.venta.rangoDesde" class="form-control" placeholder="1"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Rango hasta</label>
+                    <input type="number" [(ngModel)]="draftFact.venta.rangoHasta" class="form-control" placeholder="1000"/>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Vigencia desde</label>
+                    <input type="date" [(ngModel)]="draftFact.venta.vigenciaDesde" class="form-control"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Vigencia hasta</label>
+                    <input type="date" [(ngModel)]="draftFact.venta.vigenciaHasta" class="form-control"/>
+                  </div>
                 </div>
 
                 <div class="panel-footer">
@@ -334,6 +306,159 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
                     <button class="btn btn-secondary" (click)="cancelFact()">Cancelar</button>
                     <button class="btn btn-primary" [disabled]="savingFact()" (click)="saveFact()">
                       {{ savingFact() ? 'Guardando...' : 'Guardar configuración' }}
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- ══ DIAN POS Electrónico ═══════════════════════════════════ -->
+          <div class="intg-divider"></div>
+          <div class="intg-row">
+            <div class="intg-logo">
+              <svg viewBox="0 0 48 48" fill="none" width="36" height="36">
+                <rect width="48" height="48" rx="10" fill="#1d4ed8"/>
+                <text x="50%" y="42%" dominant-baseline="middle" text-anchor="middle"
+                      fill="#ffffff" font-size="9" font-weight="800" font-family="Arial,sans-serif">DIAN</text>
+                <text x="50%" y="68%" dominant-baseline="middle" text-anchor="middle"
+                      fill="#bfdbfe" font-size="8" font-weight="700" font-family="Arial,sans-serif">POS</text>
+              </svg>
+            </div>
+            <div class="intg-info">
+              <div class="intg-name">
+                DIAN — POS Electrónico
+                @if (pos().enabled) {
+                  <span class="connected-badge">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="10">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                    </svg>
+                    Activo
+                  </span>
+                  <span class="env-badge env-{{ pos().ambiente }}">
+                    {{ pos().ambiente === 'produccion' ? 'Producción' : 'Habilitación' }}
+                  </span>
+                } @else {
+                  <span class="inactive-badge">Inactivo</span>
+                }
+              </div>
+              <div class="intg-desc">Configura software DIAN y resolución para Documento Equivalente POS Electrónico (Res. 000165)</div>
+            </div>
+            <div class="intg-actions">
+              <button class="btn" [class.btn-primary]="!pos().enabled" [class.btn-secondary]="pos().enabled"
+                      (click)="togglePanel('pos')">
+                {{ panelOpen() === 'pos' ? 'Cerrar' : 'Configurar' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Panel POS -->
+          @if (panelOpen() === 'pos') {
+            <div class="config-panel">
+              @if (loadingPos()) {
+                @for (i of [1,2,3,4]; track i) {
+                  <div class="sk" style="height:38px;border-radius:8px;margin-bottom:12px"></div>
+                }
+              } @else {
+                <!-- Toggle -->
+                <div class="toggle-row">
+                  <div>
+                    <div class="toggle-label">POS Electrónico habilitado</div>
+                    <div class="toggle-sub">{{ draftPos.enabled ? 'Activo para esta empresa' : 'Inactivo — la empresa no puede emitir documentos equivalentes POS' }}</div>
+                  </div>
+                  <button class="toggle-btn" [class.toggle-btn--on]="draftPos.enabled" (click)="draftPos.enabled = !draftPos.enabled">
+                    <span class="toggle-knob"></span>
+                  </button>
+                </div>
+                <div class="divider"></div>
+
+                <!-- Ambiente -->
+                <div class="form-row">
+                  <div class="form-group form-group--full">
+                    <label>Ambiente</label>
+                    <div class="radio-group">
+                      <label class="radio-option" [class.radio-option--active]="draftPos.ambiente === 'habilitacion'">
+                        <input type="radio" [(ngModel)]="draftPos.ambiente" value="habilitacion"/>
+                        <div>
+                          <div class="radio-label">Habilitación</div>
+                          <div class="radio-sub">Pruebas y certificación ante la DIAN</div>
+                        </div>
+                      </label>
+                      <label class="radio-option" [class.radio-option--active]="draftPos.ambiente === 'produccion'">
+                        <input type="radio" [(ngModel)]="draftPos.ambiente" value="produccion"/>
+                        <div>
+                          <div class="radio-label">Producción</div>
+                          <div class="radio-sub">Documentos con validez legal</div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Software DIAN -->
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Software ID</label>
+                    <input type="text" [(ngModel)]="draftPos.softwareId" class="form-control" placeholder="UUID del software POS registrado en DIAN"/>
+                  </div>
+                  <div class="form-group">
+                    <label>PIN del software</label>
+                    <input type="password" [(ngModel)]="draftPos.softwarePin" class="form-control" placeholder="••••••"/>
+                  </div>
+                </div>
+
+                <!-- TestSet y Clave Técnica -->
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>TestSet ID (habilitación)</label>
+                    <input type="text" [(ngModel)]="draftPos.testSetId" class="form-control" placeholder="UUID del set de pruebas POS"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Clave técnica (CUDE)</label>
+                    <input type="text" [(ngModel)]="draftPos.claveTecnica" class="form-control" placeholder="Clave técnica del set POS"/>
+                  </div>
+                </div>
+
+                <div class="resolution-section-header">
+                  <h4>Resolución — Documento Equivalente POS Electrónico</h4>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Número de resolución</label>
+                    <input type="text" [(ngModel)]="draftPos.resolucion" class="form-control" placeholder="Ej: 18760000002"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Prefijo</label>
+                    <input type="text" [(ngModel)]="draftPos.prefijo" class="form-control" placeholder="Ej: POS"/>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Rango desde</label>
+                    <input type="number" [(ngModel)]="draftPos.rangoDesde" class="form-control" placeholder="1"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Rango hasta</label>
+                    <input type="number" [(ngModel)]="draftPos.rangoHasta" class="form-control" placeholder="1000"/>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Vigencia desde</label>
+                    <input type="date" [(ngModel)]="draftPos.vigenciaDesde" class="form-control"/>
+                  </div>
+                  <div class="form-group">
+                    <label>Vigencia hasta</label>
+                    <input type="date" [(ngModel)]="draftPos.vigenciaHasta" class="form-control"/>
+                  </div>
+                </div>
+
+                <div class="panel-footer">
+                  <div></div>
+                  <div class="panel-btns">
+                    <button class="btn btn-secondary" (click)="cancelPos()">Cancelar</button>
+                    <button class="btn btn-primary" [disabled]="savingPos()" (click)="savePos()">
+                      {{ savingPos() ? 'Guardando...' : 'Guardar configuración' }}
                     </button>
                   </div>
                 </div>
@@ -629,6 +754,9 @@ const EMPTY_CERT = (): DianCertificateConfig => ({
     .sk { background:linear-gradient(90deg,#f0f4f8 25%,#e8eef8 50%,#f0f4f8 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; display:block; }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
+    .resolution-section-header { margin:12px 0 8px; }
+    .resolution-section-header h4 { font-size:13px; font-weight:700; color:#374151; margin:0; padding-bottom:8px; border-bottom:1px solid #e2e8f0; }
+
     .cert-badge { font-size:10px; font-weight:700; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:2px 8px; border-radius:99px; }
     .info-note { display:flex; align-items:center; gap:8px; padding:9px 13px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; font-size:12.5px; color:#166534; margin-bottom:12px; }
 
@@ -656,7 +784,7 @@ export class SaIntegrationsComponent implements OnInit {
   selectedCompanyId = '';
 
   // Panel
-  panelOpen = signal<'facturacion' | 'nomina' | 'certificate' | null>(null);
+  panelOpen = signal<'facturacion' | 'nomina' | 'pos' | 'certificate' | null>(null);
 
   // Facturación
   loadingFact = signal(false);
@@ -670,6 +798,12 @@ export class SaIntegrationsComponent implements OnInit {
   savingNom  = signal(false);
   nomina     = signal<DianNominaConfig>(EMPTY_NOM());
   draftNom: DianNominaConfig = EMPTY_NOM();
+
+  // POS Electrónico
+  loadingPos = signal(false);
+  savingPos  = signal(false);
+  pos        = signal<DianPosConfig>(EMPTY_POS());
+  draftPos: DianPosConfig = EMPTY_POS();
 
   // Certificate (shared)
   loadingCert = signal(false);
@@ -701,6 +835,7 @@ export class SaIntegrationsComponent implements OnInit {
     if (!this.selectedCompanyId) return;
     this.loadFact();
     this.loadNom();
+    this.loadPos();
     this.loadCert();
   }
 
@@ -720,6 +855,14 @@ export class SaIntegrationsComponent implements OnInit {
     });
   }
 
+  loadPos() {
+    this.loadingPos.set(true);
+    this.http.get<DianPosConfig>(`${this.SA_API}/${this.selectedCompanyId}/integrations/dian/pos`).subscribe({
+      next: r => { this.pos.set(r); this.draftPos = { ...r }; this.loadingPos.set(false); },
+      error: () => this.loadingPos.set(false),
+    });
+  }
+
   loadCert() {
     this.loadingCert.set(true);
     this.http.get<DianCertificateConfig>(`${this.SA_API}/${this.selectedCompanyId}/integrations/dian/certificate`).subscribe({
@@ -728,12 +871,13 @@ export class SaIntegrationsComponent implements OnInit {
     });
   }
 
-  togglePanel(panel: 'facturacion' | 'nomina' | 'certificate') {
+  togglePanel(panel: 'facturacion' | 'nomina' | 'pos' | 'certificate') {
     if (this.panelOpen() === panel) {
       this.panelOpen.set(null);
     } else {
       if (panel === 'facturacion') this.draftFact = { ...this.facturacion() };
       else if (panel === 'nomina') this.draftNom = { ...this.nomina() };
+      else if (panel === 'pos') this.draftPos = { ...this.pos() };
       else this.draftCert = { ...this.certificate() };
       this.panelOpen.set(panel);
     }
@@ -800,6 +944,16 @@ export class SaIntegrationsComponent implements OnInit {
         this.notify.error(e?.error?.message ?? 'No fue posible consultar la numeración DIAN');
         this.loadingNumberingRange.set(false);
       },
+    });
+  }
+
+  cancelPos() { this.draftPos = { ...this.pos() }; this.panelOpen.set(null); }
+
+  savePos() {
+    this.savingPos.set(true);
+    this.http.put<DianPosConfig>(`${this.SA_API}/${this.selectedCompanyId}/integrations/dian/pos`, this.draftPos).subscribe({
+      next: r => { this.pos.set(r); this.notify.success('Configuración DIAN POS Electrónico guardada'); this.savingPos.set(false); this.panelOpen.set(null); },
+      error: e => { this.notify.error(e?.error?.message ?? 'Error al guardar'); this.savingPos.set(false); },
     });
   }
 
