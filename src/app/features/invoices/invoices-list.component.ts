@@ -1815,6 +1815,13 @@ interface InvoiceExternalIntake {
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="resetDocumentConfigForm()">Nueva configuración</button>
+            <button
+              class="btn btn-outline"
+              [disabled]="savingConfig() || !editingDocumentConfigId"
+              (click)="deleteDocumentConfig()"
+            >
+              Eliminar
+            </button>
             <button class="btn btn-outline" (click)="closeConfigModal()">Cerrar</button>
             <button class="btn btn-primary" [disabled]="savingConfig()" (click)="saveDocumentConfig()">
               {{ savingConfig() ? 'Guardando...' : (editingDocumentConfigId ? 'Actualizar' : 'Crear configuración') }}
@@ -4905,6 +4912,30 @@ export class InvoicesListComponent implements OnInit {
       error: (error) => {
         this.savingConfig.set(false);
         this.notify.error(error?.error?.message ?? 'No fue posible guardar la configuración documental');
+      },
+    });
+  }
+
+  deleteDocumentConfig() {
+    if (!this.editingDocumentConfigId) return;
+
+    const config = this.documentConfigs().find((item) => item.id === this.editingDocumentConfigId);
+    const confirmed = window.confirm(
+      `¿Eliminar la configuración documental "${config?.name ?? 'seleccionada'}"? Las facturas existentes conservarán sus datos y quedarán sin esta referencia.`,
+    );
+    if (!confirmed) return;
+
+    this.savingConfig.set(true);
+    this.http.delete(`${this.DOC_CFG_API}/${this.editingDocumentConfigId}`).subscribe({
+      next: () => {
+        this.notify.success('Configuración documental eliminada');
+        this.savingConfig.set(false);
+        this.loadDocumentConfigs();
+        this.resetDocumentConfigForm();
+      },
+      error: (error) => {
+        this.savingConfig.set(false);
+        this.notify.error(error?.error?.message ?? 'No fue posible eliminar la configuración documental');
       },
     });
   }
