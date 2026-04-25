@@ -39,307 +39,306 @@ interface Company {
             Gestión de sets de prueba de Facturación Electrónica y Nómina Electrónica por empresa
           </p>
         </div>
-        @if (anyInProgress()) {
-          <div class="refresh-indicator">
-            <span class="spinner"></span>
-            <span>Actualizando cada 10s…</span>
-          </div>
-        }
       </div>
 
-      <!-- ── Barra de búsqueda ────────────────────────────────── -->
-      <div class="filters-bar">
-        <div class="search-wrap">
-          <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor" width="15">
-            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/>
-          </svg>
-          <input
-            type="text"
-            [(ngModel)]="searchTermModel"
-            (ngModelChange)="searchTerm.set($event)"
-            placeholder="Buscar empresa o NIT…"
-            class="form-control search-input"
-          />
+      <!-- ── Selector de empresa ────────────────────────────────── -->
+      <div class="company-selector">
+        <label class="selector-label">Empresa</label>
+        <div class="selector-row">
+          <div class="search-wrap">
+            <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor" width="15">
+              <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/>
+            </svg>
+            <input
+              type="text"
+              [(ngModel)]="companySearch"
+              (ngModelChange)="filterCompanies()"
+              placeholder="Buscar empresa…"
+              class="form-control search-input"
+            />
+          </div>
+          <select
+            [(ngModel)]="selectedCompanyId"
+            (ngModelChange)="onCompanyChange()"
+            class="form-control company-select"
+          >
+            <option value="">— Selecciona una empresa —</option>
+            @for (c of filteredCompanies(); track c.id) {
+              <option [value]="c.id">{{ c.name }} ({{ c.nit }})</option>
+            }
+          </select>
         </div>
-        <span class="results-count">{{ filteredCompanies().length }} empresa(s)</span>
       </div>
 
       <!-- ── Loading skeleton ────────────────────────────────── -->
       @if (loading()) {
-        <div class="company-grid">
-          @for (i of [1,2,3,4,5,6]; track i) {
-            <div class="dian-card dian-card--skeleton">
-              <div class="sk sk-avatar"></div>
-              <div class="sk sk-line" style="width:70%;margin:12px 0 6px"></div>
-              <div class="sk sk-line" style="width:45%;margin-bottom:16px"></div>
-              <div class="sk sk-line" style="width:100%;height:10px;margin-bottom:8px"></div>
-              <div class="sk sk-line" style="width:100%;height:10px"></div>
+        <div class="tests-container">
+          @for (i of [1,2,3]; track i) {
+            <div class="test-card test-card--skeleton">
+              <div class="sk sk-line" style="width:60%;height:14px"></div>
+              <div class="sk sk-line" style="width:100%;height:10px;margin-top:10px"></div>
+              <div class="sk sk-line" style="width:40%;height:10px;margin-top:8px"></div>
             </div>
           }
         </div>
       }
 
-      <!-- ── Sin resultados ──────────────────────────────────── -->
-      @if (!loading() && filteredCompanies().length === 0) {
+      <!-- ── Empty state si no hay empresa seleccionada ────────── -->
+      @if (!loading() && !selectedCompanyId) {
         <div class="empty-state">
           <svg viewBox="0 0 48 48" fill="none" width="44">
             <rect width="48" height="48" rx="12" fill="#f0f4f9"/>
             <path d="M14 34V18l10-6 10 6v16M18 34v-8h4v8M26 34v-8h4v8"
                   stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
           </svg>
-          <p>{{ searchTerm() ? 'Sin resultados para "' + searchTerm() + '"' : 'No hay empresas registradas' }}</p>
+          <p>Selecciona una empresa para ver y gestionar sus sets de pruebas DIAN</p>
         </div>
       }
 
-      <!-- ── Grid de empresas ────────────────────────────────── -->
-      @if (!loading() && filteredCompanies().length > 0) {
-        <div class="company-grid">
-          @for (company of filteredCompanies(); track company.id) {
-            <div class="dian-card">
+      <!-- ── Contenido de empresa seleccionada ─────────────────── -->
+      @if (!loading() && selectedCompanyId) {
+        <div class="tests-container">
 
-              <!-- Cabecera empresa -->
-              <div class="dian-card-header">
-                <div class="co-avatar">{{ company.name[0].toUpperCase() }}</div>
-                <div class="dian-card-info">
-                  <div class="dian-card-name">{{ company.name }}</div>
-                  <div class="dian-card-nit">NIT {{ company.nit }}</div>
-                </div>
-              </div>
-
-              <!-- Facturación -->
-              <div class="test-section">
-                <div class="test-section-label">
-                  <svg viewBox="0 0 20 20" fill="currentColor" width="13">
-                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"/>
-                  </svg>
-                  <span>Facturación</span>
-                  <span class="doc-count-hint">(50 docs)</span>
-                  @if (getLatestTestSet(company.id, 'FACTURACION'); as ts) {
-                    <span class="badge" [class]="statusClass(ts.status)">
-                      {{ statusLabel(ts.status) }}
-                    </span>
-                  } @else {
-                    <span class="badge badge-muted">Sin iniciar</span>
-                  }
-                </div>
-                @if (getLatestTestSet(company.id, 'FACTURACION'); as ts) {
-                  <div class="progress-wrap">
-                    <div class="progress-bar">
-                      <div class="progress-fill" [style.width.%]="progressPct(ts)"
-                           [class.fill-success]="ts.status === 'COMPLETED'"
-                           [class.fill-warning]="ts.status === 'IN_PROGRESS' || ts.status === 'PARTIAL'"
-                           [class.fill-danger]="ts.status === 'FAILED'">
-                      </div>
-                    </div>
-                    <span class="progress-label">{{ ts.sentDocs }}/{{ ts.totalDocs }}</span>
-                  </div>
-                  <div class="test-stats">
-                    <span class="stat stat-ok">
-                      <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"/></svg>
-                      {{ ts.acceptedDocs }}
-                    </span>
-                    <span class="stat stat-err">
-                      <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zM8 4a.75.75 0 01.75.75v3a.75.75 0 01-1.5 0v-3A.75.75 0 018 4zm0 8a1 1 0 100-2 1 1 0 000 2z"/></svg>
-                      {{ ts.rejectedDocs + ts.errorDocs }}
-                    </span>
-                    @if (ts.startedAt) {
-                      <span class="stat stat-date">{{ ts.startedAt | date:'dd/MM/yy HH:mm' }}</span>
-                    }
-                  </div>
-                }
-                <div class="test-actions">
-                  @if (!getLatestTestSet(company.id, 'FACTURACION') ||
-                       getLatestTestSet(company.id, 'FACTURACION')?.status === 'FAILED') {
-                    <button class="btn btn-sm btn-primary"
-                            (click)="confirmStart(company, 'FACTURACION')"
-                            [disabled]="actionLoading()">
-                      <svg viewBox="0 0 20 20" fill="currentColor" width="12">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
-                      </svg>
-                      Iniciar
-                    </button>
-                  }
-                  @if (getLatestTestSet(company.id, 'FACTURACION'); as ts) {
-                    <button class="btn btn-sm btn-secondary"
-                            (click)="openDetail(ts.id)">
-                      <svg viewBox="0 0 20 20" fill="currentColor" width="12">
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/>
-                      </svg>
-                      Ver detalle
-                    </button>
-                    @if (ts.status !== 'IN_PROGRESS' && ts.status !== 'PENDING') {
-                      <button class="btn btn-sm btn-danger"
-                              (click)="confirmReset(ts, company.id)"
-                              [disabled]="actionLoading()">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="12">
-                          <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/>
-                        </svg>
-                        Reiniciar
-                      </button>
-                    }
-                  }
-                </div>
-              </div>
-
-              <div class="test-divider"></div>
-
-              <!-- Nómina -->
-              <div class="test-section">
-                <div class="test-section-label">
-                  <svg viewBox="0 0 20 20" fill="currentColor" width="13">
-                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
-                  </svg>
-                  <span>Nómina</span>
-                  <span class="doc-count-hint">(20 docs)</span>
-                  @if (getLatestTestSet(company.id, 'NOMINA'); as ts) {
-                    <span class="badge" [class]="statusClass(ts.status)">
-                      {{ statusLabel(ts.status) }}
-                    </span>
-                  } @else {
-                    <span class="badge badge-muted">Sin iniciar</span>
-                  }
-                </div>
-                @if (getLatestTestSet(company.id, 'NOMINA'); as ts) {
-                  <div class="progress-wrap">
-                    <div class="progress-bar">
-                      <div class="progress-fill" [style.width.%]="progressPct(ts)"
-                           [class.fill-success]="ts.status === 'COMPLETED'"
-                           [class.fill-warning]="ts.status === 'IN_PROGRESS' || ts.status === 'PARTIAL'"
-                           [class.fill-danger]="ts.status === 'FAILED'">
-                      </div>
-                    </div>
-                    <span class="progress-label">{{ ts.sentDocs }}/{{ ts.totalDocs }}</span>
-                  </div>
-                  <div class="test-stats">
-                    <span class="stat stat-ok">
-                      <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"/></svg>
-                      {{ ts.acceptedDocs }}
-                    </span>
-                    <span class="stat stat-err">
-                      <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zM8 4a.75.75 0 01.75.75v3a.75.75 0 01-1.5 0v-3A.75.75 0 018 4zm0 8a1 1 0 100-2 1 1 0 000 2z"/></svg>
-                      {{ ts.rejectedDocs + ts.errorDocs }}
-                    </span>
-                    @if (ts.startedAt) {
-                      <span class="stat stat-date">{{ ts.startedAt | date:'dd/MM/yy HH:mm' }}</span>
-                    }
-                  </div>
-                }
-                <div class="test-actions">
-                  @if (!getLatestTestSet(company.id, 'NOMINA') ||
-                       getLatestTestSet(company.id, 'NOMINA')?.status === 'FAILED') {
-                    <button class="btn btn-sm btn-primary"
-                            (click)="confirmStart(company, 'NOMINA')"
-                            [disabled]="actionLoading()">
-                      <svg viewBox="0 0 20 20" fill="currentColor" width="12">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
-                      </svg>
-                      Iniciar
-                    </button>
-                  }
-                  @if (getLatestTestSet(company.id, 'NOMINA'); as ts) {
-                    <button class="btn btn-sm btn-secondary"
-                            (click)="openDetail(ts.id)">
-                      <svg viewBox="0 0 20 20" fill="currentColor" width="12">
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/>
-                      </svg>
-                      Ver detalle
-                    </button>
-                    @if (ts.status !== 'IN_PROGRESS' && ts.status !== 'PENDING') {
-                      <button class="btn btn-sm btn-danger"
-                              (click)="confirmReset(ts, company.id)"
-                              [disabled]="actionLoading()">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="12">
-                          <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/>
-                        </svg>
-                        Reiniciar
-                      </button>
-                    }
-                  }
-                </div>
-              </div>
-
-              <div class="test-divider"></div>
-
-              <!-- POS Electrónico -->
-              <div class="test-section">
-                <div class="test-section-label">
-                  <svg viewBox="0 0 20 20" fill="currentColor" width="13">
-                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h7a1 1 0 110 2H4a1 1 0 01-1-1zm9 1a1 1 0 112 0v3a1 1 0 11-2 0v-3zm3-1a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1z"/>
-                  </svg>
-                  <span>POS Electrónico</span>
-                  <span class="doc-count-hint">(30 docs)</span>
-                  @if (getLatestTestSet(company.id, 'POS_ELECTRONICO'); as ts) {
-                    <span class="badge" [class]="statusClass(ts.status)">
-                      {{ statusLabel(ts.status) }}
-                    </span>
-                  } @else {
-                    <span class="badge badge-muted">Sin iniciar</span>
-                  }
-                </div>
-                @if (getLatestTestSet(company.id, 'POS_ELECTRONICO'); as ts) {
-                  <div class="progress-wrap">
-                    <div class="progress-bar">
-                      <div class="progress-fill" [style.width.%]="progressPct(ts)"
-                           [class.fill-success]="ts.status === 'COMPLETED'"
-                           [class.fill-warning]="ts.status === 'IN_PROGRESS' || ts.status === 'PARTIAL'"
-                           [class.fill-danger]="ts.status === 'FAILED'">
-                      </div>
-                    </div>
-                    <span class="progress-label">{{ ts.sentDocs }}/{{ ts.totalDocs }}</span>
-                  </div>
-                  <div class="test-stats">
-                    <span class="stat stat-ok">
-                      <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"/></svg>
-                      {{ ts.acceptedDocs }}
-                    </span>
-                    <span class="stat stat-err">
-                      <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zM8 4a.75.75 0 01.75.75v3a.75.75 0 01-1.5 0v-3A.75.75 0 018 4zm0 8a1 1 0 100-2 1 1 0 000 2z"/></svg>
-                      {{ ts.rejectedDocs + ts.errorDocs }}
-                    </span>
-                    @if (ts.startedAt) {
-                      <span class="stat stat-date">{{ ts.startedAt | date:'dd/MM/yy HH:mm' }}</span>
-                    }
-                  </div>
-                }
-                <div class="test-actions">
-                  @if (!getLatestTestSet(company.id, 'POS_ELECTRONICO') ||
-                       getLatestTestSet(company.id, 'POS_ELECTRONICO')?.status === 'FAILED') {
-                    <button class="btn btn-sm btn-primary"
-                            (click)="confirmStart(company, 'POS_ELECTRONICO')"
-                            [disabled]="actionLoading()">
-                      <svg viewBox="0 0 20 20" fill="currentColor" width="12">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
-                      </svg>
-                      Iniciar
-                    </button>
-                  }
-                  @if (getLatestTestSet(company.id, 'POS_ELECTRONICO'); as ts) {
-                    <button class="btn btn-sm btn-secondary"
-                            (click)="openDetail(ts.id)">
-                      <svg viewBox="0 0 20 20" fill="currentColor" width="12">
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/>
-                      </svg>
-                      Ver detalle
-                    </button>
-                    @if (ts.status !== 'IN_PROGRESS' && ts.status !== 'PENDING') {
-                      <button class="btn btn-sm btn-danger"
-                              (click)="confirmReset(ts, company.id)"
-                              [disabled]="actionLoading()">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="12">
-                          <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/>
-                        </svg>
-                        Reiniciar
-                      </button>
-                    }
-                  }
-                </div>
-              </div>
-
+          <!-- Cabecera de la empresa seleccionada -->
+          <div class="company-header-bar">
+            <div class="co-avatar">{{ (selectedCompany()?.name ?? '')[0]?.toUpperCase() }}</div>
+            <div>
+              <div class="company-header-name">{{ selectedCompany()?.name }}</div>
+              <div class="company-header-nit">NIT {{ selectedCompany()?.nit }}</div>
             </div>
-          }
+            @if (anyInProgress()) {
+              <div class="refresh-indicator">
+                <span class="spinner"></span>
+                <span>Actualizando cada 10s…</span>
+              </div>
+            }
+          </div>
+
+          <!-- ── Facturación Electrónica ─────────────────────────── -->
+          <div class="test-card">
+            <div class="test-card-header">
+              <div class="test-card-title">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"/>
+                </svg>
+                <span>Facturación Electrónica</span>
+                <span class="doc-count-hint">(50 docs)</span>
+                @if (getLatestTestSet(selectedCompanyId, 'FACTURACION'); as ts) {
+                  <span class="badge" [class]="statusClass(ts.status)">{{ statusLabel(ts.status) }}</span>
+                } @else {
+                  <span class="badge badge-muted">Sin iniciar</span>
+                }
+              </div>
+            </div>
+            @if (getLatestTestSet(selectedCompanyId, 'FACTURACION'); as ts) {
+              <div class="progress-wrap">
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="progressPct(ts)"
+                       [class.fill-success]="ts.status === 'COMPLETED'"
+                       [class.fill-warning]="ts.status === 'IN_PROGRESS' || ts.status === 'PARTIAL'"
+                       [class.fill-danger]="ts.status === 'FAILED'">
+                  </div>
+                </div>
+                <span class="progress-label">{{ ts.sentDocs }}/{{ ts.totalDocs }}</span>
+              </div>
+              <div class="test-stats">
+                <span class="stat stat-ok">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"/></svg>
+                  {{ ts.acceptedDocs }}
+                </span>
+                <span class="stat stat-err">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zM8 4a.75.75 0 01.75.75v3a.75.75 0 01-1.5 0v-3A.75.75 0 018 4zm0 8a1 1 0 100-2 1 1 0 000 2z"/></svg>
+                  {{ ts.rejectedDocs + ts.errorDocs }}
+                </span>
+                @if (ts.startedAt) {
+                  <span class="stat stat-date">{{ ts.startedAt | date:'dd/MM/yy HH:mm' }}</span>
+                }
+              </div>
+            }
+            <div class="test-actions">
+              @if (!getLatestTestSet(selectedCompanyId, 'FACTURACION') ||
+                   getLatestTestSet(selectedCompanyId, 'FACTURACION')?.status === 'FAILED') {
+                <button class="btn btn-sm btn-primary"
+                        (click)="confirmStart(selectedCompany()!, 'FACTURACION')"
+                        [disabled]="actionLoading()">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
+                  </svg>
+                  Iniciar
+                </button>
+              }
+              @if (getLatestTestSet(selectedCompanyId, 'FACTURACION'); as ts) {
+                <button class="btn btn-sm btn-secondary" (click)="openDetail(ts.id)">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/>
+                  </svg>
+                  Ver detalle
+                </button>
+                @if (ts.status !== 'IN_PROGRESS' && ts.status !== 'PENDING') {
+                  <button class="btn btn-sm btn-danger"
+                          (click)="confirmReset(ts, selectedCompanyId)"
+                          [disabled]="actionLoading()">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                      <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/>
+                    </svg>
+                    Reiniciar
+                  </button>
+                }
+              }
+            </div>
+          </div>
+
+          <!-- ── Nómina Electrónica ──────────────────────────────── -->
+          <div class="test-card">
+            <div class="test-card-header">
+              <div class="test-card-title">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                </svg>
+                <span>Nómina Electrónica</span>
+                <span class="doc-count-hint">(20 docs)</span>
+                @if (getLatestTestSet(selectedCompanyId, 'NOMINA'); as ts) {
+                  <span class="badge" [class]="statusClass(ts.status)">{{ statusLabel(ts.status) }}</span>
+                } @else {
+                  <span class="badge badge-muted">Sin iniciar</span>
+                }
+              </div>
+            </div>
+            @if (getLatestTestSet(selectedCompanyId, 'NOMINA'); as ts) {
+              <div class="progress-wrap">
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="progressPct(ts)"
+                       [class.fill-success]="ts.status === 'COMPLETED'"
+                       [class.fill-warning]="ts.status === 'IN_PROGRESS' || ts.status === 'PARTIAL'"
+                       [class.fill-danger]="ts.status === 'FAILED'">
+                  </div>
+                </div>
+                <span class="progress-label">{{ ts.sentDocs }}/{{ ts.totalDocs }}</span>
+              </div>
+              <div class="test-stats">
+                <span class="stat stat-ok">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"/></svg>
+                  {{ ts.acceptedDocs }}
+                </span>
+                <span class="stat stat-err">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zM8 4a.75.75 0 01.75.75v3a.75.75 0 01-1.5 0v-3A.75.75 0 018 4zm0 8a1 1 0 100-2 1 1 0 000 2z"/></svg>
+                  {{ ts.rejectedDocs + ts.errorDocs }}
+                </span>
+                @if (ts.startedAt) {
+                  <span class="stat stat-date">{{ ts.startedAt | date:'dd/MM/yy HH:mm' }}</span>
+                }
+              </div>
+            }
+            <div class="test-actions">
+              @if (!getLatestTestSet(selectedCompanyId, 'NOMINA') ||
+                   getLatestTestSet(selectedCompanyId, 'NOMINA')?.status === 'FAILED') {
+                <button class="btn btn-sm btn-primary"
+                        (click)="confirmStart(selectedCompany()!, 'NOMINA')"
+                        [disabled]="actionLoading()">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
+                  </svg>
+                  Iniciar
+                </button>
+              }
+              @if (getLatestTestSet(selectedCompanyId, 'NOMINA'); as ts) {
+                <button class="btn btn-sm btn-secondary" (click)="openDetail(ts.id)">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/>
+                  </svg>
+                  Ver detalle
+                </button>
+                @if (ts.status !== 'IN_PROGRESS' && ts.status !== 'PENDING') {
+                  <button class="btn btn-sm btn-danger"
+                          (click)="confirmReset(ts, selectedCompanyId)"
+                          [disabled]="actionLoading()">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                      <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/>
+                    </svg>
+                    Reiniciar
+                  </button>
+                }
+              }
+            </div>
+          </div>
+
+          <!-- ── POS Electrónico ─────────────────────────────────── -->
+          <div class="test-card">
+            <div class="test-card-header">
+              <div class="test-card-title">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15">
+                  <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h7a1 1 0 110 2H4a1 1 0 01-1-1zm9 1a1 1 0 112 0v3a1 1 0 11-2 0v-3zm3-1a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1z"/>
+                </svg>
+                <span>POS Electrónico</span>
+                <span class="doc-count-hint">(30 docs)</span>
+                @if (getLatestTestSet(selectedCompanyId, 'POS_ELECTRONICO'); as ts) {
+                  <span class="badge" [class]="statusClass(ts.status)">{{ statusLabel(ts.status) }}</span>
+                } @else {
+                  <span class="badge badge-muted">Sin iniciar</span>
+                }
+              </div>
+            </div>
+            @if (getLatestTestSet(selectedCompanyId, 'POS_ELECTRONICO'); as ts) {
+              <div class="progress-wrap">
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="progressPct(ts)"
+                       [class.fill-success]="ts.status === 'COMPLETED'"
+                       [class.fill-warning]="ts.status === 'IN_PROGRESS' || ts.status === 'PARTIAL'"
+                       [class.fill-danger]="ts.status === 'FAILED'">
+                  </div>
+                </div>
+                <span class="progress-label">{{ ts.sentDocs }}/{{ ts.totalDocs }}</span>
+              </div>
+              <div class="test-stats">
+                <span class="stat stat-ok">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"/></svg>
+                  {{ ts.acceptedDocs }}
+                </span>
+                <span class="stat stat-err">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="10"><path fill-rule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zM8 4a.75.75 0 01.75.75v3a.75.75 0 01-1.5 0v-3A.75.75 0 018 4zm0 8a1 1 0 100-2 1 1 0 000 2z"/></svg>
+                  {{ ts.rejectedDocs + ts.errorDocs }}
+                </span>
+                @if (ts.startedAt) {
+                  <span class="stat stat-date">{{ ts.startedAt | date:'dd/MM/yy HH:mm' }}</span>
+                }
+              </div>
+            }
+            <div class="test-actions">
+              @if (!getLatestTestSet(selectedCompanyId, 'POS_ELECTRONICO') ||
+                   getLatestTestSet(selectedCompanyId, 'POS_ELECTRONICO')?.status === 'FAILED') {
+                <button class="btn btn-sm btn-primary"
+                        (click)="confirmStart(selectedCompany()!, 'POS_ELECTRONICO')"
+                        [disabled]="actionLoading()">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
+                  </svg>
+                  Iniciar
+                </button>
+              }
+              @if (getLatestTestSet(selectedCompanyId, 'POS_ELECTRONICO'); as ts) {
+                <button class="btn btn-sm btn-secondary" (click)="openDetail(ts.id)">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/>
+                  </svg>
+                  Ver detalle
+                </button>
+                @if (ts.status !== 'IN_PROGRESS' && ts.status !== 'PENDING') {
+                  <button class="btn btn-sm btn-danger"
+                          (click)="confirmReset(ts, selectedCompanyId)"
+                          [disabled]="actionLoading()">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12">
+                      <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/>
+                    </svg>
+                    Reiniciar
+                  </button>
+                }
+              }
+            </div>
+          </div>
+
         </div>
       }
     </div>
@@ -424,7 +423,7 @@ interface Company {
               ¿Eliminar el set de pruebas actual y permitir iniciar uno nuevo?
             </p>
             <p class="confirm-sub">
-              Se eliminarán el set y todos sus documentos de la base de datos. Esta acción no puede deshacerse.
+              Se eliminarán permanentemente el set, sus documentos, y todos los registros creados en las tablas correspondientes: facturas, notas crédito/débito, ventas POS, nóminas electrónicas y sus ajustes. Esta acción no puede deshacerse.
             </p>
           </div>
           <div class="modal-footer">
@@ -667,14 +666,6 @@ interface Company {
     }
     .page-subtitle { font-size: 13.5px; color: #6b7280; margin: 0; }
 
-    /* Indicador auto-refresh */
-    .refresh-indicator {
-      display: flex; align-items: center; gap: 8px;
-      background: #eff6ff; border: 1px solid #bfdbfe;
-      color: #1a407e; padding: 7px 14px; border-radius: 9999px;
-      font-size: 12.5px; font-weight: 600;
-    }
-
     /* ─── Spinner ───────────────────────────────────────────── */
     .spinner {
       display: inline-block; width: 14px; height: 14px;
@@ -685,22 +676,6 @@ interface Company {
     .spinner-xs { width: 10px; height: 10px; border-width: 1.5px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ─── Filtros ───────────────────────────────────────────── */
-    .filters-bar {
-      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    }
-    .search-wrap {
-      position: relative; flex: 1; min-width: 240px;
-    }
-    .search-icon {
-      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-      color: #94a3b8; pointer-events: none;
-    }
-    .search-input { padding-left: 32px; }
-    .results-count {
-      font-size: 12.5px; color: #94a3b8; white-space: nowrap;
-    }
-
     /* ─── Form controls ─────────────────────────────────────── */
     .form-control {
       width: 100%; padding: 8px 12px; border: 1.5px solid #dce6f0;
@@ -710,6 +685,30 @@ interface Company {
     }
     .form-control:focus { border-color: #1a407e; }
 
+    /* ─── Company selector (idéntico a Integraciones) ───────── */
+    .company-selector {
+      background: #fff; border: 1px solid #dce6f0;
+      border-radius: 12px; padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .selector-label {
+      font-size: 13px; font-weight: 700; color: #374151;
+    }
+    .selector-row {
+      display: flex; gap: 12px; align-items: center;
+    }
+    .search-wrap {
+      position: relative; flex: 1; min-width: 200px;
+    }
+    .search-icon {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: #94a3b8; pointer-events: none;
+    }
+    .search-input { padding-left: 32px !important; }
+    .company-select {
+      flex: 2; min-width: 0;
+    }
+
     /* ─── Skeleton ──────────────────────────────────────────── */
     .sk {
       background: linear-gradient(90deg, #f0f4f9 25%, #e2e8f0 50%, #f0f4f9 75%);
@@ -717,12 +716,10 @@ interface Company {
       animation: shimmer 1.4s infinite; border-radius: 6px;
     }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-    .sk-avatar { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; }
-    .sk-line   { height: 13px; }
-    .dian-card--skeleton {
-      display: flex; flex-direction: column; gap: 0;
-      background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
-      padding: 18px; min-height: 220px;
+    .sk-line { height: 13px; }
+    .test-card--skeleton {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 18px 20px; min-height: 90px;
     }
 
     /* ─── Empty state ───────────────────────────────────────── */
@@ -733,28 +730,20 @@ interface Company {
       color: #94a3b8; font-size: 14px; text-align: center;
     }
 
-    /* ─── Company grid ──────────────────────────────────────── */
-    .company-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 16px;
+    /* ─── Indicador auto-refresh ────────────────────────────── */
+    .refresh-indicator {
+      display: flex; align-items: center; gap: 8px;
+      background: #eff6ff; border: 1px solid #bfdbfe;
+      color: #1a407e; padding: 7px 14px; border-radius: 9999px;
+      font-size: 12.5px; font-weight: 600;
     }
 
-    /* ─── DIAN card ─────────────────────────────────────────── */
-    .dian-card {
-      background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
-      padding: 18px; display: flex; flex-direction: column; gap: 14px;
-      box-shadow: 0 1px 4px rgba(12,28,53,.05);
-      transition: box-shadow .2s, border-color .2s;
-    }
-    .dian-card:hover {
-      box-shadow: 0 4px 16px rgba(12,28,53,.1);
-      border-color: #bfdbfe;
-    }
-
-    /* Card header */
-    .dian-card-header {
+    /* ─── Company header bar ────────────────────────────────── */
+    .company-header-bar {
       display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px;
+      background: #fff; border: 1px solid #e2e8f0;
+      border-radius: 12px;
     }
     .co-avatar {
       width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
@@ -764,30 +753,35 @@ interface Company {
       display: flex; align-items: center; justify-content: center;
       text-transform: uppercase;
     }
-    .dian-card-info { min-width: 0; }
-    .dian-card-name {
-      font-size: 14px; font-weight: 700; color: #0f172a;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    .company-header-name {
+      font-size: 15px; font-weight: 700; color: #0f172a;
     }
-    .dian-card-nit { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+    .company-header-nit { font-size: 12px; color: #94a3b8; }
+    .company-header-bar .refresh-indicator { margin-left: auto; }
 
-    /* Divider */
-    .test-divider { height: 1px; background: #f1f5f9; margin: 0 -2px; }
+    /* ─── Tests container ───────────────────────────────────── */
+    .tests-container { display: flex; flex-direction: column; gap: 14px; }
 
-    /* Test section */
-    .test-section { display: flex; flex-direction: column; gap: 8px; }
-
-    .test-section-label {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 12.5px; font-weight: 700; color: #374151;
+    /* ─── Test cards ────────────────────────────────────────── */
+    .test-card {
+      background: #fff; border: 1px solid #e2e8f0;
+      border-radius: 12px; padding: 18px 20px;
+      display: flex; flex-direction: column; gap: 12px;
+      box-shadow: 0 1px 4px rgba(12,28,53,.04);
+    }
+    .test-card-header { display: flex; flex-direction: column; gap: 6px; }
+    .test-card-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 14px; font-weight: 700; color: #0f172a;
       flex-wrap: wrap;
     }
-    .test-section-label svg { color: #6b7280; flex-shrink: 0; }
+    .test-card-title svg { color: #6b7280; flex-shrink: 0; }
+
     .doc-count-hint {
       font-size: 11px; color: #94a3b8; font-weight: 500;
     }
 
-    /* Progress bar */
+    /* ─── Progress bar ──────────────────────────────────────── */
     .progress-wrap {
       display: flex; align-items: center; gap: 8px;
     }
@@ -804,7 +798,7 @@ interface Company {
     .progress-fill.fill-danger  { background: #dc2626; }
     .progress-label { font-size: 11px; color: #94a3b8; white-space: nowrap; }
 
-    /* Stats row */
+    /* ─── Stats row ─────────────────────────────────────────── */
     .test-stats {
       display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     }
@@ -817,7 +811,7 @@ interface Company {
     .stat-err  { color: #dc2626; }
     .stat-date { color: #94a3b8; font-size: 10.5px; font-weight: 400; margin-left: auto; }
 
-    /* Action buttons within card */
+    /* ─── Action buttons within card ────────────────────────── */
     .test-actions {
       display: flex; gap: 8px; flex-wrap: wrap;
     }
@@ -1048,7 +1042,8 @@ interface Company {
 
     /* ─── Responsive ────────────────────────────────────────── */
     @media (max-width: 640px) {
-      .company-grid { grid-template-columns: 1fr; }
+      .selector-row { flex-direction: column; align-items: stretch; }
+      .search-wrap { flex: none; }
       .detail-summary { grid-template-columns: repeat(3, 1fr); }
       .modal-xl { max-width: 100%; }
       .docs-table th:nth-child(4),
@@ -1066,7 +1061,12 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
   private cdr      = inject(ChangeDetectorRef);
 
   // ── State ─────────────────────────────────────────────────────
-  companies       = signal<Company[]>([]);
+  allCompanies      = signal<Company[]>([]);
+  filteredCompanies = signal<Company[]>([]);
+  companySearch     = '';
+  selectedCompanyId = '';
+  selectedCompany   = signal<Company | null>(null);
+
   testSets        = signal<Map<string, DianTestSet[]>>(new Map());
   loading         = signal(false);
   actionLoading   = signal(false);
@@ -1076,9 +1076,6 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
   selectedTestSet  = signal<DianTestSet | null>(null);
   showDetailModal  = signal(false);
   showConfirmModal = signal(false);
-
-  searchTerm      = signal('');
-  searchTermModel = '';
 
   // Confirm start dialog state
   confirmCompany  = signal<Company | null>(null);
@@ -1093,19 +1090,10 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
 
   // ── Computed ──────────────────────────────────────────────────
-  filteredCompanies = computed(() => {
-    const term = this.searchTerm().toLowerCase().trim();
-    if (!term) return this.companies();
-    return this.companies().filter(
-      c => c.name.toLowerCase().includes(term) || (c.nit ?? '').includes(term)
-    );
-  });
-
   anyInProgress = computed(() => {
-    for (const sets of this.testSets().values()) {
-      if (sets.some(ts => ts.status === 'IN_PROGRESS')) return true;
-    }
-    return false;
+    if (!this.selectedCompanyId) return false;
+    const sets = this.testSets().get(this.selectedCompanyId) ?? [];
+    return sets.some(ts => ts.status === 'IN_PROGRESS');
   });
 
   // ── Lifecycle ─────────────────────────────────────────────────
@@ -1121,19 +1109,17 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
   loadCompanies(): void {
     this.loading.set(true);
     this.http
-      .get<Company[]>(`${environment.apiUrl}/super-admin/companies`)
+      .get<any>(`${environment.apiUrl}/super-admin/companies?limit=500`)
       .subscribe({
         next: (data) => {
-          // SA companies API returns { data: Company[], total, ... } after interceptor unwrap
           const raw = Array.isArray(data)
             ? data
             : (data as any).items ?? (data as any).data ?? [];
-          // Filter out any entry without a valid id (defensive guard)
           const list = (raw as any[]).filter((c: any) => !!c?.id);
-          this.companies.set(list);
+          this.allCompanies.set(list);
+          this.filteredCompanies.set(list);
           this.loading.set(false);
           this.cdr.markForCheck();
-          this.loadAllTestSets(list);
         },
         error: (err) => {
           this.notify.error(err?.error?.message ?? 'Error al cargar empresas');
@@ -1143,10 +1129,24 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
       });
   }
 
-  loadAllTestSets(companies: Company[]): void {
-    for (const c of companies) {
-      this.loadTestSetsForCompany(c.id);
+  filterCompanies(): void {
+    const q = this.companySearch.toLowerCase();
+    this.filteredCompanies.set(
+      this.allCompanies().filter(c =>
+        c.name.toLowerCase().includes(q) || (c.nit ?? '').includes(q)
+      )
+    );
+  }
+
+  onCompanyChange(): void {
+    const company = this.allCompanies().find(c => c.id === this.selectedCompanyId) ?? null;
+    this.selectedCompany.set(company);
+    if (!this.selectedCompanyId) {
+      this.testSets.update(m => { const n = new Map(m); n.delete(''); return n; });
+      this.stopAutoRefresh();
+      return;
     }
+    this.loadTestSetsForCompany(this.selectedCompanyId);
   }
 
   loadTestSetsForCompany(companyId: string): void {
@@ -1172,7 +1172,6 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
     const sets = this.testSets().get(companyId) ?? [];
     const filtered = sets.filter(ts => ts.type === type);
     if (!filtered.length) return null;
-    // Return the most recent (by createdAt desc)
     return filtered.reduce((a, b) =>
       new Date(a.createdAt) > new Date(b.createdAt) ? a : b
     );
@@ -1219,7 +1218,6 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
   }
 
   docStatusLabel(status: string, dianStatusCode?: string): string {
-    // SENT with a non-00 DIAN code means it was effectively rejected
     if (status === 'SENT' && dianStatusCode && dianStatusCode !== '00') return 'Rechazado';
     const map: Record<string, string> = {
       PENDING:  'Pendiente',
@@ -1270,14 +1268,11 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
     const typeLabel = type === 'FACTURACION' ? 'Facturación' : type === 'NOMINA' ? 'Nómina' : 'POS Electrónico';
 
     obs.subscribe({
-      next: (newSet) => {
-        this.notify.success(
-          `Set de pruebas de ${typeLabel} iniciado`
-        );
+      next: () => {
+        this.notify.success(`Set de pruebas de ${typeLabel} iniciado`);
         this.actionLoading.set(false);
         this.showConfirmModal.set(false);
         this.confirmCompany.set(null);
-        // Refresh this company's test sets
         this.loadTestSetsForCompany(company.id);
         this.cdr.markForCheck();
       },
@@ -1306,7 +1301,7 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
     if (!ts) return;
 
     this.actionLoading.set(true);
-    this.service.cancel(ts.id).subscribe({
+    this.service.reset(ts.id).subscribe({
       next: () => {
         this.notify.success('Set eliminado. Ya puede iniciar uno nuevo.');
         this.actionLoading.set(false);
@@ -1358,7 +1353,6 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
       next: (updated) => {
         this.selectedTestSet.set(updated);
         this.checkLoading.set(false);
-        // Also refresh the card
         this.loadTestSetsForCompany(updated.companyId);
         this.cdr.markForCheck();
         this.notify.success('Estados actualizados desde DIAN');
@@ -1381,15 +1375,13 @@ export class SaDianTestsComponent implements OnInit, OnDestroy {
   }
 
   private startAutoRefresh(): void {
-    if (this.refreshInterval) return; // Already running
+    if (this.refreshInterval) return;
     this.refreshInterval = setInterval(() => {
-      // Refresh all companies that have an IN_PROGRESS test set
       for (const [companyId, sets] of this.testSets()) {
         if (sets.some(ts => ts.status === 'IN_PROGRESS')) {
           this.loadTestSetsForCompany(companyId);
         }
       }
-      // If detail modal is open and IN_PROGRESS, refresh detail too
       const detail = this.selectedTestSet();
       if (detail && detail.status === 'IN_PROGRESS') {
         this.service.findOne(detail.id).subscribe({

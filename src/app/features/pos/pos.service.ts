@@ -3,6 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export type PosDocumentMode = 'POS_ELECTRONIC' | 'ELECTRONIC_INVOICE' | 'NONE';
+
 export interface PosSession {
   id: string;
   companyId: string;
@@ -794,6 +796,7 @@ export interface PosSale {
     id: string;
     invoiceNumber: string;
     status: string;
+    sourceChannel?: string;
     dianZipKey?: string;
     dianStatusCode?: string;
     dianStatusMsg?: string;
@@ -1296,7 +1299,10 @@ export class PosApiService {
     return this.http.patch<PosSale>(`${this.base}/sales/${saleId}/pay`, dto);
   }
 
-  markDelivered(saleId: string, dto: { notes?: string; generateInvoice?: boolean }): Observable<PosSale & { invoice?: any }> {
+  markDelivered(
+    saleId: string,
+    dto: { notes?: string; generateInvoice?: boolean; documentMode?: PosDocumentMode },
+  ): Observable<PosSale & { invoice?: any }> {
     return this.http.patch<PosSale & { invoice?: any }>(`${this.base}/sales/${saleId}/deliver`, dto);
   }
 

@@ -66,4 +66,8 @@ export class SaDianTestsService {
   cancel(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
+
+  reset(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${id}/reset`);
+  }
 }

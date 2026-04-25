@@ -570,9 +570,9 @@ interface QueuedPosSalePayload {
           <div class="it-text">
             <span class="it-main">¿Requiere factura electrónica?</span>
             @if (!selectedCustomer()) {
-              <span class="it-sub it-sub--warn">Selecciona un cliente para habilitar</span>
+              <span class="it-sub it-sub--warn">Sin esta opción, la venta se emitirá como POS electrónico a consumidor final</span>
             } @else {
-              <span class="it-sub">{{ generateInvoice() ? 'Se generará factura para ' + selectedCustomer()!.name : 'Toca para activar la facturación electrónica' }}</span>
+              <span class="it-sub">{{ generateInvoice() ? 'Se generará factura electrónica para ' + selectedCustomer()!.name : 'Si no la activas, la venta se emitirá como POS electrónico' }}</span>
             }
           </div>
           <svg viewBox="0 0 16 16" fill="currentColor" width="13" class="it-doc-icon"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
@@ -2504,6 +2504,11 @@ interface QueuedPosSalePayload {
               <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
               Se generará una factura electrónica DRAFT para <strong>{{ selectedCustomer()!.name }}</strong>
             </div>
+          } @else if (!generateInvoice() && !isAdvancePayment()) {
+            <div class="pay-invoice-notice">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13" aria-hidden="true"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm7 1.5v2A1.5 1.5 0 0012.5 5h2V14a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1h7z"/></svg>
+              Se emitirá un <strong>POS electrónico</strong>{{ selectedCustomer() ? ' para ' + selectedCustomer()!.name : ' a consumidor final' }}.
+            </div>
           }
         </div>
         <div class="modal-footer">
@@ -3080,6 +3085,9 @@ interface QueuedPosSalePayload {
               <input type="checkbox" [(ngModel)]="deliverGenerateInv" />
               <span class="adv-toggle-text">Generar factura electrónica al entregar</span>
             </label>
+            <div class="adv-notice" style="margin-top:8px">
+              Si no la activas, al entregar se emitirá como POS electrónico.
+            </div>
           }
         </div>
         <div class="modal-footer">
@@ -4979,6 +4987,10 @@ export class PosComponent implements OnInit, OnDestroy {
     return normalized.includes('override') || normalized.includes('supervisor');
   }
 
+  private resolvePosDocumentMode(forceElectronicInvoice = this.generateInvoice()) {
+    return forceElectronicInvoice ? 'ELECTRONIC_INVOICE' : 'POS_ELECTRONIC';
+  }
+
   private productSearchTimer: any;
   private createClientSyncId() {
     const generator = (globalThis.crypto as Crypto | undefined)?.randomUUID;
@@ -6694,6 +6706,7 @@ export class PosComponent implements OnInit, OnDestroy {
       amountPaid: this.amountPaid(),
       payments,
       generateInvoice: !isAdv && this.generateInvoice() && !!this.selectedCustomer(),
+      documentMode: !isAdv ? this.resolvePosDocumentMode(this.generateInvoice() && !!this.selectedCustomer()) : undefined,
       isAdvancePayment: (isAdv || this.selectedOrderType() === 'LAYAWAY') || undefined,
       cartDiscountPct: this.cartDiscountPct() || undefined,
     };
@@ -7354,12 +7367,16 @@ export class PosComponent implements OnInit, OnDestroy {
     const sale = this.selectedAdvanceSale();
     if (!sale) return;
     this.processingAdvance.set(true);
-    this.pos.markDelivered(sale.id, { notes: this.deliverNotes || undefined, generateInvoice: this.deliverGenerateInv }).subscribe({
+    this.pos.markDelivered(sale.id, {
+      notes: this.deliverNotes || undefined,
+      generateInvoice: this.deliverGenerateInv,
+      documentMode: this.resolvePosDocumentMode(this.deliverGenerateInv),
+    }).subscribe({
       next: (updated: any) => {
         this.processingAdvance.set(false);
         this.showDeliverModal.set(false);
         if (updated.invoice) {
-          this.notify.success(`Pedido entregado y factura ${updated.invoice.invoiceNumber} generada`);
+          this.notify.success(`Pedido entregado y documento ${updated.invoice.invoiceNumber} generado`);
         } else {
           this.notify.success('Pedido marcado como entregado');
         }
