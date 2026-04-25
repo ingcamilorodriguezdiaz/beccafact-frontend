@@ -1016,7 +1016,9 @@ interface InvoiceExternalIntake {
                   <div class="dw-fiscal-row"><span>Configuración</span><strong>{{ detailInvoice()?.documentConfig?.name || 'Legado / empresa' }}</strong></div>
                   <div class="dw-fiscal-row"><span>Prefijo</span><strong>{{ detailInvoice()?.documentConfig?.prefix || detailInvoice()?.prefix || '—' }}</strong></div>
                   <div class="dw-fiscal-row"><span>Resolución</span><strong>{{ detailInvoice()?.resolutionNumber || detailInvoice()?.documentConfig?.resolutionNumber || '—' }}</strong></div>
-                  <div class="dw-fiscal-row"><span>Clave técnica</span><strong>{{ detailInvoice()?.documentConfig?.technicalKey || '—' }}</strong></div>
+                  @if (detailInvoice()?.sourceChannel !== 'POS') {
+                    <div class="dw-fiscal-row"><span>Clave técnica</span><strong>{{ detailInvoice()?.documentConfig?.technicalKey || '—' }}</strong></div>
+                  }
                   <div class="dw-fiscal-row"><span>Rango</span><strong>{{ formatRange(detailInvoice()?.numberingRangeFrom || detailInvoice()?.documentConfig?.rangeFrom, detailInvoice()?.numberingRangeTo || detailInvoice()?.documentConfig?.rangeTo) }}</strong></div>
                 </div>
               </div>
