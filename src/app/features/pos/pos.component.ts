@@ -2832,7 +2832,7 @@ interface QueuedPosSalePayload {
                   </div>
                 }
                 <div class="pos-dw-info-row">
-                  <span class="pos-dw-lbl">Estado</span>
+                  <span class="pos-dw-lbl">Estado factura</span>
                   <span class="pos-dw-val">
                     @if (selectedInvoiceSale()!.invoice!.status === 'ACCEPTED_DIAN') {
                       <span class="dian-badge dian-accepted">Aceptada ✓</span>
@@ -2858,6 +2858,18 @@ interface QueuedPosSalePayload {
                     </span>
                   </div>
                 }
+                @if (selectedInvoiceDetail()?.dianSentAt) {
+                  <div class="pos-dw-info-row">
+                    <span class="pos-dw-lbl">Fecha de envío</span>
+                    <span class="pos-dw-val">{{ selectedInvoiceDetail()!.dianSentAt! | date:'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                }
+                @if (selectedInvoiceDetail()?.dianResponseAt) {
+                  <div class="pos-dw-info-row">
+                    <span class="pos-dw-lbl">Última consulta</span>
+                    <span class="pos-dw-val">{{ selectedInvoiceDetail()!.dianResponseAt! | date:'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                }
                 @if (selectedInvoiceSale()!.invoice!.dianZipKey) {
                   <div class="pos-dw-info-row">
                     <span class="pos-dw-lbl">ZipKey</span>
@@ -2874,10 +2886,37 @@ interface QueuedPosSalePayload {
                     <button class="pos-dw-copy pos-dw-copy--inline" (click)="copyText(selectedInvoiceSale()!.invoice!.dianCufe)">Copiar CUFE</button>
                   </div>
                 }
-                @if (selectedInvoiceSale()!.invoice!.dianStatusMsg) {
-                  <div class="pos-dw-info-row">
-                    <span class="pos-dw-lbl">Respuesta DIAN</span>
-                    <span class="pos-dw-val pos-dw-muted">{{ selectedInvoiceSale()!.invoice!.dianStatusMsg }}</span>
+                @if (selectedInvoiceDetail()?.dianStatusMsg && !selectedInvoiceDetail()?.dianErrors) {
+                  <div
+                    class="dian-msg-block"
+                    [class.dian-msg-ok]="selectedInvoiceDetail()!.status === 'ACCEPTED_DIAN'"
+                    [class.dian-msg-err]="selectedInvoiceDetail()!.status === 'REJECTED_DIAN'"
+                  >
+                    {{ selectedInvoiceDetail()!.dianStatusMsg }}
+                  </div>
+                }
+                @if (parseDianErrors(selectedInvoiceDetail()?.dianErrors).length > 0) {
+                  <div class="dian-errors-block">
+                    <div class="dian-errors-header">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="13" style="flex-shrink:0">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                      </svg>
+                      <span>Respuesta de validación DIAN ({{ parseDianErrors(selectedInvoiceDetail()?.dianErrors).length }} reglas)</span>
+                    </div>
+                    <ul class="dian-errors-list">
+                      @for (err of parseDianErrors(selectedInvoiceDetail()?.dianErrors); track $index) {
+                        <li
+                          class="dian-error-item"
+                          [class.dian-error-rechazo]="dianErrorSeverity(err) === 'rechazo'"
+                          [class.dian-error-notif]="dianErrorSeverity(err) === 'notificacion'"
+                        >
+                          <span class="dian-error-badge">
+                            {{ dianErrorSeverity(err) === 'notificacion' ? 'Notif.' : 'Rechazo' }}
+                          </span>
+                          <span class="dian-error-text">{{ err }}</span>
+                        </li>
+                      }
+                    </ul>
                   </div>
                 }
               </div>
@@ -3982,6 +4021,20 @@ interface QueuedPosSalePayload {
     .pos-dw-code { display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
     .pos-dw-code small { font-size:10px; color:#94a3b8; }
     .pos-dw-muted { font-size:11px; color:#6b7280; max-width:200px; text-align:right; }
+    .dian-msg-block { margin-top:10px; padding:8px 10px; background:#f8fafc; border-radius:7px; border-left:3px solid #94a3b8; font-size:12px; color:#374151; line-height:1.5; }
+    .dian-msg-ok { border-left-color:#059669; background:#ecfdf5; }
+    .dian-msg-err { border-left-color:#dc2626; background:#fef2f2; }
+    .dian-errors-block { margin-top:10px; border:1px solid #fca5a5; border-radius:8px; overflow:hidden; }
+    .dian-errors-header { display:flex; align-items:center; gap:6px; padding:7px 10px; background:#fef2f2; font-size:11.5px; font-weight:600; color:#b91c1c; border-bottom:1px solid #fca5a5; }
+    .dian-errors-list { list-style:none; margin:0; padding:0; }
+    .dian-error-item { display:flex; align-items:flex-start; gap:6px; padding:6px 10px; font-size:11.5px; line-height:1.45; border-bottom:1px solid #fee2e2; }
+    .dian-error-item:last-child { border-bottom:none; }
+    .dian-error-rechazo { background:#fff5f5; }
+    .dian-error-notif { background:#fafafa; }
+    .dian-error-badge { flex-shrink:0; margin-top:1px; padding:1px 5px; border-radius:3px; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+    .dian-error-rechazo .dian-error-badge { background:#fee2e2; color:#b91c1c; }
+    .dian-error-notif .dian-error-badge { background:#e0f2fe; color:#0369a1; }
+    .dian-error-text { color:#374151; }
     .pos-dw-client-name { font-size:14px; font-weight:700; color:#0c1c35; margin-bottom:3px; }
     .pos-dw-client-doc { font-size:12px; color:#64748b; font-family:monospace; }
     .pos-dw-date-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
@@ -7261,6 +7314,23 @@ export class PosComponent implements OnInit, OnDestroy {
       '90': 'TrackId no encontrado',
       '99': 'Errores de validación',
     } as Record<string, string>)[code ?? ''] ?? '';
+  }
+
+  parseDianErrors(raw?: string | null): string[] {
+    if (!raw) return [];
+    try {
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.map(item => String(item)) : [String(arr)];
+    } catch {
+      return String(raw)
+        .split(';')
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+  }
+
+  dianErrorSeverity(msg: string): 'rechazo' | 'notificacion' {
+    return /Notificaci/i.test(msg) ? 'notificacion' : 'rechazo';
   }
 
   openAddPaymentModal(sale: PosSale) {

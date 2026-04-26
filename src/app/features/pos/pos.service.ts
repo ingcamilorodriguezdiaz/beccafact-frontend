@@ -800,9 +800,11 @@ export interface PosSale {
     dianZipKey?: string;
     dianStatusCode?: string;
     dianStatusMsg?: string;
+    dianErrors?: string;
     dianCufe?: string;
     dianQrCode?: string;
     dianSentAt?: string;
+    dianResponseAt?: string;
   };
   customer?: { id: string; name: string; documentNumber: string; documentType?: string };
   items: PosSaleItem[];
@@ -861,9 +863,11 @@ export interface PosInvoiceDetail {
   dianZipKey?: string;
   dianStatusCode?: string;
   dianStatusMsg?: string;
+  dianErrors?: string;
   dianCufe?: string;
   dianQrCode?: string;
   dianSentAt?: string;
+  dianResponseAt?: string;
   customer?: {
     id: string;
     name: string;

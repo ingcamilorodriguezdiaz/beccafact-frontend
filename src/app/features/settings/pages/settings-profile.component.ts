@@ -75,7 +75,7 @@ import { environment } from '../../../../environments/environment';
 
           <div class="field">
             <label>Telefono</label>
-            <input type="tel" [(ngModel)]="form.phone" placeholder="+57 300 000 0000" />
+            <input type="tel" [(ngModel)]="form.phone" name="phone" autocomplete="tel" inputmode="tel" placeholder="+57 300 000 0000" />
           </div>
 
           <div class="form-footer">
@@ -427,11 +427,15 @@ export class SettingsProfileComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.syncFormWithUser();
+  }
+
+  private syncFormWithUser() {
     const user = this.auth.user();
-    if (user) {
-      this.form.firstName = user.firstName ?? '';
-      this.form.lastName = user.lastName ?? '';
-    }
+    if (!user) return;
+    this.form.firstName = user.firstName ?? '';
+    this.form.lastName = user.lastName ?? '';
+    this.form.phone = user.phone ?? '';
   }
 
   initials(): string {
@@ -447,10 +451,12 @@ export class SettingsProfileComponent implements OnInit {
   }
 
   save() {
-    this.http.put<any>(`${environment.apiUrl}/users/me`, this.form).subscribe({
+    this.http.patch<any>(`${environment.apiUrl}/users/me`, this.form).subscribe({
       next: () => {
         this.notification.success('Perfil actualizado');
-        this.auth.loadProfile().subscribe();
+        this.auth.loadProfile().subscribe({
+          next: () => this.syncFormWithUser(),
+        });
       },
       error: () => this.notification.error('Error al guardar cambios'),
     });

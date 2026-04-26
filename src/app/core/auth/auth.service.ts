@@ -15,6 +15,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  phone?: string;
   isSuperAdmin: boolean;
   hasSeenTour: boolean;
   companyId: string | null;

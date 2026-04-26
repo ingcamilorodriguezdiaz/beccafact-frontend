@@ -131,19 +131,19 @@ interface RoleEntry {
                 </div>
 
                 <div class="user-actions">
-                  @if (canManage()) {
+                  @if (canManage() && u.id !== currentUserId()) {
                     <button class="btn-icon" (click)="openModal(u)" title="Editar">
                       <svg viewBox="0 0 20 20" fill="currentColor" width="14">
                         <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
                       </svg>
                     </button>
-                    @if (u.id !== currentUserId()) {
-                      <button class="btn-icon" (click)="toggleActive(u)" [title]="u.isActive ? 'Desactivar' : 'Activar'">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="14">
-                          <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"/>
-                        </svg>
-                      </button>
-                    }
+                    <button class="btn-icon" (click)="toggleActive(u)" [title]="u.isActive ? 'Desactivar' : 'Activar'">
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="14">
+                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"/>
+                      </svg>
+                    </button>
+                  } @else if (u.id === currentUserId()) {
+                    <span class="self-managed-note">Gestiona tu cuenta desde Mi perfil</span>
                   }
                 </div>
               </div>
@@ -214,6 +214,33 @@ interface RoleEntry {
                 <p class="form-hint">Como gerente, no puedes asignar el rol Administrador.</p>
               }
             </div>
+
+            @if (editingId() && isAdmin()) {
+              <div class="password-panel">
+                <div class="password-panel-head">
+                  <div>
+                    <label>Nueva contrasena</label>
+                    <p class="form-hint">Opcional. Si la completas, se reemplazara la contraseña actual del usuario.</p>
+                  </div>
+                  @if (editingId() === currentUserId()) {
+                    <span class="inline-note">Usa Mi perfil para cambiar tu propia clave.</span>
+                  }
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <input type="password" [(ngModel)]="form.newPassword" class="form-control"
+                           [disabled]="editingId() === currentUserId()"
+                           placeholder="Minimo 8 caracteres"/>
+                  </div>
+                  <div class="form-group">
+                    <input type="password" [(ngModel)]="form.confirmPassword" class="form-control"
+                           [disabled]="editingId() === currentUserId()"
+                           placeholder="Confirmar nueva contrasena"/>
+                  </div>
+                </div>
+              </div>
+            }
           </div>
 
           <div class="modal-footer">
@@ -479,6 +506,19 @@ interface RoleEntry {
       align-items:center;
     }
 
+    .self-managed-note {
+      display:inline-flex;
+      align-items:center;
+      padding:8px 10px;
+      border-radius:999px;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      color:#1d4ed8;
+      font-size:11px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
     .btn-icon {
       width:36px;
       height:36px;
@@ -615,6 +655,31 @@ interface RoleEntry {
     .form-group { margin-bottom:14px; }
     .form-group label { display:block; margin-bottom:6px; font-size:12px; font-weight:700; color:#334155; }
     .form-hint { margin:6px 0 0; font-size:11px; color:#8aa0b8; }
+    .password-panel {
+      margin-top:6px;
+      padding:14px;
+      border-radius:16px;
+      background:#f8fbff;
+      border:1px solid #dce6f0;
+    }
+    .password-panel-head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .inline-note {
+      display:inline-flex;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      font-size:11px;
+      font-weight:700;
+      color:#1d4ed8;
+      white-space:nowrap;
+    }
 
     .form-control {
       width:100%;
@@ -710,7 +775,7 @@ export class SettingsUsersComponent implements OnInit {
   availableRoles = signal<RoleEntry[]>([]);
   loadingRoles   = signal(false);
 
-  form = { firstName: '', lastName: '', email: '', password: '', roleId: '' };
+  form = { firstName: '', lastName: '', email: '', password: '', roleId: '', newPassword: '', confirmPassword: '' };
 
   currentUserId = computed(() => this.auth.user()?.id ?? '');
   private userRoles = computed(() => this.auth.user()?.roles ?? []);
@@ -779,11 +844,16 @@ export class SettingsUsersComponent implements OnInit {
         email:     u.email,
         password:  '',
         roleId:    matchedRole?.id ?? defaultRole?.id ?? '',
+        newPassword: '',
+        confirmPassword: '',
       };
     } else {
       const defaultRole = this.availableRoles().find(r => r.name === 'OPERATOR') ?? this.availableRoles()[0];
       this.editingId.set(null);
-      this.form = { firstName: '', lastName: '', email: '', password: '', roleId: defaultRole?.id ?? '' };
+      this.form = {
+        firstName: '', lastName: '', email: '', password: '', roleId: defaultRole?.id ?? '',
+        newPassword: '', confirmPassword: '',
+      };
     }
 
     this.showModal.set(true);
@@ -804,23 +874,49 @@ export class SettingsUsersComponent implements OnInit {
     if (!this.form.roleId) {
       this.notify.warning('Selecciona un rol'); return;
     }
+    if (this.editingId() && this.isAdmin() && this.form.newPassword) {
+      if (this.form.newPassword.length < 8) {
+        this.notify.warning('La contrasena debe tener al menos 8 caracteres'); return;
+      }
+      if (this.form.newPassword !== this.form.confirmPassword) {
+        this.notify.warning('Las contrasenas no coinciden'); return;
+      }
+    }
 
     this.saving.set(true);
 
     const body: any = {
       firstName: this.form.firstName,
       lastName:  this.form.lastName,
-      email:     this.form.email,
       roleId:    this.form.roleId,
     };
-    if (!this.editingId() && this.form.password) body.password = this.form.password;
+    if (!this.editingId()) {
+      body.email = this.form.email;
+      if (this.form.password) body.password = this.form.password;
+    }
 
-    const req = this.editingId()
+    const request = this.editingId()
       ? this.http.put(`${this.API}/${this.editingId()}`, body)
       : this.http.post(this.API, body);
 
-    req.subscribe({
+    request.subscribe({
       next: () => {
+        if (this.editingId() && this.isAdmin() && this.form.newPassword && this.editingId() !== this.currentUserId()) {
+          this.http.patch(`${this.API}/${this.editingId()}/password`, {
+            newPassword: this.form.newPassword,
+          }).subscribe({
+            next: () => {
+              this.notify.success('Usuario y contrasena actualizados');
+              this.saving.set(false); this.closeModal(); this.load();
+            },
+            error: e => {
+              this.saving.set(false);
+              this.notify.error(e?.error?.message ?? 'Usuario actualizado, pero no se pudo cambiar la contrasena');
+            },
+          });
+          return;
+        }
+
         this.notify.success(this.editingId() ? 'Usuario actualizado' : 'Invitacion enviada');
         this.saving.set(false); this.closeModal(); this.load();
       },

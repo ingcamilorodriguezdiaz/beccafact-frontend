@@ -2,10 +2,36 @@ import { Component, OnInit, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../core/auth/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { environment } from '../../../../environments/environment';
 
-interface PlanFeature { key: string; value: string; }
-interface Plan { id:string; name:string; displayName:string; price:number; description:string; features:PlanFeature[]; }
+interface PlanFeature { key: string; label?: string; value: string; }
+interface Plan {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  price: number;
+  currency?: string;
+  isActive?: boolean;
+  features: PlanFeature[];
+}
+
+interface FeatureDef {
+  key: string;
+  label: string;
+  description: string;
+  type: 'bool' | 'number' | 'months';
+  defaultValue: string;
+  icon: string;
+  group: 'limits' | 'modules' | 'support';
+}
+
+const CARD_PRIORITY = [
+  'max_documents_per_month', 'max_users', 'max_products',
+  'has_invoices', 'has_inventory', 'has_reports', 'dian_enabled',
+  'has_accounting', 'has_purchasing', 'priority_support',
+];
 
 @Component({
   selector: 'app-settings-billing',
@@ -89,21 +115,53 @@ interface Plan { id:string; name:string; displayName:string; price:number; descr
                   <div class="current-badge">Plan actual</div>
                 }
 
-                <div class="plan-title">{{ plan.displayName }}</div>
+                <div class="plan-head">
+                  <div>
+                    <div class="plan-title">{{ plan.displayName }}</div>
+                    <code class="plan-slug">{{ plan.name }}</code>
+                  </div>
+                  @if (plan.isActive === false) {
+                    <span class="plan-status">Inactivo</span>
+                  }
+                </div>
+
                 <div class="plan-price">
-                  {{ plan.price | currency:'COP':'symbol':'1.0-0' }}<span>/mes</span>
+                  {{ plan.price | currency:(plan.currency || 'COP'):'symbol':'1.0-0' }}<span>/mes</span>
                 </div>
 
                 @if (plan.description) {
                   <div class="plan-desc">{{ plan.description }}</div>
                 }
 
-                @if (plan.features.length > 0) {
+                @if (cardFeatures(plan).length > 0) {
                   <div class="plan-features">
-                    @for (feature of plan.features.slice(0, 4); track feature.key) {
-                      <div class="plan-feature">{{ feature.key }}</div>
+                    @for (feature of cardFeatures(plan); track feature.key) {
+                      <div class="feat-row">
+                        <div class="feat-row-left">
+                          @if (featDef(feature.key); as def) {
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13" class="feat-icon">
+                              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="def.icon"/>
+                            </svg>
+                            <span class="feat-label">{{ def.label }}</span>
+                          } @else {
+                            <span class="feat-label">{{ feature.label || feature.key }}</span>
+                          }
+                        </div>
+                        <span class="feat-val">
+                          @if (feature.value === 'true') {
+                            <span class="feat-check">✓</span>
+                          } @else if (feature.value === 'false') {
+                            <span class="feat-x">✗</span>
+                          } @else {
+                            {{ feature.value === '-1' ? '∞' : feature.value }}{{ featDef(feature.key)?.type === 'months' ? ' meses' : '' }}
+                          }
+                        </span>
+                      </div>
                     }
                   </div>
+                  @if (plan.features.length > 6) {
+                    <div class="feat-more">+{{ plan.features.length - 6 }} caracteristicas mas</div>
+                  }
                 }
 
                 @if (plan.name !== auth.currentPlan()?.name) {
@@ -321,7 +379,8 @@ interface Plan { id:string; name:string; displayName:string; price:number; descr
 
     .plan-card {
       position:relative;
-      display:grid;
+      display:flex;
+      flex-direction:column;
       gap:10px;
       padding:22px;
       border-radius:22px;
@@ -350,11 +409,41 @@ interface Plan { id:string; name:string; displayName:string; price:number; descr
       letter-spacing:.08em;
     }
 
+    .plan-head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-top:8px;
+    }
+
     .plan-title {
       font-size:18px;
       font-weight:800;
       color:#0c1c35;
-      margin-top:8px;
+    }
+
+    .plan-slug {
+      display:inline-block;
+      margin-top:6px;
+      padding:3px 7px;
+      border-radius:999px;
+      background:#f0f4f9;
+      color:#6b7f95;
+      font-size:10px;
+    }
+
+    .plan-status {
+      padding:5px 9px;
+      border-radius:999px;
+      background:#fff1f2;
+      border:1px solid #fecdd3;
+      color:#be123c;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      white-space:nowrap;
     }
 
     .plan-price {
@@ -382,19 +471,65 @@ interface Plan { id:string; name:string; displayName:string; price:number; descr
     }
 
     .plan-features {
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
+      border-top:1px solid #edf2f7;
+      padding-top:12px;
       margin-top:2px;
+      display:grid;
+      gap:8px;
+      flex:1;
     }
 
-    .plan-feature {
-      padding:5px 9px;
-      border-radius:999px;
-      background:#f8fbff;
-      border:1px solid #dce6f0;
+    .feat-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }
+
+    .feat-row-left {
+      display:flex;
+      align-items:center;
+      gap:6px;
+      min-width:0;
+      flex:1;
+    }
+
+    .feat-icon {
+      color:#94a3b8;
+      flex-shrink:0;
+    }
+
+    .feat-label {
+      font-size:12.5px;
+      color:#64748b;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .feat-val {
+      font-size:12px;
+      font-weight:700;
+      color:#334155;
+      flex-shrink:0;
+    }
+
+    .feat-check {
+      color:#10b981;
+      font-size:13px;
+    }
+
+    .feat-x {
+      color:#ef4444;
+      font-size:13px;
+    }
+
+    .feat-more {
+      margin-top:8px;
       font-size:11px;
-      color:#4b6079;
+      color:#94a3b8;
+      text-align:right;
+      font-style:italic;
     }
 
     .btn {
@@ -478,17 +613,48 @@ interface Plan { id:string; name:string; displayName:string; price:number; descr
 export class SettingsBillingComponent implements OnInit {
   protected auth = inject(AuthService);
   private http   = inject(HttpClient);
+  private notify = inject(NotificationService);
 
   plans   = signal<Plan[]>([]);
+  catalog = signal<FeatureDef[]>([]);
   loading = signal(true);
 
+  private catalogMap = computed(() => new Map(this.catalog().map((feature) => [feature.key, feature])));
   private userRoles = computed(() => this.auth.user()?.roles ?? []);
   canManage = computed(() => this.userRoles().some(r => r === 'ADMIN' || r === 'MANAGER'));
 
   ngOnInit() {
+    this.loadCatalog();
+    this.loadPlans();
+  }
+
+  private loadCatalog() {
+    this.http.get<FeatureDef[]>(`${environment.apiUrl}/plans/feature-catalog`).subscribe({
+      next: (catalog) => this.catalog.set(catalog ?? []),
+      error: () => this.notify.error('Error al cargar catalogo de caracteristicas'),
+    });
+  }
+
+  private loadPlans() {
     this.http.get<any>(`${environment.apiUrl}/plans/public`).subscribe({
       next: res => { this.plans.set(res.data ?? res ?? []); this.loading.set(false); },
-      error: () => this.loading.set(false),
+      error: () => {
+        this.loading.set(false);
+        this.notify.error('Error al cargar planes');
+      },
     });
+  }
+
+  featDef(key: string): FeatureDef | undefined {
+    return this.catalogMap().get(key);
+  }
+
+  cardFeatures(plan: Plan): PlanFeature[] {
+    const sorted = [...(plan.features ?? [])].sort((a, b) => {
+      const ia = CARD_PRIORITY.indexOf(a.key);
+      const ib = CARD_PRIORITY.indexOf(b.key);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+    return sorted.slice(0, 6);
   }
 }
