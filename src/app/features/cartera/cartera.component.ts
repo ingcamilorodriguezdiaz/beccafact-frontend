@@ -237,23 +237,64 @@ interface AdjustmentForm {
         </div>
       </section>
 
-      <!-- ── Tabs ────────────────────────────────────────────────────── -->
-      <div class="tab-shell">
-        <div class="ct__tabs">
-          <button class="ct__tab" [class.ct__tab--active]="activeTab() === 'cartera'" (click)="activeTab.set('cartera')">
-            <span class="material-symbols-outlined">receipt_long</span> Cartera
-          </button>
-          <button class="ct__tab" [class.ct__tab--active]="activeTab() === 'aging'" (click)="setTab('aging')">
-            <span class="material-symbols-outlined">bar_chart</span> Aging
-          </button>
-          <button class="ct__tab" [class.ct__tab--active]="activeTab() === 'receipts'" (click)="setTab('receipts')">
-            <span class="material-symbols-outlined">payments</span> Recaudos
-          </button>
-          <button class="ct__tab" [class.ct__tab--active]="activeTab() === 'collections'" (click)="setTab('collections')">
-            <span class="material-symbols-outlined">support_agent</span> Cobranza
-          </button>
+      <!-- ── Navegación del módulo ───────────────────────────────────── -->
+      <section class="tabs-shell" id="tour-cartera-nav">
+        <div class="tabs-shell__head">
+          <div>
+            <span class="tabs-shell__eyebrow">Navegación del módulo</span>
+            <h3>Áreas de Cartera</h3>
+          </div>
+          <p>Organiza el seguimiento por saldos, antigüedad, recaudos y gestión operativa de cobranza.</p>
         </div>
-      </div>
+
+        <div class="tabs-groups">
+          <section class="tab-group">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Seguimiento financiero</span>
+              <small>Visibilidad de cartera y comportamiento por vencimiento</small>
+            </div>
+            <div class="tab-grid">
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'cartera'" (click)="setTab('cartera')">
+                <span class="material-symbols-outlined">receipt_long</span>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Cartera</span>
+                  <span class="tab-btn__meta">Facturas, saldos pendientes y estado general de las cuentas por cobrar.</span>
+                </span>
+              </button>
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'aging'" (click)="setTab('aging')">
+                <span class="material-symbols-outlined">bar_chart</span>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Aging</span>
+                  <span class="tab-btn__meta">Concentración de cartera por antigüedad, mora y riesgo de vencimiento.</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section class="tab-group tab-group--utility">
+            <div class="tab-group__header">
+              <span class="tab-group__label">Gestión de recaudo</span>
+              <small>Pagos recibidos, compromisos y acciones de recuperación</small>
+            </div>
+            <div class="tab-grid">
+              <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'receipts'" (click)="setTab('receipts')">
+                <span class="material-symbols-outlined">payments</span>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Recaudos</span>
+                  <span class="tab-btn__meta">Registro de pagos, aplicaciones y trazabilidad de ingresos de clientes.</span>
+                </span>
+              </button>
+              <button class="tab-btn tab-btn--utility" [class.tab-btn--active]="activeTab() === 'collections'" (click)="setTab('collections')">
+                <span class="material-symbols-outlined">support_agent</span>
+                <span class="tab-btn__content">
+                  <span class="tab-btn__title">Cobranza</span>
+                  <span class="tab-btn__meta">Promesas de pago, seguimiento comercial y novedades de recuperación.</span>
+                </span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
 
       <!-- ══════════════════════════════════════════════════════════════
            TAB: CARTERA
@@ -1734,20 +1775,138 @@ interface AdjustmentForm {
       letter-spacing:-.04em;
     }
 
-    /* Tabs */
-    .tab-shell {
+    /* Module navigation */
+    .tabs-shell {
       margin-bottom:18px;
-      padding:8px;
-      border-radius:20px;
+      padding:18px;
+      border-radius:24px;
       background:rgba(255,255,255,.84);
       border:1px solid #dce6f0;
       box-shadow:0 12px 26px rgba(12,28,53,.05);
     }
-    .ct__tabs { display:flex; gap:6px; }
-    .ct__tab { display:inline-flex; align-items:center; gap:6px; padding:10px 18px; font-size:13.5px; font-weight:600; color:#64748b; background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px; cursor:pointer; transition:all .15s; border-radius:6px 6px 0 0; }
-    .ct__tab .material-symbols-outlined { font-size:17px; }
-    .ct__tab:hover { color:#1a407e; background:#f0f4f9; }
-    .ct__tab--active { color:#1a407e; border-bottom-color:#1a407e; background:#eff6ff; box-shadow:inset 0 0 0 1px #bfdbfe; }
+    .tabs-shell__head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:16px;
+    }
+    .tabs-shell__eyebrow {
+      display:block;
+      margin-bottom:8px;
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:#00a084;
+    }
+    .tabs-shell__head h3 {
+      margin:0;
+      font-family:'Sora',sans-serif;
+      font-size:20px;
+      letter-spacing:-.04em;
+      color:#0c1c35;
+    }
+    .tabs-shell__head p {
+      margin:0;
+      max-width:380px;
+      font-size:12.5px;
+      line-height:1.6;
+      color:#6f859f;
+      text-align:right;
+    }
+    .tabs-groups { display:grid; gap:14px; }
+    .tab-group {
+      padding:14px;
+      border-radius:20px;
+      background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border:1px solid #dce6f0;
+    }
+    .tab-group--utility {
+      background:linear-gradient(180deg, #fbfdff 0%, #f5fbff 100%);
+    }
+    .tab-group__header {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .tab-group__label {
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:#1a407e;
+    }
+    .tab-group__header small {
+      font-size:11.5px;
+      color:#8aa0b8;
+      text-align:right;
+    }
+    .tab-grid {
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:12px;
+    }
+    .tab-btn {
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      width:100%;
+      padding:14px 15px;
+      border-radius:18px;
+      background:#fff;
+      border:1px solid #dce6f0;
+      color:#64748b;
+      cursor:pointer;
+      text-align:left;
+      transition:all .16s ease;
+      box-shadow:0 10px 22px rgba(12,28,53,.04);
+    }
+    .tab-btn .material-symbols-outlined {
+      font-size:20px;
+      color:#1a407e;
+      margin-top:1px;
+      flex-shrink:0;
+    }
+    .tab-btn__content {
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:0;
+    }
+    .tab-btn__title {
+      font-size:14px;
+      font-weight:800;
+      color:#0c1c35;
+    }
+    .tab-btn__meta {
+      font-size:12px;
+      line-height:1.5;
+      color:#7a90aa;
+    }
+    .tab-btn:hover {
+      transform:translateY(-1px);
+      border-color:#bfd3e6;
+      box-shadow:0 14px 28px rgba(12,28,53,.08);
+    }
+    .tab-btn--active {
+      background:linear-gradient(135deg, #eff6ff 0%, #f2fffb 100%);
+      border-color:#93c5fd;
+      box-shadow:0 16px 30px rgba(37,99,235,.12);
+    }
+    .tab-btn--active .tab-btn__title,
+    .tab-btn--active .material-symbols-outlined {
+      color:#1a407e;
+    }
+    .tab-btn--active .tab-btn__meta {
+      color:#46627f;
+    }
+    .tab-btn--utility.tab-btn--active {
+      border-color:#99f6e4;
+      box-shadow:0 16px 30px rgba(16,185,129,.12);
+    }
 
     /* KPIs */
     .ct__kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
@@ -2108,13 +2267,23 @@ interface AdjustmentForm {
     @media (max-width:1100px) { .ct__aging-summary { grid-template-columns:repeat(3,1fr); } }
     @media (max-width:900px) {
       .hero-shell { grid-template-columns:1fr; }
+      .tabs-shell__head {
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .tabs-shell__head p,
+      .tab-group__header small {
+        text-align:left;
+      }
       .hero-mini-grid,
       .ct__kpis { grid-template-columns:repeat(2,1fr); }
     }
     @media (max-width:640px) {
-      .hero-shell { padding:16px; gap:14px; }
+      .hero-shell,
+      .tabs-shell { padding:16px; gap:14px; }
       .page-header__title { font-size:26px; }
       .hero-mini-grid,
+      .tab-grid,
       .ct__kpis { grid-template-columns:1fr; }
       .content-shell__head { flex-direction:column; align-items:flex-start; }
       .grid-shell-head { flex-direction:column; align-items:flex-start; padding:0; }
