@@ -9,6 +9,7 @@ interface Company {
   id: string; name: string; nit: string; email: string;
   phone?: string; address?: string; city?: string; department?: string;
   razonSocial?: string; status: string; createdAt: string;
+  isSandbox?: boolean;
   subscriptions?: Array<{ plan: { displayName: string; name: string } }>;
   _count?: { users: number; invoices: number };
 }
@@ -29,6 +30,7 @@ const EMPTY_FORM = () => ({
   name: '', nit: '', razonSocial: '', email: '',
   phone: '', address: '', city: '', department: '',
   planId: '',
+  isSandbox: false,
 });
 
 @Component({
@@ -67,6 +69,11 @@ const EMPTY_FORM = () => ({
           <option value="TRIAL">Trial</option>
           <option value="SUSPENDED">Suspendidas</option>
           <option value="CANCELLED">Canceladas</option>
+        </select>
+        <select [(ngModel)]="filterSandbox" (ngModelChange)="page.set(1); load()" class="form-control filter-select">
+          <option value="">Todos los ambientes</option>
+          <option value="production">Producción</option>
+          <option value="sandbox">Sandbox</option>
         </select>
 
         <!-- View Toggle -->
@@ -122,9 +129,14 @@ const EMPTY_FORM = () => ({
                 <tr class="co-row">
                   <td>
                     <div class="co-cell">
-                      <div class="co-avatar">{{ c.name[0].toUpperCase() }}</div>
+                      <div class="co-avatar" [class.co-avatar--sandbox]="c.isSandbox">{{ c.name[0].toUpperCase() }}</div>
                       <div>
-                        <div class="co-name">{{ c.name }}</div>
+                        <div class="co-name">
+                          {{ c.name }}
+                          @if (c.isSandbox) {
+                            <span class="badge badge-sandbox badge-sandbox--xs">SANDBOX</span>
+                          }
+                        </div>
                         <div class="co-email">{{ c.email }}</div>
                       </div>
                     </div>
@@ -220,14 +232,17 @@ const EMPTY_FORM = () => ({
         } @else {
           <div class="company-grid">
             @for (c of companies(); track c.id) {
-              <div class="co-grid-card" [class.co-grid-card--suspended]="c.status === 'SUSPENDED'" [class.co-grid-card--cancelled]="c.status === 'CANCELLED'">
+              <div class="co-grid-card" [class.co-grid-card--suspended]="c.status === 'SUSPENDED'" [class.co-grid-card--cancelled]="c.status === 'CANCELLED'" [class.co-grid-card--sandbox]="c.isSandbox">
 
                 <!-- Status badge top-right -->
                 <span class="badge cc-status-badge" [class]="statusClass(c.status)">{{ statusLabel(c.status) }}</span>
+                @if (c.isSandbox) {
+                  <span class="badge badge-sandbox cc-sandbox-badge">SANDBOX</span>
+                }
 
                 <!-- Avatar + nombre -->
                 <div class="co-grid-top">
-                  <div class="co-grid-avatar">{{ c.name[0].toUpperCase() }}</div>
+                  <div class="co-grid-avatar" [class.co-grid-avatar--sandbox]="c.isSandbox">{{ c.name[0].toUpperCase() }}</div>
                   <div class="co-grid-name">{{ c.name }}</div>
                   <div class="co-grid-nit">
                     <span class="badge badge-muted">{{ c.nit }}</span>
@@ -344,6 +359,9 @@ const EMPTY_FORM = () => ({
               </div>
               <div class="co-card-meta">
                 <span class="badge badge-muted">{{ c.nit }}</span>
+                @if (c.isSandbox) {
+                  <span class="badge badge-sandbox">SANDBOX</span>
+                }
                 @if (c.subscriptions?.length) {
                   <span class="badge badge-primary">{{ c.subscriptions![0].plan.displayName }}</span>
                 }
@@ -441,6 +459,34 @@ const EMPTY_FORM = () => ({
                 </select>
               </div>
             }
+
+            <!-- ── Ambiente ─────────────────────────────────── -->
+            <div class="form-group">
+              <label>Ambiente</label>
+              <div class="env-toggle-group">
+                <button type="button" class="env-btn" [class.env-btn--active]="!form.isSandbox"
+                        (click)="form.isSandbox = false">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="14">
+                    <path fill-rule="evenodd" d="M10 1a9 9 0 100 18A9 9 0 0010 1zm0 2a7 7 0 110 14A7 7 0 0110 3zm0 3a1 1 0 00-1 1v3.586l-2.707 2.707a1 1 0 101.414 1.414L10 11.414l2.293 2.293a1 1 0 001.414-1.414L11 9.586V7a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                  </svg>
+                  Producción
+                </button>
+                <button type="button" class="env-btn" [class.env-btn--sandbox]="form.isSandbox" [class.env-btn--active-sandbox]="form.isSandbox"
+                        (click)="form.isSandbox = true">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="14">
+                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                  </svg>
+                  Sandbox (Pruebas)
+                </button>
+              </div>
+              @if (form.isSandbox) {
+                <p class="env-hint">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="12"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                  Los documentos (facturas, nómina, POS) se generan normalmente pero <strong>no se transmiten a la DIAN</strong>.
+                </p>
+              }
+            </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
@@ -515,10 +561,26 @@ const EMPTY_FORM = () => ({
                 <span class="detail-val">{{ detailCompany()!._count?.invoices ?? 0 }}</span>
               </div>
               <div class="detail-item">
+                <span class="detail-label">Ambiente</span>
+                <span class="detail-val">
+                  @if (detailCompany()!.isSandbox) {
+                    <span class="badge badge-sandbox">SANDBOX — Pruebas</span>
+                  } @else {
+                    <span class="badge badge-success">Producción</span>
+                  }
+                </span>
+              </div>
+              <div class="detail-item">
                 <span class="detail-label">Registro</span>
                 <span class="detail-val">{{ detailCompany()!.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
               </div>
             </div>
+            @if (detailCompany()!.isSandbox) {
+              <div class="sandbox-notice">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                <span>Esta empresa opera en <strong>modo sandbox</strong>. Los documentos electrónicos no se transmiten a la DIAN.</span>
+              </div>
+            }
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeModal()">Cerrar</button>
@@ -1007,6 +1069,70 @@ const EMPTY_FORM = () => ({
       .co-card-actions { gap:4px; }
       .btn-ghost-sm { padding:4px 8px; font-size:11px; }
     }
+
+    /* ── Sandbox styles ──────────────────────────────────── */
+    .badge-sandbox {
+      background:#fdf4e7; color:#b45309;
+      border:1px solid #fde68a;
+      font-weight:700; letter-spacing:.04em;
+    }
+    .badge-sandbox--xs { font-size:9px; padding:1px 6px; margin-left:5px; vertical-align:middle; }
+
+    /* Avatar con gradiente naranja para sandbox */
+    .co-avatar--sandbox {
+      background: linear-gradient(135deg, #f59e0b, #ef4444) !important;
+    }
+    .co-grid-avatar--sandbox {
+      background: linear-gradient(135deg, #f59e0b, #ef4444) !important;
+    }
+
+    /* Card sandbox tint */
+    .co-grid-card--sandbox {
+      border-color: #fde68a;
+      background: #fffdf5;
+    }
+    .cc-sandbox-badge {
+      position: absolute; top: 32px; right: 12px;
+      font-size: 9px; padding: 1px 6px;
+    }
+
+    /* Aviso sandbox en detalle */
+    .sandbox-notice {
+      display: flex; align-items: flex-start; gap: 8px;
+      background: #fffbeb; border: 1px solid #fde68a;
+      border-radius: 9px; padding: 10px 14px;
+      font-size: 12.5px; color: #92400e;
+      margin-top: 14px;
+    }
+    .sandbox-notice svg { flex-shrink:0; margin-top:1px; color:#f59e0b; }
+    .sandbox-notice strong { color:#78350f; }
+
+    /* Toggle ambiente en modal crear/editar */
+    .env-toggle-group {
+      display: flex; gap: 0; border: 1px solid #dce6f0;
+      border-radius: 9px; overflow: hidden;
+    }
+    .env-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      gap: 6px; padding: 9px 14px; font-size: 13px; font-weight: 600;
+      border: none; background: #f8fafc; color: #64748b;
+      cursor: pointer; transition: all .15s;
+    }
+    .env-btn:first-child { border-right: 1px solid #dce6f0; }
+    .env-btn--active {
+      background: #1a407e; color: #fff;
+    }
+    .env-btn--active-sandbox {
+      background: #f59e0b; color: #fff;
+    }
+    .env-hint {
+      display: flex; align-items: flex-start; gap: 6px;
+      font-size: 11.5px; color: #92400e;
+      background: #fffbeb; border: 1px solid #fde68a;
+      border-radius: 7px; padding: 7px 10px;
+      margin: 6px 0 0; line-height: 1.5;
+    }
+    .env-hint svg { flex-shrink:0; margin-top:1px; color:#f59e0b; }
   `]
 })
 export class SaCompaniesComponent implements OnInit {
@@ -1043,6 +1169,7 @@ export class SaCompaniesComponent implements OnInit {
   editingId = '';
   search = '';
   filterStatus = '';
+  filterSandbox = '';
   selectedPlanId = '';
   private searchTimer: any;
 
@@ -1055,6 +1182,8 @@ export class SaCompaniesComponent implements OnInit {
     const params: any = { page: this.page(), limit: 20 };
     if (this.search) params.search = this.search;
     if (this.filterStatus) params.status = this.filterStatus;
+    if (this.filterSandbox === 'sandbox') params.isSandbox = 'true';
+    if (this.filterSandbox === 'production') params.isSandbox = 'false';
     this.http.get<any>(`${this.API}/companies`, { params }).subscribe({
       next: r => {
         this.companies.set(r.data ?? r);
@@ -1092,6 +1221,7 @@ export class SaCompaniesComponent implements OnInit {
       name: c.name, nit: c.nit, razonSocial: c.razonSocial ?? '',
       email: c.email, phone: c.phone ?? '', address: c.address ?? '',
       city: c.city ?? '', department: c.department ?? '', planId: '',
+      isSandbox: c.isSandbox ?? false,
     };
     this.modal.set('edit');
   }
