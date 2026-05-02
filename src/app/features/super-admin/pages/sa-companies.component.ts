@@ -1279,14 +1279,14 @@ export class SaCompaniesComponent implements OnInit {
   }
 
   suspend(c: Company) {
-    this.http.post(`${this.API}/companies/${c.id}/suspend`, {}).subscribe({
+    this.http.patch(`${this.API}/companies/${c.id}/suspend`, {}).subscribe({
       next: () => { this.notify.success('Empresa suspendida'); this.load(); },
       error: e => this.notify.error(e?.error?.message ?? 'Error'),
     });
   }
 
   activate(c: Company) {
-    this.http.post(`${this.API}/companies/${c.id}/activate`, {}).subscribe({
+    this.http.patch(`${this.API}/companies/${c.id}/activate`, {}).subscribe({
       next: () => { this.notify.success('Empresa activada'); this.load(); },
       error: e => this.notify.error(e?.error?.message ?? 'Error'),
     });
