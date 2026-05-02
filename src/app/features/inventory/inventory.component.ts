@@ -1021,11 +1021,16 @@ interface UnitMeasure { name: string; usage: string; }
       .alert-link { margin-left:0; }
       .drawer-footer { flex-direction:column; }
       .drawer-footer .btn { width:100%; justify-content:center; }
+      /* Touch-friendly */
+      .btn { min-height:44px; }
+      .btn-sm { min-height:38px; }
     }
     @media (max-width: 400px) {
       .product-grid { grid-template-columns:1fr; }
       .form-row { grid-template-columns:1fr; }
       .form-row .fg-2 { grid-column:1; }
+      .dw-dates-row { grid-template-columns:1fr; }
+      .filters-bar { flex-direction:column; align-items:stretch; }
     }
   `]
 })

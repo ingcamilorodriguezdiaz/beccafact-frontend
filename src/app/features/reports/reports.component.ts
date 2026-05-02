@@ -1654,10 +1654,18 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
       .summary-row { grid-template-columns: 1fr 1fr; }
       .report-tabs { gap: 2px; }
       .tab-btn { padding: 7px 10px; font-size: 12.5px; }
+      /* Tabla con scroll horizontal en móvil */
+      .report-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .report-table { min-width: 520px; }
+      /* Inputs touch-friendly */
+      .filter-input, .btn-consultar { min-height: 44px; }
+      .btn-excel, .btn-pdf { min-height: 38px; }
     }
     @media (max-width: 480px) {
       .kpi-grid { grid-template-columns: 1fr 1fr !important; }
       .summary-row { grid-template-columns: 1fr 1fr; }
+      .report-tabs { flex-wrap: wrap; }
+      .tab-btn { flex: 1 1 auto; justify-content: center; }
     }
 
     /* ── Print styles ──────────────────────────────────────────────── */

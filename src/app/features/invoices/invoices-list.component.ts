@@ -3752,6 +3752,19 @@ interface InvoiceExternalIntake {
     .form-row { display:grid; grid-template-columns:1fr auto auto; gap:12px; margin-bottom:12px; }
     .form-label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:5px; }
     .modal-box { background:#fff; border-radius:16px; width:100%; max-height:90vh; display:flex; flex-direction:column; }
+
+    /* Scroll horizontal tabla de notas débito/crédito en móvil */
+    @media (max-width: 600px) {
+      .note-line { grid-template-columns:1fr 70px 90px 60px 28px; gap:4px; }
+      .invoice-collection-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width: 480px) {
+      .note-line { grid-template-columns:1fr 60px 80px 28px; }
+      .table-shell { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      /* Touch-friendly */
+      .btn { min-height:44px; }
+      .btn-sm { min-height:38px; }
+    }
   `]
 })
 export class InvoicesListComponent implements OnInit {

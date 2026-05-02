@@ -4646,6 +4646,22 @@ interface QueuedPosSalePayload {
       .config-summary-grid, .config-form-grid { grid-template-columns:1fr; }
       .denomination-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
       .config-section__header, .config-card-item { flex-direction:column; align-items:stretch; }
+      /* Tabla de historial con scroll horizontal */
+      .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .data-table  { min-width:520px; }
+      /* Modales a pantalla completa en móvil */
+      .modal-overlay { align-items:flex-end; padding:0; }
+      .modal { border-radius:20px 20px 0 0; max-height:95dvh; max-width:100%; }
+      .modal-footer { flex-direction:column-reverse; gap:8px; }
+      .modal-footer .sb-btn { width:100%; justify-content:center; }
+      /* Touch-friendly */
+      .sb-btn { min-height:44px; }
+    }
+    @media (max-width: 480px) {
+      .products-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+      .sb-stats { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+      .pm-grid { grid-template-columns:1fr; }
+      .denomination-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
     }
   `],
 })

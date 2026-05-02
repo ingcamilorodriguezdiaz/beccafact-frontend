@@ -1334,7 +1334,7 @@ import { environment } from '../../../environments/environment';
       }
 
       .db__stats {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
       .db__plan-top,
@@ -1353,6 +1353,16 @@ import { environment } from '../../../environments/environment';
         padding: 18px;
         border-radius: 20px;
       }
+
+      /* Tablas con scroll horizontal */
+      .db__table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .db__table      { min-width: 480px; }
+    }
+
+    @media (max-width: 480px) {
+      .db__stats { grid-template-columns: 1fr; }
+      .db__hero { padding: 18px; border-radius: 20px; }
+      .db__hero-actions { grid-template-columns: 1fr; }
     }
   `],
 })

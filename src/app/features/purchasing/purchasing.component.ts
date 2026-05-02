@@ -4190,8 +4190,15 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
       .detail-grid { grid-template-columns:1fr; }
       .line-row { grid-template-columns:1fr; }
       .customer-grid, .orders-grid { grid-template-columns:repeat(2, 1fr); gap:8px; }
+      /* Touch-friendly */
+      .btn { min-height:44px; }
+      .btn-sm { min-height:38px; }
     }
-    @media (max-width: 400px) { .customer-grid, .orders-grid { grid-template-columns:1fr; } }
+    @media (max-width: 400px) {
+      .customer-grid, .orders-grid { grid-template-columns:1fr; }
+      .filters-bar { flex-direction:column; align-items:stretch; }
+      .search-wrap { max-width:100%; flex:1 1 100%; }
+    }
   `]
 })
 export class PurchasingComponent implements OnInit {

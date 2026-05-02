@@ -924,8 +924,14 @@ interface Country { code: string; name: string; }
       .form-row { grid-template-columns:1fr; }
       .pagination { flex-direction:column; gap:8px; align-items:center; }
       .customer-grid { grid-template-columns:repeat(2, 1fr); gap:8px; }
+      /* Touch-friendly */
+      .btn { min-height:44px; }
+      .btn-sm { min-height:38px; }
     }
-    @media (max-width: 400px) { .customer-grid { grid-template-columns:1fr; } }
+    @media (max-width: 400px) {
+      .customer-grid { grid-template-columns:1fr; }
+      .filters-bar { flex-direction:column; align-items:stretch; }
+    }
   `]
 })
 export class CustomersComponent implements OnInit {

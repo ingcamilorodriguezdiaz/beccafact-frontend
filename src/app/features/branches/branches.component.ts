@@ -1034,6 +1034,18 @@ interface CompanyUser {
       .brf-transfer-body   { grid-template-columns:1fr; }
       .brf-table           { min-width:560px; }
       .brf-table-card      { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      /* Touch-friendly */
+      .brf-btn { min-height:44px; }
+      .brf-btn-sm { min-height:38px; }
+      /* Toolbar en columna */
+      .brf-toolbar { flex-direction:column; align-items:stretch; }
+      .brf-search-wrap { max-width:100%; }
+    }
+    @media (max-width: 480px) {
+      .brf-page-header .brf-btn { width:100%; justify-content:center; }
+      .brf-grid { grid-template-columns:1fr; }
+      .brf-tabs { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .brf-tab  { flex-shrink:0; }
     }
   `]
 })

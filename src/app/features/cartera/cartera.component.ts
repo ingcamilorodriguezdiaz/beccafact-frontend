@@ -2334,7 +2334,25 @@ interface AdjustmentForm {
       .ct-card__dates { grid-template-columns:1fr; }
       .form-row-2 { grid-template-columns:1fr; }
       .modal-overlay { align-items:flex-end; padding:0; }
-      .modal { border-radius:20px 20px 0 0; max-height:95dvh; }
+      .modal { border-radius:20px 20px 0 0; max-height:95dvh; max-width:100%; }
+      /* Tabla con scroll horizontal */
+      .table-card { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .data-table  { min-width:560px; }
+      /* Drawer a pantalla completa */
+      .drawer-overlay { align-items:flex-end; justify-content:stretch; }
+      .drawer { width:100%; height:92dvh; border-radius:22px 22px 0 0; }
+      /* Footer del modal en columna */
+      .modal-footer { flex-direction:column-reverse; gap:8px; }
+      .modal-footer .btn { width:100%; justify-content:center; }
+      /* Botones touch-friendly */
+      .btn { min-height:44px; }
+      .btn--sm { min-height:38px; }
+    }
+    @media (max-width:480px) {
+      .ct__cliente-kpis { grid-template-columns:1fr; }
+      .ct__aging-summary { grid-template-columns:1fr; }
+      .page-header__actions { flex-direction:column; align-items:stretch; }
+      .page-header__actions .btn { width:100%; justify-content:center; }
     }
   `],
 })

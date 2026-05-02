@@ -2810,6 +2810,13 @@ interface QuoteApprovalPolicy {
       .master-row__actions { width:100%; }
       .master-row__actions .btn { flex:1; justify-content:center; }
       .pagination { flex-direction:column; gap:8px; align-items:center; }
+      /* Touch-friendly */
+      .btn { min-height:44px; }
+    }
+    @media (max-width:400px) {
+      .line-fields, .line-fields--template { grid-template-columns:1fr; }
+      .page-header { flex-direction:column; align-items:stretch; gap:10px; }
+      .page-header .btn { width:100%; justify-content:center; }
     }
   `]
 })

@@ -381,10 +381,31 @@ type SettingsNavItem = {
 
       .settings-link {
         grid-template-columns:auto minmax(0, 1fr);
+        /* Touch-friendly */
+        min-height:60px;
       }
 
       .settings-link-kicker {
         display:none;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .settings-hero {
+        padding:16px;
+        border-radius:18px;
+      }
+
+      .hero-copy h1 {
+        font-size:24px;
+      }
+
+      .hero-copy p {
+        font-size:13px;
+      }
+
+      .settings-sidebar {
+        border-radius:18px;
       }
     }
   `],

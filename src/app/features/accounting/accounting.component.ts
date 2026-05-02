@@ -4062,6 +4062,18 @@ const LEVEL_LABELS: Record<number, string> = {
       .pagination { flex-direction:column; gap:8px; align-items:center; }
       .balance-indicator { flex-direction:column; align-items:flex-start; gap:8px; }
       .balance-status { margin-left:0; }
+      /* Touch-friendly */
+      .btn { min-height:44px; }
+      .btn-sm { min-height:38px; }
+      /* Drawer a pantalla completa */
+      .drawer-overlay { align-items:flex-end; justify-content:stretch; }
+      .drawer { width:100%; height:92dvh; border-radius:22px 22px 0 0; }
+    }
+    @media (max-width: 480px) {
+      .hero-mini-grid { grid-template-columns:1fr; }
+      .panel-card__header { gap:8px; }
+      .filters-bar { flex-direction:column; align-items:stretch; }
+      .search-wrap { max-width:100%; flex:1 1 100%; }
     }
   `]
 })

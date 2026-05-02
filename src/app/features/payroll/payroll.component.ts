@@ -4219,6 +4219,17 @@ type ViewMode  = 'table' | 'grid';
       .modal-footer { flex-direction:column-reverse; gap:8px; }
       .modal-footer .btn { width:100%; justify-content:center; }
       .form-row-2 { grid-template-columns:1fr; }
+      /* Drawer a pantalla completa en móvil */
+      .drawer-overlay { align-items:flex-end; justify-content:stretch; }
+      .drawer { width:100%; max-width:100%; height:92dvh; border-radius:22px 22px 0 0; }
+      /* Footer del drawer en columna */
+      .drawer-footer { flex-direction:column; gap:8px; }
+      .drawer-footer .btn { width:100%; justify-content:center; }
+      /* Botones touch-friendly */
+      .btn { min-height:44px; }
+      .btn--sm { min-height:38px; }
+      /* Form grid nómina en columna */
+      .form-grid { grid-template-columns:1fr !important; }
     }
 
     @media (max-width: 400px) {

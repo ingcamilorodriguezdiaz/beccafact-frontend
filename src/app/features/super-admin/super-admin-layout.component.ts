@@ -834,6 +834,27 @@ interface SANavItem {
       .sa-content { padding:12px; }
       .sa-hero { margin:12px 12px 0; }
     }
+
+    /* ── Scroll horizontal de tablas en móvil ── */
+    @media (max-width: 768px) {
+      .sa-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .sa-table      { min-width:520px; }
+      /* Touch-friendly */
+      .sa-btn { min-height:44px; }
+      .sa-btn--sm { min-height:38px; }
+      /* Filtros en columna */
+      .sa-filters { flex-direction:column; align-items:stretch; gap:10px; }
+      .sa-search-wrap { max-width:100%; width:100%; }
+    }
+
+    @media (max-width: 640px) {
+      /* Overlay */
+      .sa-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:199; }
+      /* Cards de stats en 2 columnas */
+      .sa-stats-grid { grid-template-columns:repeat(2, minmax(0,1fr)) !important; }
+      .sa-content-shell { padding:14px; border-radius:18px; }
+      .sa-hero-stats { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    }
   `],
 })
 export class SuperAdminLayoutComponent {
