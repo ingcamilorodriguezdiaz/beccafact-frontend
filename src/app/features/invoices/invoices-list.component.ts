@@ -1,6 +1,8 @@
-import { Component, HostListener, signal, OnInit } from '@angular/core';
+import { Component, HostListener, signal, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { NotificationService } from '../../core/services/notification.service';
 import { environment } from '../../../environments/environment';
@@ -500,7 +502,7 @@ interface InvoiceExternalIntake {
 @Component({
   selector: 'app-invoices-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   template: `
     <div class="page animate-in">
 
@@ -1454,6 +1456,13 @@ interface InvoiceExternalIntake {
                       (click)="openNoteModal(detailInvoice()!, 'debit')">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
                 Nota Débito
+              </button>
+            }
+            @if (detailInvoice()!.status !== 'CANCELLED' && detailInvoice()!.type === 'VENTA') {
+              <button class="btn btn-outline btn-sm" style="border-color:#0369a1;color:#0369a1"
+                      (click)="goToCartera(detailInvoice()!.id)">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h2a1 1 0 010 2H5a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                Ver en Cartera
               </button>
             }
           </div>
@@ -3915,6 +3924,8 @@ export class InvoicesListComponent implements OnInit {
     { label:'Pagadas',         value:'0'  },
   ];
 
+  private router = inject(Router);
+
   constructor(
     private http: HttpClient,
     private notify: NotificationService,
@@ -3929,6 +3940,10 @@ export class InvoicesListComponent implements OnInit {
     this.loadDocumentConfigs();
     this.loadBranches();
     this.loadPosTerminals();
+  }
+
+  goToCartera(invoiceId: string) {
+    this.router.navigate(['/cartera'], { queryParams: { invoiceId } });
   }
 
   loadCompanyPrefix() {

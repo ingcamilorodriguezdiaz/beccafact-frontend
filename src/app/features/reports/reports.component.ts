@@ -164,7 +164,48 @@ const BADGE_MAP: Record<string, BadgeConfig> = {
   OVER_90:        { label: '+90 días',      cssClass: 'badge-red'    },
 };
 
-type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
+type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections' | 'purchasing' | 'inventory';
+
+interface PurchasingReport {
+  summary: {
+    count: number;
+    totalAmount: number;
+    pendingCount: number;
+    approvedCount: number;
+  };
+  items: Array<{
+    id: string;
+    number: string;
+    issueDate: string;
+    supplierName: string;
+    supplierDocument: string;
+    status: string;
+    subtotal: number;
+    taxes: number;
+    total: number;
+  }>;
+}
+
+interface InventoryReport {
+  summary: {
+    totalProducts: number;
+    totalValue: number;
+    lowStockCount: number;
+    outOfStockCount: number;
+  };
+  items: Array<{
+    id: string;
+    sku: string;
+    name: string;
+    category: string;
+    stock: number;
+    minStock: number;
+    cost: number;
+    price: number;
+    stockValue: number;
+    status: string;
+  }>;
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -257,6 +298,19 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z"/>
           </svg>
           Cartera
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'purchasing'" (click)="setTab('purchasing')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+            <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z"/>
+          </svg>
+          Compras
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'inventory'" (click)="setTab('inventory')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+            <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>
+            <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+          </svg>
+          Inventario
         </button>
       </div>
       </div>
@@ -1188,6 +1242,192 @@ type TabId = 'dashboard' | 'invoices' | 'payroll' | 'pos' | 'collections';
         </div>
       }
 
+      <!-- ════════════════════════════════════════════════════════════ -->
+      <!-- TAB: COMPRAS (PURCHASING)                                   -->
+      <!-- ════════════════════════════════════════════════════════════ -->
+      @if (activeTab() === 'purchasing') {
+        <div class="tab-content">
+          <div class="report-filters">
+            <div class="filter-group">
+              <label>Desde</label>
+              <input type="date" class="filter-input"
+                     [value]="purchasingFromVal"
+                     (change)="purchasingFromVal = $any($event.target).value; purchasingFrom.set(purchasingFromVal)"/>
+            </div>
+            <div class="filter-group">
+              <label>Hasta</label>
+              <input type="date" class="filter-input"
+                     [value]="purchasingToVal"
+                     (change)="purchasingToVal = $any($event.target).value; purchasingTo.set(purchasingToVal)"/>
+            </div>
+            <div class="export-btns">
+              <button class="btn-consultar" [disabled]="purchasingLoading()" (click)="loadPurchasing()">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
+                {{ purchasingLoading() ? 'Cargando...' : 'Consultar' }}
+              </button>
+              <button class="btn-excel" (click)="downloadXlsx('purchasing')"
+                      [disabled]="purchasingDownloading() || !purchasingData()" [class.loading]="purchasingDownloading()">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/></svg>
+                {{ purchasingDownloading() ? 'Descargando...' : 'Excel' }}
+              </button>
+            </div>
+          </div>
+
+          @if (purchasingData()) {
+            <div class="summary-row" style="margin-bottom:16px">
+              <div class="summary-mini-card smc-primary">
+                <div class="smc-value">{{ purchasingData()!.summary.count }}</div>
+                <div class="smc-label">Facturas de compra</div>
+              </div>
+              <div class="summary-mini-card smc-accent">
+                <div class="smc-value">{{ fmtCOP(purchasingData()!.summary.totalAmount) }}</div>
+                <div class="smc-label">Total compras</div>
+              </div>
+              <div class="summary-mini-card smc-yellow">
+                <div class="smc-value">{{ purchasingData()!.summary.pendingCount }}</div>
+                <div class="smc-label">Pendientes de pago</div>
+              </div>
+              <div class="summary-mini-card smc-green">
+                <div class="smc-value">{{ purchasingData()!.summary.approvedCount }}</div>
+                <div class="smc-label">Aprobadas</div>
+              </div>
+            </div>
+
+            <div class="report-table-wrap">
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th>Número</th>
+                    <th>Proveedor</th>
+                    <th>Documento</th>
+                    <th>Fecha</th>
+                    <th>Subtotal</th>
+                    <th>IVA</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of purchasingData()!.items; track item.id) {
+                    <tr>
+                      <td><strong>{{ item.number }}</strong></td>
+                      <td>{{ item.supplierName }}</td>
+                      <td class="text-muted">{{ item.supplierDocument }}</td>
+                      <td>{{ fmtDate(item.issueDate) }}</td>
+                      <td>{{ fmtCOP(item.subtotal) }}</td>
+                      <td>{{ fmtCOP(item.taxes) }}</td>
+                      <td><strong>{{ fmtCOP(item.total) }}</strong></td>
+                      <td><span class="badge" [class]="badge(item.status).cssClass">{{ badge(item.status).label }}</span></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          @if (!purchasingLoading() && !purchasingData()) {
+            <div class="empty-state empty-state-idle">
+              <svg viewBox="0 0 48 48" fill="none" width="48" height="48">
+                <circle cx="24" cy="24" r="20" stroke="#dce6f0" stroke-width="2"/>
+                <path d="M16 28h4l4-8 4 12 4-8h4" stroke="#7ea3cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <p>Selecciona el rango de fechas y haz clic en <strong>Consultar</strong>.</p>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ════════════════════════════════════════════════════════════ -->
+      <!-- TAB: INVENTARIO                                             -->
+      <!-- ════════════════════════════════════════════════════════════ -->
+      @if (activeTab() === 'inventory') {
+        <div class="tab-content">
+          <div class="report-filters">
+            <div class="filter-group">
+              <label>Buscar producto</label>
+              <input type="text" class="filter-input" placeholder="Nombre o SKU..."
+                     [value]="inventorySearchVal"
+                     (input)="inventorySearchVal = $any($event.target).value; inventorySearch.set(inventorySearchVal)"/>
+            </div>
+            <div class="export-btns">
+              <button class="btn-consultar" [disabled]="inventoryLoading()" (click)="loadInventory()">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/></svg>
+                {{ inventoryLoading() ? 'Cargando...' : 'Consultar' }}
+              </button>
+              <button class="btn-excel" (click)="downloadXlsx('inventory')"
+                      [disabled]="inventoryDownloading() || !inventoryData()" [class.loading]="inventoryDownloading()">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/></svg>
+                {{ inventoryDownloading() ? 'Descargando...' : 'Excel' }}
+              </button>
+            </div>
+          </div>
+
+          @if (inventoryData()) {
+            <div class="summary-row" style="margin-bottom:16px">
+              <div class="summary-mini-card smc-primary">
+                <div class="smc-value">{{ inventoryData()!.summary.totalProducts }}</div>
+                <div class="smc-label">Total productos</div>
+              </div>
+              <div class="summary-mini-card smc-accent">
+                <div class="smc-value">{{ fmtCOP(inventoryData()!.summary.totalValue) }}</div>
+                <div class="smc-label">Valor total inventario</div>
+              </div>
+              <div class="summary-mini-card smc-yellow">
+                <div class="smc-value">{{ inventoryData()!.summary.lowStockCount }}</div>
+                <div class="smc-label">Stock bajo</div>
+              </div>
+              <div class="summary-mini-card smc-red">
+                <div class="smc-value">{{ inventoryData()!.summary.outOfStockCount }}</div>
+                <div class="smc-label">Sin stock</div>
+              </div>
+            </div>
+
+            <div class="report-table-wrap">
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th>SKU</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Stock</th>
+                    <th>Stock mín.</th>
+                    <th>Costo</th>
+                    <th>Precio</th>
+                    <th>Valor stock</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of inventoryData()!.items; track item.id) {
+                    <tr [class.table-row-warn]="item.stock <= item.minStock && item.status === 'ACTIVE'">
+                      <td><code style="font-size:12px;background:#f3f4f6;padding:2px 6px;border-radius:4px">{{ item.sku }}</code></td>
+                      <td><strong>{{ item.name }}</strong></td>
+                      <td class="text-muted">{{ item.category || '—' }}</td>
+                      <td [class.text-danger]="item.stock <= item.minStock">{{ item.stock }}</td>
+                      <td class="text-muted">{{ item.minStock }}</td>
+                      <td>{{ fmtCOP(item.cost) }}</td>
+                      <td>{{ fmtCOP(item.price) }}</td>
+                      <td><strong>{{ fmtCOP(item.stockValue) }}</strong></td>
+                      <td><span class="badge" [class]="badge(item.status).cssClass">{{ badge(item.status).label }}</span></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          @if (!inventoryLoading() && !inventoryData()) {
+            <div class="empty-state empty-state-idle">
+              <svg viewBox="0 0 48 48" fill="none" width="48" height="48">
+                <circle cx="24" cy="24" r="20" stroke="#dce6f0" stroke-width="2"/>
+                <path d="M14 16h20M14 22h14M14 28h10" stroke="#7ea3cc" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <p>Haz clic en <strong>Consultar</strong> para ver el reporte de stock y valorización.</p>
+            </div>
+          }
+        </div>
+      }
+
     </div>
   `,
   styles: [`
@@ -1797,6 +2037,22 @@ export class ReportsComponent implements OnInit {
 
   collectionsAsOfVal = this.today();
 
+  // ── Purchasing state ─────────────────────────────────────────────────
+  purchasingData = signal<PurchasingReport | null>(null);
+  purchasingLoading = signal(false);
+  purchasingDownloading = signal(false);
+  purchasingFrom = signal(this.firstDayOfMonth());
+  purchasingTo = signal(this.today());
+  purchasingFromVal = this.firstDayOfMonth();
+  purchasingToVal = this.today();
+
+  // ── Inventory state ──────────────────────────────────────────────────
+  inventoryData = signal<InventoryReport | null>(null);
+  inventoryLoading = signal(false);
+  inventoryDownloading = signal(false);
+  inventorySearch = signal('');
+  inventorySearchVal = '';
+
   // ── Lifecycle ────────────────────────────────────────────────────────
 
   ngOnInit(): void {
@@ -1816,6 +2072,10 @@ export class ReportsComponent implements OnInit {
       this.loadPos();
     } else if (tab === 'collections' && !this.collectionsData()) {
       this.loadCollections();
+    } else if (tab === 'purchasing' && !this.purchasingData()) {
+      this.loadPurchasing();
+    } else if (tab === 'inventory' && !this.inventoryData()) {
+      this.loadInventory();
     }
   }
 
@@ -1974,6 +2234,27 @@ export class ReportsComponent implements OnInit {
       });
   }
 
+  loadPurchasing(): void {
+    this.purchasingLoading.set(true);
+    const params = new URLSearchParams();
+    params.set('from', this.purchasingFrom());
+    params.set('to', this.purchasingTo());
+    this.http.get<PurchasingReport>(`${this.API}/purchasing?${params.toString()}`).subscribe({
+      next: (r) => { this.purchasingData.set(r); this.purchasingLoading.set(false); this.cdr.markForCheck(); },
+      error: () => { this.purchasingLoading.set(false); this.cdr.markForCheck(); },
+    });
+  }
+
+  loadInventory(): void {
+    this.inventoryLoading.set(true);
+    const params = new URLSearchParams();
+    if (this.inventorySearch()) params.set('search', this.inventorySearch());
+    this.http.get<InventoryReport>(`${this.API}/inventory?${params.toString()}`).subscribe({
+      next: (r) => { this.inventoryData.set(r); this.inventoryLoading.set(false); this.cdr.markForCheck(); },
+      error: () => { this.inventoryLoading.set(false); this.cdr.markForCheck(); },
+    });
+  }
+
   // ── Export actions ───────────────────────────────────────────────────
 
   downloadXlsx(type: string): void {
@@ -1982,6 +2263,8 @@ export class ReportsComponent implements OnInit {
       : type === 'payroll' ? this.payrollDownloading
       : type === 'pos' ? this.posDownloading
       : type === 'collections/detail' ? this.collectionsDownloading
+      : type === 'purchasing' ? this.purchasingDownloading
+      : type === 'inventory' ? this.inventoryDownloading
       : this.dashboardDownloading;
 
     loadingSignal.set(true);
@@ -2000,6 +2283,11 @@ export class ReportsComponent implements OnInit {
       params.set('to', this.posTo());
     } else if (type === 'collections/detail') {
       params.set('asOf', this.collectionsAsOf());
+    } else if (type === 'purchasing') {
+      params.set('from', this.purchasingFrom());
+      params.set('to', this.purchasingTo());
+    } else if (type === 'inventory') {
+      if (this.inventorySearch()) params.set('search', this.inventorySearch());
     } else if (type === 'dashboard') {
       params.set('year', String(this.selectedYear));
       params.set('month', String(this.selectedMonth));
@@ -2068,6 +2356,8 @@ export class ReportsComponent implements OnInit {
       payroll: 'Reporte de nómina',
       pos: 'Reporte de POS',
       collections: 'Reporte de cartera',
+      purchasing: 'Reporte de compras',
+      inventory: 'Reporte de inventario',
     } as Record<TabId, string>)[this.activeTab()];
   }
 
@@ -2078,6 +2368,8 @@ export class ReportsComponent implements OnInit {
       payroll: 'Revisa liquidaciones, netos, devengados y deducciones con una vista más clara y accionable.',
       pos: 'Monitorea sesiones, ventas de caja y desempeño operativo del punto de venta.',
       collections: 'Analiza vencimientos, saldos pendientes y concentración de cartera por cliente.',
+      purchasing: 'Revisa facturas de compra, proveedores y totales de adquisición por período.',
+      inventory: 'Consulta stock actual, valorización y alertas de productos por debajo del mínimo.',
     } as Record<TabId, string>)[this.activeTab()];
   }
 
@@ -2088,6 +2380,8 @@ export class ReportsComponent implements OnInit {
       payroll: 'Control laboral',
       pos: 'Operacion retail',
       collections: 'Seguimiento de recaudo',
+      purchasing: 'Gestión de proveedores',
+      inventory: 'Stock y valorización',
     } as Record<TabId, string>)[this.activeTab()];
   }
 
@@ -2098,6 +2392,8 @@ export class ReportsComponent implements OnInit {
       payroll: 'Neto visible',
       pos: 'Ventas visibles',
       collections: 'Saldo visible',
+      purchasing: 'Total compras',
+      inventory: 'Valor inventario',
     } as Record<TabId, string>)[this.activeTab()];
   }
 
@@ -2111,6 +2407,10 @@ export class ReportsComponent implements OnInit {
         return this.posData() ? this.fmtCOP(this.posData()!.summary.totalSales) : '—';
       case 'collections':
         return this.collectionsData() ? this.fmtCOP(this.collectionsData()!.summary.totalBalance) : '—';
+      case 'purchasing':
+        return this.purchasingData() ? this.fmtCOP(this.purchasingData()!.summary.totalAmount) : '—';
+      case 'inventory':
+        return this.inventoryData() ? this.fmtCOP(this.inventoryData()!.summary.totalValue) : '—';
       default:
         return this.fmtCOP(this.kpi()?.revenue?.current ?? 0);
     }
@@ -2126,6 +2426,10 @@ export class ReportsComponent implements OnInit {
         return `${this.posData()?.summary.transactions ?? 0} transacciones registradas`;
       case 'collections':
         return `${this.collectionsData()?.items.length ?? 0} documentos con saldo`;
+      case 'purchasing':
+        return `${this.purchasingData()?.summary.count ?? 0} facturas de compra`;
+      case 'inventory':
+        return `${this.inventoryData()?.summary.totalProducts ?? 0} productos en catálogo`;
       default:
         return `${this.kpi()?.invoices?.current ?? 0} facturas durante ${this.monthName(this.selectedMonth)}`;
     }

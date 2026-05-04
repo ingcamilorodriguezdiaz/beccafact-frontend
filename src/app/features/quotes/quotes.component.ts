@@ -1,6 +1,8 @@
-import { Component, HostListener, signal, computed, OnInit } from '@angular/core';
+import { Component, HostListener, signal, computed, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ConfirmDialogComponent, ConfirmDialogService } from '../../core/confirm-dialog/confirm-dialog.component';
@@ -287,7 +289,7 @@ interface QuoteApprovalPolicy {
 @Component({
   selector: 'app-quotes',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, RouterModule, ConfirmDialogComponent],
   template: `
     <div class="page animate-in">
 
@@ -2965,6 +2967,7 @@ export class QuotesComponent implements OnInit {
   quoteAuditTrail = signal<QuoteAuditEntry[]>([]);
   quoteIntegrationSummary = signal<QuoteIntegrationSummary | null>(null);
   private objectUrl: string | null = null;
+  private router = inject(Router);
 
   constructor(
     private http: HttpClient,
@@ -4017,8 +4020,10 @@ export class QuotesComponent implements OnInit {
         if (this.detailQuote()?.id === q.id) {
           this.detailQuote.set(null);
         }
-        this.notify.success(`Cotización ${q.number} convertida a factura ${invoice.invoiceNumber ?? invoice.id}`);
+        this.notify.success(`Cotización ${q.number} convertida a factura ${invoice.invoiceNumber ?? invoice.id}. Redirigiendo a Facturación...`);
         this.load();
+        // Navega a facturación para ver la factura recién creada
+        setTimeout(() => this.router.navigate(['/invoices']), 1500);
       },
       error: (e) => {
         this.saving.set(false);

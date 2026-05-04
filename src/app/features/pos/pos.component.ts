@@ -8,6 +8,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subject, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { RouterModule } from '@angular/router';
+import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -58,7 +60,7 @@ interface QueuedPosSalePayload {
   selector: 'app-pos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, RouterModule, ConfirmDialogComponent],
   template: `
 <div #posRoot class="pos-root" [class.pos-root--fullscreen]="isFullscreen()">
 
@@ -2644,6 +2646,16 @@ interface QueuedPosSalePayload {
               Generar factura
             </button>
           }
+          @if (completedSale()!.invoiceId || generatedInvoiceId()) {
+            <button class="sa-btn" (click)="goToCarteraFromInvoice(completedSale()!.invoiceId || generatedInvoiceId()!)">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path d="M0 4a2 2 0 012-2h12a2 2 0 012 2v1H0V4zm0 3h16v5a2 2 0 01-2 2H2a2 2 0 01-2-2V7z"/></svg>
+              Ver en Cartera
+            </button>
+            <button class="sa-btn" (click)="goToInvoices()">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="13"><path fill-rule="evenodd" d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4.414A2 2 0 0013.414 3L11 .586A2 2 0 009.586 0H4zm1 4a.5.5 0 000 1h6a.5.5 0 000-1H5zm-.5 2.5A.5.5 0 015 6h6a.5.5 0 010 1H5a.5.5 0 01-.5-.5zm0 2A.5.5 0 015 8h6a.5.5 0 010 1H5a.5.5 0 01-.5-.5z" clip-rule="evenodd"/></svg>
+              Ver Factura
+            </button>
+          }
           <button class="sa-btn-primary" (click)="dismissSuccessOverlay()">
             <svg viewBox="0 0 16 16" fill="currentColor" width="14" aria-hidden="true"><path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z"/></svg>
             Nueva venta
@@ -4673,6 +4685,7 @@ export class PosComponent implements OnInit, OnDestroy {
   private dialog = inject(ConfirmDialogService);
   private sanitizer = inject(DomSanitizer);
   private cdr = inject(ChangeDetectorRef);
+  private router = inject(Router);
   private destroy$ = new Subject<void>();
   private customerSearch$ = new Subject<string>();
 
@@ -4695,6 +4708,7 @@ export class PosComponent implements OnInit, OnDestroy {
   showInventoryTransferForm = signal(false);
   showPaymentModal      = signal(false);
   completedSale         = signal<PosSale | null>(null);
+  generatedInvoiceId    = signal<string | null>(null);
   operatingConfig = signal<PosOperatingConfig | null>(null);
   terminals = signal<PosTerminal[]>([]);
   shiftTemplates = signal<PosShiftTemplate[]>([]);
@@ -7123,12 +7137,21 @@ export class PosComponent implements OnInit, OnDestroy {
     if (sale.deliveryStatus === 'PENDING') { this.notify.error('El pedido aún no ha sido entregado'); return; }
     this.pos.generateInvoiceFromSale(sale.id).subscribe({
       next: (inv: any) => {
-        this.notify.success(`Factura ${inv.invoiceNumber} generada exitosamente`);
+        this.notify.success(`Factura ${inv.invoiceNumber} generada. Puedes verla en Cartera o Facturación.`);
         if (this.showHistory()) this.loadSessionSales();
         if (this.completedSale()?.id === sale.id) this.completedSale.update(s => s ? { ...s, invoiceId:inv.id, invoice:inv } : null);
+        this.generatedInvoiceId.set(inv.id ?? null);
       },
       error: (err: any) => this.notify.error(err?.error?.message ?? 'Error al generar la factura'),
     });
+  }
+
+  goToCarteraFromInvoice(invoiceId: string) {
+    this.router.navigate(['/cartera'], { queryParams: { invoiceId } });
+  }
+
+  goToInvoices() {
+    this.router.navigate(['/invoices']);
   }
 
   openInvoiceModal(sale: PosSale) {
@@ -7479,6 +7502,7 @@ export class PosComponent implements OnInit, OnDestroy {
   dismissSuccessOverlay() {
     clearTimeout(this.successAutoCloseTimer);
     this.completedSale.set(null);
+    this.generatedInvoiceId.set(null);
     this.cartDiscountPct.set(0);
     this.amountPaid.set(0);
     this.paymentLines.set([]);

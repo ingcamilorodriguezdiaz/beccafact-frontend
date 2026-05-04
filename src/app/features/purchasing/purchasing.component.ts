@@ -1,6 +1,8 @@
-import { Component, OnInit, signal, computed, HostListener } from '@angular/core';
+import { Component, OnInit, signal, computed, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { NotificationService } from '../../core/services/notification.service';
@@ -596,7 +598,7 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
 @Component({
   selector: 'app-purchasing',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   template: `
     <div class="page animate-in">
 
@@ -4202,6 +4204,8 @@ const PURCHASE_BUDGET_STATUS_LABELS: Record<PurchaseBudgetStatus, string> = {
   `]
 })
 export class PurchasingComponent implements OnInit {
+  private router = inject(Router);
+
   // ── URLs de la API ──────────────────────────────────────────────────────────
   // Nota: environment.apiUrl ya incluye /api/v1; el módulo purchasing vive en /purchasing
   private readonly CUSTOMERS_API = `${environment.apiUrl}/purchasing/customers`;
@@ -5238,7 +5242,7 @@ export class PurchasingComponent implements OnInit {
       next: () => {
         this.saving.set(false);
         this.closeReceiptModal();
-        this.notify.success('Recepción registrada correctamente');
+        this.notify.success('Recepción registrada. El inventario ha sido actualizado automáticamente.');
         this.loadReceipts();
         this.loadOrders();
       },
@@ -5247,6 +5251,10 @@ export class PurchasingComponent implements OnInit {
         this.notify.error(err?.error?.message || 'No fue posible registrar la recepción');
       },
     });
+  }
+
+  goToInventory() {
+    this.router.navigate(['/inventory']);
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -5353,9 +5361,11 @@ export class PurchasingComponent implements OnInit {
     this.http.patch(`${this.PURCHASE_INVOICES_API}/${invoice.id}/post`, {}).subscribe({
       next: () => {
         this.saving.set(false);
-        this.notify.success('Factura contabilizada y cuenta por pagar generada');
+        this.notify.success('Factura contabilizada y cuenta por pagar generada. Cambiando a CxP...');
         this.loadPurchaseInvoices();
         this.loadAccountsPayable();
+        // Navega a la pestaña de Cuentas por Pagar para ver el registro recién creado
+        setTimeout(() => this.switchTab('accountsPayable'), 800);
       },
       error: (err) => {
         this.saving.set(false);

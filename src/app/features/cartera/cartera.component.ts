@@ -1,6 +1,7 @@
 import { Component, HostListener, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../core/services/notification.service';
@@ -412,7 +413,9 @@ interface AdjustmentForm {
                 </thead>
                 <tbody>
                   @for (f of invoices(); track f.id) {
-                    <tr [class.ct__row--mora]="f.carteraStatus === 'EN_MORA'">
+                    <tr [class.ct__row--mora]="f.carteraStatus === 'EN_MORA'"
+                        [class.ct__row--highlighted]="highlightedInvoiceId() === f.id"
+                        [id]="'cartera-row-' + f.id">
                       <td><code class="inv-num">{{ f.invoiceNumber }}</code></td>
                       <td>
                         <div class="ct__cliente">
@@ -504,7 +507,9 @@ interface AdjustmentForm {
           } @else {
             <div class="ct-card-grid">
               @for (f of invoices(); track f.id) {
-                <article class="ct-card" [class.ct-card--mora]="f.carteraStatus === 'EN_MORA'">
+                <article class="ct-card" [class.ct-card--mora]="f.carteraStatus === 'EN_MORA'"
+                         [class.ct-card--highlighted]="highlightedInvoiceId() === f.id"
+                         [id]="'cartera-card-' + f.id">
                   <span class="ct-card__status badge" [ngClass]="statusClass(f.carteraStatus)">
                     {{ statusLabel(f.carteraStatus) }}
                   </span>
@@ -2083,6 +2088,8 @@ interface AdjustmentForm {
     .bf-table--sm th, .bf-table--sm td { padding:8px 12px; font-size:12.5px; }
     .bf-table tbody tr:hover td { background:#fafcff; }
     .ct__row--mora td { background:#fff8f8; }
+    .ct__row--highlighted td { background:#eff6ff; outline:2px solid #3b82f6; outline-offset:-2px; }
+    .ct-card--highlighted { outline:2px solid #3b82f6; background:#eff6ff; }
 
     .inv-num { background:#f0f4f9; padding:2px 6px; border-radius:4px; font-size:12px; color:#1a407e; }
     .ct__cliente { display:flex; flex-direction:column; gap:1px; }
@@ -2360,6 +2367,7 @@ export class CarteraComponent implements OnInit {
   private http   = inject(HttpClient);
   private notify = inject(NotificationService);
   private auth   = inject(AuthService);
+  private route  = inject(ActivatedRoute);
 
   private readonly api = `${environment.apiUrl}/cartera`;
   private readonly customersApi = `${environment.apiUrl}/customers`;
@@ -2385,6 +2393,7 @@ export class CarteraComponent implements OnInit {
   statusFilter  = signal('');
   activeTab     = signal<'cartera' | 'aging' | 'receipts' | 'collections'>('cartera');
   viewMode      = signal<'table' | 'grid'>('table');
+  highlightedInvoiceId = signal<string | null>(null);
 
   showCustomerModal      = signal(false);
   customerReceivables    = signal<any>(null);
@@ -2481,6 +2490,12 @@ export class CarteraComponent implements OnInit {
     this.loadDashboard();
     this.load();
     this.loadReceiptCustomers();
+    // Lectura de invoiceId desde query params (navegación cruzada desde Facturación o POS)
+    const invoiceId = this.route.snapshot.queryParamMap.get('invoiceId');
+    if (invoiceId) {
+      this.highlightedInvoiceId.set(invoiceId);
+      this.notify.info('Mostrando cartera relacionada con la factura seleccionada');
+    }
   }
 
   // ── Tab switching ────────────────────────────────────────────────────────

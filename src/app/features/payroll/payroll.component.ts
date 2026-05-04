@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, signal, computed, inject, HostListener, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
@@ -620,7 +621,7 @@ type ViewMode  = 'table' | 'grid';
 @Component({
   selector: 'app-payroll',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, RouterLink, ConfirmDialogComponent],
   template: `
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
@@ -644,6 +645,11 @@ type ViewMode  = 'table' | 'grid';
               <button class="btn btn--secondary btn--sm" id="tour-payroll-operations" (click)="openOperationsModal()">
                 <span class="material-symbols-outlined">developer_board</span> Operación DIAN
               </button>
+            }
+            @if (activeTab() === 'records') {
+              <a routerLink="/accounting" class="btn btn--secondary btn--sm" title="Ver asientos contables de nómina en Contabilidad">
+                <span class="material-symbols-outlined">account_balance</span> Ver en Contabilidad
+              </a>
             }
             @if (activeTab() === 'employees' && canManageEmployees()) {
               <button class="btn btn--primary btn--sm" (click)="openEmployeeModal()">
